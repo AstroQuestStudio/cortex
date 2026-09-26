@@ -1,0 +1,18 @@
+{
+  "name": "astroquest",
+  "owner": { "name": "AstroQuest", "url": "https://astroquest.fr" },
+  "description": "Plugins published by AstroQuest.",
+  "plugins": [
+    {
+      "name": "cortex",
+      "source": "./",
+      "version": "0.3.0",
+      "description": "Cortex: the code-context engine for AI agents (MCP server + /cortex skill). Requires the `cortex` binary on PATH.",
+      "author": { "name": "AstroQuest", "url": "https://astroquest.fr" },
+      "homepage": "https://astroquest.fr/cortex",
+      "license": "MIT",
+      "keywords": ["code-search", "mcp", "context"],
+      "category": "development"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+== flask (https://github.com/pallets/flask @ 22d924701a6a)
+top-1 70.0%  top-5 95.0%  MRR 0.789
+  [en] n=12 top-1 83.3%  top-5 100.0%  MRR 0.892
+  [fr] n=4 top-1 25.0%  top-5 75.0%  MRR 0.458
+  [tech] n=4 top-1 75.0%  top-5 100.0%  MRR 0.812
+== hono (https://github.com/honojs/hono @ 7c3b0df96dbf)
+top-1 60.0%  top-5 85.0%  MRR 0.718
+  [en] n=12 top-1 41.7%  top-5 83.3%  MRR 0.607
+  [fr] n=4 top-1 100.0%  top-5 100.0%  MRR 1.000
+  [tech] n=4 top-1 75.0%  top-5 75.0%  MRR 0.769
+== ripgrep (https://github.com/BurntSushi/ripgrep @ e89fff89ac9a)
+top-1 35.0%  top-5 85.0%  MRR 0.549
+  [en] n=12 top-1 33.3%  top-5 83.3%  MRR 0.520
+  [fr] n=4 top-1 25.0%  top-5 75.0%  MRR 0.438
+  [tech] n=4 top-1 50.0%  top-5 100.0%  MRR 0.750

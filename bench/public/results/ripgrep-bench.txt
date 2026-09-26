@@ -1,0 +1,65 @@
+[ 1] rang  1  Where is a file path actually tested against parsed .gitignore patterns to decide if it should be excluded? attendu crates/ignore/src/gitignore.rs
+[ 2] rang  3  How does ripgrep decide during a search that a file's contents are binary and should be skipped or truncated? attendu crates/searcher/src/searcher/mod.rs | crates/searcher/src/line_buffer.rs
+        1. crates/core/search.rs
+        2. crates/core/flags/defs.rs
+        3. crates/searcher/src/searcher/mod.rs
+[ 3] rang  3  Where does ripgrep turn a shell-style glob pattern like *.rs or src/** into something it can match against paths? attendu crates/globset/src/glob.rs
+        1. crates/globset/src/lib.rs
+        2. crates/ignore/src/gitignore.rs
+        3. crates/globset/src/glob.rs
+[ 4] rang  3  Where does ripgrep pull out required literal substrings from a compiled regex so it can prefilter candidate lines quickly? attendu crates/regex/src/literal.rs
+        1. crates/matcher/src/lib.rs
+        2. crates/regex/src/matcher.rs
+        3. crates/regex/src/literal.rs
+[ 5] rang  3  How does ripgrep search inside a gzip or xz compressed file without the user manually decompressing it first? attendu crates/cli/src/decompress.rs
+        1. crates/core/search.rs
+        2. crates/core/flags/defs.rs
+        3. crates/cli/src/decompress.rs
+[ 6] rang  8  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file? attendu crates/searcher/src/sink.rs
+        1. crates/matcher/src/lib.rs
+        2. crates/core/flags/defs.rs
+        3. crates/searcher/src/line_buffer.rs
+[ 7] rang  1  Where is the code that formats matches as JSON objects for the --json output option? attendu crates/printer/src/json.rs
+[ 8] rang 13  Where does ripgrep accumulate the match/line/byte counters that get printed with the --stats flag? attendu crates/printer/src/stats.rs
+        1. crates/core/flags/defs.rs
+        2. crates/core/flags/mod.rs
+        3. crates/core/main.rs
+[ 9] rang  1  How does ripgrep let a user override or re-include paths that .gitignore would otherwise exclude, via a command-line glob? attendu crates/ignore/src/overrides.rs
+[10] rang  2  Where does ripgrep transcode a file from a user-specified character encoding to UTF-8 before it gets searched? attendu crates/searcher/src/searcher/mod.rs
+        1. crates/core/flags/defs.rs
+        2. crates/searcher/src/searcher/mod.rs
+        3. crates/printer/src/hyperlink/mod.rs
+[11] rang  1  Where does ripgrep look for an rc/config file of default arguments (RIPGREP_CONFIG_PATH) and turn it into extra CLI args? attendu crates/core/flags/config.rs
+[12] rang  5  How does ripgrep turn on PCRE2's just-in-time compiler for faster matching? attendu crates/pcre2/src/matcher.rs
+        1. crates/core/flags/doc/version.rs
+        2. crates/globset/src/glob.rs
+        3. crates/core/flags/defs.rs
+[13] rang  2  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ? attendu crates/ignore/src/default_types.rs
+        1. crates/ignore/src/types.rs
+        2. crates/ignore/src/default_types.rs
+        3. crates/core/flags/defs.rs
+[14] rang  4  Comment ripgrep convertit-il une taille lisible par un humain comme "10M" ou "2K" (pour --max-filesize) en nombre d'octets ? attendu crates/cli/src/human.rs
+        1. crates/core/flags/defs.rs
+        2. crates/ignore/src/walk.rs
+        3. crates/core/main.rs
+[15] rang  -  Où ripgrep lit-il la liste de motifs de recherche fournie via un fichier avec l'option -f ? attendu crates/cli/src/pattern.rs
+        1. crates/core/flags/defs.rs
+        2. crates/globset/src/glob.rs
+        3. crates/ignore/src/default_types.rs
+[16] rang  1  Comment ripgrep verrouille-t-il la sortie standard pour éviter que les messages d'erreur sur stderr ne s'entremêlent avec les résultats ? attendu crates/core/messages.rs
+[17] rang  2  Matcher trait definition find_at is_match capture group semantics attendu crates/matcher/src/lib.rs
+        1. crates/matcher/src/interpolate.rs
+        2. crates/matcher/src/lib.rs
+        3. crates/ignore/src/types.rs
+[18] rang  2  non_matching_bytes ByteSet Hir                   attendu crates/regex/src/non_matching.rs
+        1. crates/regex/src/config.rs
+        2. crates/regex/src/non_matching.rs
+        3. crates/matcher/src/lib.rs
+[19] rang  1  WalkParallel struct run WalkState                attendu crates/ignore/src/walk.rs
+[20] rang  1  JSONSink struct definition                       attendu crates/printer/src/json.rs
+
+== moteur atlas · 20 questions · 130 ms ==
+top-1 35.0%  top-5 85.0%  MRR 0.549
+  [en] n=12 top-1 33.3%  top-5 83.3%  MRR 0.520
+  [fr] n=4 top-1 25.0%  top-5 75.0%  MRR 0.438
+  [tech] n=4 top-1 50.0%  top-5 100.0%  MRR 0.750

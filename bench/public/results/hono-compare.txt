@@ -1,0 +1,69 @@
+== Banc comparatif — bench-hono · 20 questions · 421 fichiers ==
+corpus relu : 421 fichiers, 89435 lignes, 2.8 Mio en 0.01s
+morceaux : 3103 (40 lignes, recouvrement 10)
+dense : dim 256, 0 morceaux du cache, 3103 calculés ; modèle chargé en 1.89s
+mesure de la construction d'un atlas Cortex complet…
+
+── Global (20 questions) ─ tokens = caractères/4 ; « 1er bon » = médiane sur les trouvées ; « moy. » = échec compté comme la sortie complète
+approche              top-1  top-5    MRR  lat méd  lat p95  1er bon     moy.    top-5   sortie
+rg-compte             10.0%  30.0%  0.209   1.98ms   4.29ms    13269    49543    11666    42210
+rg-termes             10.0%  45.0%  0.271   3.99ms   6.43ms     6898    23692     6390    42210
+bm25-fich             40.0%  70.0%  0.517   0.05ms   0.08ms       22       33       40      168
+rag-dense             25.0%  55.0%  0.381   1.16ms   1.40ms      991     3016     2908     3005
+hybride               30.0%  70.0%  0.463   1.56ms   1.83ms     1234     2878     3998     3114
+cortex                60.0%  85.0%  0.718   9.99ms  14.95ms       15       40       67      767
+exp:cortex+dense      50.0%  75.0%  0.633   9.01ms  13.61ms       13       31       38      160
+exp:rerank20-dense    55.0%  75.0%  0.671   9.80ms  11.98ms       12       24       38      156
+exp:cortex+bm25       55.0%  95.0%  0.729   8.18ms  11.36ms       10       19       38      162
+exp:rerank20-bm25     65.0%  90.0%  0.774   7.08ms  10.87ms       10       17       40      156
+
+── Par catégorie : top-1 / top-5 / MRR
+approche                           fr (n=4)              en (n=12)             tech (n=4)
+rg-compte                 25% / 25% / 0.292       0% / 17% / 0.102      25% / 75% / 0.448
+rg-termes                 25% / 25% / 0.286       0% / 42% / 0.207      25% / 75% / 0.448
+bm25-fich                 25% / 75% / 0.396      42% / 75% / 0.537      50% / 50% / 0.577
+rag-dense                 50% / 75% / 0.583      17% / 50% / 0.324      25% / 50% / 0.349
+hybride                   50% / 75% / 0.625      17% / 67% / 0.367      50% / 75% / 0.588
+cortex                  100% / 100% / 1.000      42% / 83% / 0.607      75% / 75% / 0.769
+exp:cortex+dense          75% / 75% / 0.781      42% / 75% / 0.595      50% / 75% / 0.598
+exp:rerank20-dense        75% / 75% / 0.792      42% / 75% / 0.599      75% / 75% / 0.768
+exp:cortex+bm25          75% / 100% / 0.875      42% / 92% / 0.653     75% / 100% / 0.812
+exp:rerank20-bm25       100% / 100% / 1.000      50% / 92% / 0.693      75% / 75% / 0.792
+
+── Construction de l'index
+rg-compte                0.01s     5.5 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
+rg-termes                0.01s     5.5 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
+bm25-fich                0.03s     0.5 Mio  index inversé en RAM (taille estimée)
+rag-dense                2.52s   509.5 Mio  3103 morceaux ; vecteurs 3.1 Mio + modèle 506.4 Mio ; embedding à froid 0.6s (rayon)
+hybride                  2.58s   510.9 Mio  dense + BM25 sur les mêmes morceaux, RRF k=60 sur les 3000 premiers de chaque
+cortex                   0.37s     2.0 Mio  atlas complet (rayon, 16 threads), segment rkyv
+exp:cortex+dense             —           —  RRF k=60 : 100 fichiers Cortex + 100 fichiers dense
+exp:rerank20-dense           —           —  top-20 Cortex re-classé par RRF(rang Cortex, rang dense)
+exp:cortex+bm25              —           —  RRF k=60 : 100 fichiers Cortex + 100 fichiers BM25 (contenu)
+exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF(rang Cortex, rang BM25 contenu)
+
+── Rang du bon fichier par question (- = absent du top-20)
+   # tag    a1  a2  a3  a4  a5  a6  a7  a8  a9 a10  question
+   1 en      4   2   1   4   3   2   1   1   1   1  where are signed cookies verified against their HMAC signature
+   2 en     20   -   -   1   9  18   2   6   -  15  how does Hono automatically pick the fastest router implementation at runtime
+   3 en     17  17   5   6   1   2   1   1   2   1  how does the trie-based router walk path segments to find a matching node
+   4 en      3   3   1   7   2   1   3   2   1   1  where is a JWT checked for expiration and unsupported algorithms
+   5 en     14   4   1   1   1   1   1   1   1   1  how does the CSRF middleware decide whether a request's origin is allowed
+   6 en      -  11   8   3   6   1   1   1   1   1  where does hono compute and compare the ETag header for caching responses
+   7 en      7   2   2   2   3   1   2   2   2   2  how does the compress middleware choose between gzip and deflate encoding
+   8 en     20   -   4   6   5   3   2   2   2   2  where does the streaming helper abort the stream when the client disconnects
+   9 en     10   9   1   -   5   2   7   4   2   2  how is the useState hook implemented for hono's own JSX runtime
+  10 en      -  19   8   -  16   7  17  10   3   4  how does the type-safe RPC client build a fetch request from the app's route types
+  11 en      -  11   4   -   -   4  10   6   2   2  where does the static site generation helper turn app routes into files on disk
+  12 en      6   2   1   3   2   1   1   1   1   1  where does basic auth compare the supplied username and password without timing leaks
+  13 fr      -   -   -   3   3   1   1   1   1   1  où est limitée la taille maximale du corps d'une requête
+  14 fr      1   1   1   1   1   1   1   1   1   1  où est construit l'en-tête Content-Security-Policy des réponses
+  15 fr      6   7   4   1   1   1   1   1   2   1  où est détectée la langue préférée du client à partir de l'en-tête Accept-Language
+  16 fr      -   -   3   -   6   1   8   6   1   1  où le helper de test simule-t-il des requêtes vers une app Hono sans lancer de serveur
+  17 tech    3   3   1   3   1   1   1   1   1   1  JwtTokenExpired
+  18 tech    3   3   7   -  10  13  17  14   4   6  createMiddleware
+  19 tech    8   8   6  16   4   1   3   1   1   1  UnsupportedPathError
+  20 tech    1   1   1   1   1   1   1   1   1   1  defaultTimeoutException 504
+      a1=rg-compte  a2=rg-termes  a3=bm25-fich  a4=rag-dense  a5=hybride  a6=cortex  a7=exp:cortex+dense  a8=exp:rerank20-dense  a9=exp:cortex+bm25  a10=exp:rerank20-bm25
+
+résultats : bench/public/results\comparatif-2026-09-26-9668092.json

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cortex · Galaxie de connaissance</title>
+<style>
+  :root { --bg:#06040f; --panel:rgba(12,9,28,.72); --accent:#a855f7; --doc:#38bdf8; --infra:#22c55e; --txt:#e9e6f5; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; background:var(--bg); color:var(--txt);
+    font:13px/1.5 ui-sans-serif,system-ui,Inter,sans-serif; overflow:hidden; }
+  #c { position:fixed; inset:0; display:block; }
+  /* Top bar */
+  #top { position:fixed; top:0; left:0; right:0; height:46px; z-index:20; display:flex; align-items:center;
+    gap:14px; padding:0 16px; background:linear-gradient(180deg,rgba(6,4,15,.92),rgba(6,4,15,0)); }
+  #top b { font-weight:700; letter-spacing:.02em; }
+  #top .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); }
+  #stat { opacity:.7; font-size:12px; }
+  #fps { margin-left:auto; font-variant-numeric:tabular-nums; opacity:.6; font-size:12px; }
+  /* Panel */
+  #panel { position:fixed; top:56px; left:14px; bottom:14px; width:280px; z-index:18; display:flex; flex-direction:column;
+    background:var(--panel); backdrop-filter:blur(18px); border:1px solid rgba(168,85,247,.22);
+    border-radius:14px; padding:12px; gap:10px; }
+  #search { width:100%; height:32px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+    border-radius:8px; color:var(--txt); padding:0 10px; font-size:13px; outline:none; }
+  #search:focus { border-color:var(--accent); }
+  .seg { display:flex; gap:6px; }
+  .seg button { flex:1; height:28px; border:1px solid rgba(255,255,255,.12); background:transparent; color:var(--txt);
+    border-radius:7px; cursor:pointer; font-size:12px; opacity:.85; }
+  .seg button.on { background:rgba(168,85,247,.22); border-color:var(--accent); opacity:1; }
+  #list { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:3px; padding-right:4px; }
+  #list::-webkit-scrollbar { width:7px; } #list::-webkit-scrollbar-thumb { background:rgba(168,85,247,.3); border-radius:4px; }
+  .row { display:flex; align-items:center; gap:8px; padding:5px 7px; border-radius:7px; cursor:pointer; font-size:12.5px; }
+  .row:hover { background:rgba(255,255,255,.05); }
+  .row.off { opacity:.38; }
+  .row .sw { width:9px; height:9px; border-radius:50%; flex:none; }
+  .row .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row .ct { opacity:.5; font-size:11px; font-variant-numeric:tabular-nums; }
+  .grp { font-size:11px; text-transform:uppercase; letter-spacing:.08em; opacity:.45; margin:8px 2px 2px; }
+  .hint { font-size:11px; opacity:.45; line-height:1.6; border-top:1px solid rgba(255,255,255,.08); padding-top:8px; }
+  /* Tooltip */
+  #tip { position:fixed; z-index:30; pointer-events:none; display:none; max-width:340px;
+    background:rgba(8,6,20,.96); border:1px solid rgba(168,85,247,.35); border-radius:9px; padding:8px 11px; font-size:12px; }
+  #tip .t { font-weight:600; margin-bottom:3px; } #tip .f { opacity:.6; font-size:11px; word-break:break-all; }
+  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:40;
+    background:var(--bg); font-size:15px; opacity:.85; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top">
+  <span class="dot"></span><b>Cortex</b><span id="stat">chargement…</span>
+  <span id="fps"></span>
+</div>
+<div id="panel">
+  <input id="search" placeholder="Rechercher un nœud…" autocomplete="off">
+  <div class="seg" id="typeseg">
+    <button data-t="0" class="on">● Code</button>
+    <button data-t="1" class="on">● Docs</button>
+    <button data-t="2" class="on">● Infra</button>
+  </div>
+  <div id="list"></div>
+  <div class="hint">Clic constellation = afficher/masquer · double-clic = focus<br>Molette = zoom · glisser = orbite · clic-droit = pan</div>
+</div>
+<div id="tip"></div>
+<div id="loading">Chargement de la galaxie…</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const TYPE_COLORS = ['#a855f7','#38bdf8','#22c55e']; // code, doc, infra
+const TYPE_NAMES  = ['Code','Docs','Infra'];
+
+// ── Chargement du JSON galaxy (servi à côté du HTML) ───────────────────────
+let G;
+try {
+  G = await (await fetch('./galaxy.json')).json();
+} catch(e) {
+  document.getElementById('loading').textContent = 'galaxy.json introuvable — lance: cortex galaxy';
+  throw e;
+}
+
+// ── Scène ──────────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x06040f, 0.000055);
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 1, 60000);
+camera.position.set(0, 2000, 14000);
+const renderer = new THREE.WebGLRenderer({ canvas:document.getElementById('c'), antialias:true, powerPreference:'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.rotateSpeed = 0.6; controls.zoomSpeed = 1.4;
+
+// Noyau central pulsant.
+const core = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 32),
+  new THREE.MeshBasicMaterial({ color:0xa855f7, transparent:true, opacity:.9 }));
+scene.add(core);
+const coreGlow = new THREE.Mesh(new THREE.SphereGeometry(260, 32, 32),
+  new THREE.MeshBasicMaterial({ color:0xa855f7, transparent:true, opacity:.12 }));
+scene.add(coreGlow);
+
+// ── HIÉRARCHIE : pour chaque constellation, on regroupe ses nœuds par THÈME et
+//    on calcule un centre de thème (sous-branche). noyau → constellation → thème → nœud.
+const dummy = new THREE.Object3D();
+const tmpColor = new THREE.Color();
+const N = G.nodes.length;
+const visible = new Uint8Array(N).fill(1);
+
+// Centre de chaque (constellation, thème) = moyenne des positions de ses nœuds.
+const themeKey = (n) => n.p * 100000 + n.m;
+const themeAgg = new Map(); // key → {sx,sy,sz,count, p, m}
+for (const n of G.nodes){
+  const k = themeKey(n);
+  let a = themeAgg.get(k);
+  if (!a){ a = {sx:0,sy:0,sz:0,count:0,p:n.p,m:n.m}; themeAgg.set(k,a); }
+  a.sx+=n.x; a.sy+=n.y; a.sz+=n.z; a.count++;
+}
+const themeCenter = new Map();
+for (const [k,a] of themeAgg) themeCenter.set(k, [a.sx/a.count, a.sy/a.count, a.sz/a.count]);
+
+// ── NŒUDS via InstancedMesh (1 draw call). Couleur par instance via setColorAt. ─
+const geo = new THREE.SphereGeometry(1, 10, 8);
+// emissive léger pour que les nœuds "brillent" sur fond noir.
+const mat = new THREE.MeshBasicMaterial({ toneMapped:false });
+const inst = new THREE.InstancedMesh(geo, mat, N);
+inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+for (let i=0;i<N;i++){
+  const n = G.nodes[i];
+  dummy.position.set(n.x, n.y, n.z);
+  const s = (n.s||1) * 9;
+  dummy.scale.set(s,s,s);
+  dummy.updateMatrix();
+  inst.setMatrixAt(i, dummy.matrix);
+  tmpColor.set(n.c || TYPE_COLORS[n.t||0]);
+  inst.setColorAt(i, tmpColor);
+}
+inst.instanceColor.needsUpdate = true;
+scene.add(inst);
+
+// ── BRANCHES : UN objet LineSegments PAR constellation → masquable individuellement.
+//    Chaque objet = branche noyau→constellation + ses sous-branches vers les thèmes.
+const projCenters = G.projects.map(p=>p.center);
+const dark = [0.25,0.18,0.4];
+const lineByProj = []; // index constellation → LineSegments
+for (let pi=0; pi<G.projects.length; pi++){
+  const c = projCenters[pi]; const col = new THREE.Color(G.projects[pi].color);
+  const pos = [], cl = [];
+  // noyau → centre constellation
+  pos.push(0,0,0, c[0],c[1],c[2]);
+  cl.push(dark[0],dark[1],dark[2], col.r,col.g,col.b);
+  // centre constellation → chaque thème de CETTE constellation
+  for (const [k,ctr] of themeCenter){
+    const a = themeAgg.get(k);
+    if (a.p !== pi) continue;
+    pos.push(c[0],c[1],c[2], ctr[0],ctr[1],ctr[2]);
+    cl.push(col.r*0.55,col.g*0.55,col.b*0.55, col.r,col.g,col.b);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cl,3));
+  const ls = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors:true, transparent:true, opacity:.45 }));
+  ls.userData.pi = pi;
+  ls.userData.targetOpacity = 0.45;
+  lineByProj.push(ls);
+  scene.add(ls);
+}
+
+// ── Labels : constellations (gros) + thèmes (petits, près du centre du thème) ──
+const labelGroup = new THREE.Group(); scene.add(labelGroup);
+const themeLabelGroup = new THREE.Group(); scene.add(themeLabelGroup);
+function makeLabel(text, color, big){
+  const cv = document.createElement('canvas'); const ctx = cv.getContext('2d');
+  cv.width=512; cv.height=128; ctx.font=`bold ${big?52:38}px Inter,sans-serif`; ctx.fillStyle=color;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,.9)'; ctx.shadowBlur=8;
+  ctx.fillText(text, 256, 64);
+  const tex = new THREE.CanvasTexture(cv);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
+  sp.scale.set(big?1500:900, big?375:225, 1); return sp;
+}
+G.projects.forEach((p,pi)=>{
+  const sp = makeLabel(p.name, p.color, true);
+  sp.position.set(p.center[0], p.center[1]+800, p.center[2]);
+  sp.userData.proj = p.name; sp.userData.pi = pi; labelGroup.add(sp);
+});
+// Labels de thèmes (sous-branches) : nom lisible du module.
+for (const [k,ctr] of themeCenter){
+  const a = themeAgg.get(k);
+  let name = G.modules[a.m] || '';
+  name = name.replace(/^doc:/,'');
+  if (!name || a.count < 3) continue; // évite le bruit des micro-thèmes
+  const col = G.projects[a.p].color;
+  const sp = makeLabel(name, col, false);
+  sp.position.set(ctr[0], ctr[1]+200, ctr[2]);
+  sp.userData.proj = G.projects[a.p].name;
+  sp.userData.pi = a.p;
+  themeLabelGroup.add(sp);
+}
+
+// ── ÉTAT on/off : par constellation (projet/doc) + par type ────────────────
+const projOff = new Set();      // noms de constellations masquées
+const typeOff = new Set();      // types masqués (0/1/2)
+// Scale cible (animée) et scale courante par nœud → transition SMOOTH.
+const targetScale = new Float32Array(N);
+const curScale = new Float32Array(N);
+for (let i=0;i<N;i++){ targetScale[i]=(G.nodes[i].s||1)*9; curScale[i]=targetScale[i]; }
+let animating = false;
+
+function applyVisibility(){
+  for (let i=0;i<N;i++){
+    const n = G.nodes[i];
+    const pname = G.projects[n.p]?.name;
+    const vis = !projOff.has(pname) && !typeOff.has(n.t);
+    visible[i] = vis?1:0;
+    targetScale[i] = vis ? (n.s||1)*9 : 0; // cible : taille normale ou 0 (disparition)
+  }
+  animating = true; // la boucle interpole curScale → targetScale
+  // Branches : masque celles d'une constellation masquée.
+  updateLineVisibility();
+  // Labels : off si constellation masquée OU son type masqué.
+  labelGroup.children.forEach(sp=>{
+    const p = G.projects[sp.userData.pi];
+    const kindType = p.kind==='doc'?1 : p.kind==='infra'?2 : 0;
+    sp.userData.off = projOff.has(sp.userData.proj) || typeOff.has(kindType);
+  });
+  themeLabelGroup.children.forEach(sp=>{
+    const p = G.projects[sp.userData.pi];
+    const kindType = p ? (p.kind==='doc'?1 : p.kind==='infra'?2 : 0) : 0;
+    sp.userData.hidden = projOff.has(sp.userData.proj) || typeOff.has(kindType);
+  });
+}
+
+// Met à jour la cible d'opacité de CHAQUE branche selon sa constellation.
+// Une constellation est "off" si masquée explicitement OU si TOUS ses types sont masqués.
+function updateLineVisibility(){
+  for (const ls of lineByProj){
+    const p = G.projects[ls.userData.pi];
+    // type dominant de la constellation : code/doc/infra selon kind.
+    const kindType = p.kind==='doc'?1 : p.kind==='infra'?2 : 0;
+    const off = projOff.has(p.name) || typeOff.has(kindType);
+    ls.userData.targetOpacity = off ? 0 : 0.45;
+  }
+}
+
+// ── Panneau latéral : liste groupée code/doc/infra + toggles ───────────────
+const listEl = document.getElementById('list');
+function buildList(filter=''){
+  listEl.innerHTML='';
+  const groups = { code:[], doc:[], infra:[] };
+  G.projects.forEach((p,i)=>{ (groups[p.kind]||groups.code).push({p,i}); });
+  for (const [kind, arr] of Object.entries(groups)){
+    const items = arr.filter(({p})=> p.name.toLowerCase().includes(filter));
+    if (!items.length) continue;
+    const g = document.createElement('div'); g.className='grp';
+    g.textContent = kind==='code'?'Projets (code)':kind==='doc'?'Documentations':'Infra';
+    listEl.appendChild(g);
+    items.sort((a,b)=>b.p.nodes-a.p.nodes).forEach(({p})=>{
+      const row = document.createElement('div'); row.className='row'+(projOff.has(p.name)?' off':'');
+      row.innerHTML = `<span class="sw" style="background:${p.color}"></span><span class="nm">${p.name}</span><span class="ct">${p.nodes}</span>`;
+      row.onclick = ()=>{ projOff.has(p.name)?projOff.delete(p.name):projOff.add(p.name); row.classList.toggle('off'); applyVisibility(); };
+      row.ondblclick = ()=> focusOn(p);
+      listEl.appendChild(row);
+    });
+  }
+}
+buildList();
+document.getElementById('search').addEventListener('input', e=> buildList(e.target.value.toLowerCase().trim()));
+
+// Toggles type.
+document.querySelectorAll('#typeseg button').forEach(b=>{
+  b.onclick = ()=>{ const t=+b.dataset.t; typeOff.has(t)?typeOff.delete(t):typeOff.add(t); b.classList.toggle('on'); applyVisibility(); };
+});
+
+// Focus sur une constellation (double-clic).
+function focusOn(p){
+  const c = p.center; const target = new THREE.Vector3(c[0],c[1],c[2]);
+  controls.target.copy(target);
+  const dir = target.clone().normalize();
+  camera.position.copy(target).addScaledVector(dir, 2600).add(new THREE.Vector3(0,800,0));
+}
+
+// ── Tooltip (raycast throttlé) ─────────────────────────────────────────────
+const ray = new THREE.Raycaster(); ray.params.Mesh = {}; const mouse = new THREE.Vector2();
+const tip = document.getElementById('tip'); let lastPick=0;
+addEventListener('pointermove', e=>{
+  mouse.x = (e.clientX/innerWidth)*2-1; mouse.y = -(e.clientY/innerHeight)*2+1;
+  tip._x=e.clientX; tip._y=e.clientY;
+});
+function pick(){
+  if (performance.now()-lastPick < 80) return; lastPick=performance.now();
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObject(inst, false)[0];
+  if (hit && hit.instanceId!=null && visible[hit.instanceId]){
+    const n = G.nodes[hit.instanceId];
+    tip.style.display='block'; tip.style.left=(tip._x+14)+'px'; tip.style.top=(tip._y+14)+'px';
+    tip.innerHTML = `<div class="t">${n.l}</div><div class="f">${n.f}</div>`;
+  } else tip.style.display='none';
+}
+
+// ── Boucle de rendu + FPS ──────────────────────────────────────────────────
+const fpsEl = document.getElementById('fps'); let frames=0, t0=performance.now();
+document.getElementById('loading').style.display='none';
+document.getElementById('stat').textContent =
+  `${G.stats.projects} constellations · ${G.stats.nodes.toLocaleString()} nœuds (code ${G.stats.code.toLocaleString()} · docs ${G.stats.docs.toLocaleString()})`;
+function loop(){
+  requestAnimationFrame(loop);
+  controls.update();
+  const t = performance.now()*0.001;
+  core.scale.setScalar(1+Math.sin(t*2)*0.08); coreGlow.scale.setScalar(1+Math.sin(t*2)*0.12);
+  // ── Animation SMOOTH du masquage/apparition (interpolation des scales) ──────
+  if (animating){
+    let moving = false;
+    for (let i=0;i<N;i++){
+      const diff = targetScale[i] - curScale[i];
+      if (Math.abs(diff) > 0.01){
+        curScale[i] += diff * 0.16; // easing
+        moving = true;
+        const n = G.nodes[i]; const s = curScale[i];
+        dummy.position.set(n.x, n.y, n.z); dummy.scale.set(s,s,s);
+        dummy.updateMatrix(); inst.setMatrixAt(i, dummy.matrix);
+      }
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    if (!moving) animating = false; // transition terminée
+  }
+  // Animation de l'opacité des branches (suit targetOpacity).
+  for (const ls of lineByProj){
+    const tgt = ls.userData.targetOpacity;
+    const o = ls.material.opacity;
+    if (Math.abs(tgt-o) > 0.005){ ls.material.opacity += (tgt-o)*0.16; ls.visible = ls.material.opacity > 0.01; }
+    else { ls.material.opacity = tgt; ls.visible = tgt > 0.01; }
+  }
+  // Labels constellations : masqués si constellation off, sinon fade selon distance.
+  labelGroup.children.forEach(sp=>{
+    if (sp.userData.off){ sp.visible=false; return; }
+    sp.visible = true;
+    sp.material.opacity = Math.min(1, 9000/camera.position.distanceTo(sp.position));
+  });
+  // Labels thèmes (sous-branches) : n'apparaissent QUE de près (sinon surcharge).
+  themeLabelGroup.children.forEach(sp=>{
+    const d = camera.position.distanceTo(sp.position);
+    sp.visible = !sp.userData.hidden && d < 4500;
+    if (sp.visible) sp.material.opacity = Math.min(0.9, (4500-d)/3000);
+  });
+  pick();
+  renderer.render(scene, camera);
+  frames++; if (performance.now()-t0>500){ fpsEl.textContent=Math.round(frames*1000/(performance.now()-t0))+' fps'; frames=0; t0=performance.now(); }
+}
+loop();
+addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+</script>
+</body>
+</html>

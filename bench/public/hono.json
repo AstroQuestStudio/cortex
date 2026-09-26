@@ -1,0 +1,128 @@
+{
+  "project": "bench-hono",
+  "repo": "https://github.com/honojs/hono",
+  "commit": "7c3b0df96dbf3e767968ff5afe4c0d999257b8ee",
+  "written": "2026-09-27, before any run of Cortex on this repository",
+  "queries": [
+    {
+      "q": "where are signed cookies verified against their HMAC signature",
+      "expect": ["src/utils/cookie.ts"],
+      "tag": "en",
+      "why": "src/utils/cookie.ts:51 verifySignature (HMAC-SHA256), used by parseSigned at line 146"
+    },
+    {
+      "q": "how does Hono automatically pick the fastest router implementation at runtime",
+      "expect": ["src/router/smart-router/router.ts"],
+      "tag": "en",
+      "why": "src/router/smart-router/router.ts:21 SmartRouter.match tries each router in order and falls back on UnsupportedPathError"
+    },
+    {
+      "q": "how does the trie-based router walk path segments to find a matching node",
+      "expect": ["src/router/trie-router/node.ts", "src/router/trie-router/router.ts"],
+      "tag": "en",
+      "why": "src/router/trie-router/node.ts:20 class Node implements the segment-by-segment trie traversal"
+    },
+    {
+      "q": "where is a JWT checked for expiration and unsupported algorithms",
+      "expect": ["src/utils/jwt/jwt.ts", "src/utils/jwt/types.ts"],
+      "tag": "en",
+      "why": "src/utils/jwt/jwt.ts:96 verify() throws JwtTokenExpired / JwtAlgorithmNotImplemented defined in src/utils/jwt/types.ts"
+    },
+    {
+      "q": "how does the CSRF middleware decide whether a request's origin is allowed",
+      "expect": ["src/middleware/csrf/index.ts"],
+      "tag": "en",
+      "why": "src/middleware/csrf/index.ts:94 csrf() builds an originHandler and checks isSafeMethodRe (line 28)"
+    },
+    {
+      "q": "where does hono compute and compare the ETag header for caching responses",
+      "expect": ["src/middleware/etag/index.ts"],
+      "tag": "en",
+      "why": "src/middleware/etag/index.ts:80 export const etag middleware"
+    },
+    {
+      "q": "how does the compress middleware choose between gzip and deflate encoding",
+      "expect": ["src/middleware/compress/index.ts"],
+      "tag": "en",
+      "why": "src/middleware/compress/index.ts:12 ENCODING_TYPES = ['gzip','deflate'] and compress() at line 72 picks by Accept-Encoding"
+    },
+    {
+      "q": "where does the streaming helper abort the stream when the client disconnects",
+      "expect": ["src/helper/streaming/stream.ts"],
+      "tag": "en",
+      "why": "src/helper/streaming/stream.ts:17 listens to c.req.raw.signal 'abort' event and calls stream.abort()"
+    },
+    {
+      "q": "how is the useState hook implemented for hono's own JSX runtime",
+      "expect": ["src/jsx/hooks/index.ts"],
+      "tag": "en",
+      "why": "src/jsx/hooks/index.ts:182 export const useState: UseStateType"
+    },
+    {
+      "q": "how does the type-safe RPC client build a fetch request from the app's route types",
+      "expect": ["src/client/client.ts"],
+      "tag": "en",
+      "why": "src/client/client.ts:151 export const hc builds a proxy client issuing fetch calls"
+    },
+    {
+      "q": "where does the static site generation helper turn app routes into files on disk",
+      "expect": ["src/helper/ssg/ssg.ts"],
+      "tag": "en",
+      "why": "src/helper/ssg/ssg.ts:369 export const toSSG writes rendered routes to the filesystem"
+    },
+    {
+      "q": "where does basic auth compare the supplied username and password without timing leaks",
+      "expect": ["src/middleware/basic-auth/index.ts", "src/utils/buffer.ts"],
+      "tag": "en",
+      "why": "src/middleware/basic-auth/index.ts:119 calls timingSafeEqual from src/utils/buffer.ts on username and password"
+    },
+    {
+      "q": "où est limitée la taille maximale du corps d'une requête",
+      "expect": ["src/middleware/body-limit/index.ts"],
+      "tag": "fr",
+      "why": "src/middleware/body-limit/index.ts:50 export const bodyLimit throws HTTPException(413) when exceeded"
+    },
+    {
+      "q": "où est construit l'en-tête Content-Security-Policy des réponses",
+      "expect": ["src/middleware/secure-headers/secure-headers.ts"],
+      "tag": "fr",
+      "why": "src/middleware/secure-headers/secure-headers.ts:179 secureHeaders() sets 'Content-Security-Policy' header at line 192"
+    },
+    {
+      "q": "où est détectée la langue préférée du client à partir de l'en-tête Accept-Language",
+      "expect": ["src/middleware/language/language.ts"],
+      "tag": "fr",
+      "why": "src/middleware/language/language.ts:297 languageDetector() and detectors object at line 191 parse Accept-Language"
+    },
+    {
+      "q": "où le helper de test simule-t-il des requêtes vers une app Hono sans lancer de serveur",
+      "expect": ["src/helper/testing/index.ts"],
+      "tag": "fr",
+      "why": "src/helper/testing/index.ts:16 export const testClient wraps app.request for in-process calls"
+    },
+    {
+      "q": "JwtTokenExpired",
+      "expect": ["src/utils/jwt/types.ts"],
+      "tag": "tech",
+      "why": "src/utils/jwt/types.ts:41 export class JwtTokenExpired extends Error"
+    },
+    {
+      "q": "createMiddleware",
+      "expect": ["src/helper/factory/index.ts"],
+      "tag": "tech",
+      "why": "src/helper/factory/index.ts:368 export const createMiddleware"
+    },
+    {
+      "q": "UnsupportedPathError",
+      "expect": ["src/router.ts"],
+      "tag": "tech",
+      "why": "src/router.ts:103 export class UnsupportedPathError extends Error {}, caught by SmartRouter"
+    },
+    {
+      "q": "defaultTimeoutException 504",
+      "expect": ["src/middleware/timeout/index.ts"],
+      "tag": "tech",
+      "why": "src/middleware/timeout/index.ts:12 const defaultTimeoutException = new HTTPException(504, {...})"
+    }
+  ]
+}

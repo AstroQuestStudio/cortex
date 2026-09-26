@@ -1,0 +1,40 @@
+name: Bug report
+description: Something is broken (crash, wrong output, stale index, install problem).
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command or MCP call, what you got, and what you expected.
+      placeholder: |
+        cortex card parseConfig -p my-project
+        → (cortex) symbole « parseConfig » introuvable
+        expected the card of src/config.ts#parseConfig
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Smallest repository or file layout that shows it, if you can share one.
+  - type: input
+    id: version
+    attributes:
+      label: cortex --version
+      placeholder: cortex 0.3.0 — by AstroQuest
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and install method
+      placeholder: macOS 15 arm64, release binary / cargo install / npm
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: stderr output
+      description: Cortex logs timings and freshness checks on stderr (`[cortex] …` lines).
+      render: text

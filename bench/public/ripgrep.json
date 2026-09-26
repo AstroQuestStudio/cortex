@@ -1,0 +1,128 @@
+{
+  "project": "bench-ripgrep",
+  "repo": "https://github.com/BurntSushi/ripgrep",
+  "commit": "e89fff89ac9af12e8d4ce9d5fd07beb408ca730f",
+  "written": "2026-09-27, before any run of Cortex on this repository",
+  "queries": [
+    {
+      "q": "Where is a file path actually tested against parsed .gitignore patterns to decide if it should be excluded?",
+      "expect": ["crates/ignore/src/gitignore.rs"],
+      "tag": "en",
+      "why": "crates/ignore/src/gitignore.rs:202 pub fn matched() runs the compiled ignore patterns against a candidate path"
+    },
+    {
+      "q": "How does ripgrep decide during a search that a file's contents are binary and should be skipped or truncated?",
+      "expect": ["crates/searcher/src/searcher/mod.rs", "crates/searcher/src/line_buffer.rs"],
+      "tag": "en",
+      "why": "crates/searcher/src/searcher/mod.rs:34-80 documents and implements BinaryDetection::quit/convert backed by line_buffer.rs"
+    },
+    {
+      "q": "Where does ripgrep turn a shell-style glob pattern like *.rs or src/** into something it can match against paths?",
+      "expect": ["crates/globset/src/glob.rs"],
+      "tag": "en",
+      "why": "crates/globset/src/glob.rs:673 fn to_regex_with() converts a parsed Glob's tokens into a regex string"
+    },
+    {
+      "q": "Where does ripgrep pull out required literal substrings from a compiled regex so it can prefilter candidate lines quickly?",
+      "expect": ["crates/regex/src/literal.rs"],
+      "tag": "en",
+      "why": "crates/regex/src/literal.rs:131 struct Extractor walks the regex HIR to build literal sequences for InnerLiterals"
+    },
+    {
+      "q": "How does ripgrep search inside a gzip or xz compressed file without the user manually decompressing it first?",
+      "expect": ["crates/cli/src/decompress.rs"],
+      "tag": "en",
+      "why": "crates/cli/src/decompress.rs:198 DecompressionReaderBuilder spawns an external decompression command and reads its stdout"
+    },
+    {
+      "q": "What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file?",
+      "expect": ["crates/searcher/src/sink.rs"],
+      "tag": "en",
+      "why": "crates/searcher/src/sink.rs:102 pub trait Sink defines matched()/context()/finish() callbacks invoked by the searcher"
+    },
+    {
+      "q": "Where is the code that formats matches as JSON objects for the --json output option?",
+      "expect": ["crates/printer/src/json.rs"],
+      "tag": "en",
+      "why": "crates/printer/src/json.rs:487-596 JSON<W> printer and its JSONSink implement the newline-delimited JSON message format"
+    },
+    {
+      "q": "Where does ripgrep accumulate the match/line/byte counters that get printed with the --stats flag?",
+      "expect": ["crates/printer/src/stats.rs"],
+      "tag": "en",
+      "why": "crates/printer/src/stats.rs:13 pub struct Stats holds counters and implements Add to merge per-file totals"
+    },
+    {
+      "q": "How does ripgrep let a user override or re-include paths that .gitignore would otherwise exclude, via a command-line glob?",
+      "expect": ["crates/ignore/src/overrides.rs"],
+      "tag": "en",
+      "why": "crates/ignore/src/overrides.rs:47-97 struct Override wraps a Gitignore built from --glob patterns and its matched() flips ignore decisions"
+    },
+    {
+      "q": "Where does ripgrep transcode a file from a user-specified character encoding to UTF-8 before it gets searched?",
+      "expect": ["crates/searcher/src/searcher/mod.rs"],
+      "tag": "en",
+      "why": "crates/searcher/src/searcher/mod.rs:127 pub struct Encoding wraps encoding_rs and is used with DecodeReaderBytesBuilder"
+    },
+    {
+      "q": "Where does ripgrep look for an rc/config file of default arguments (RIPGREP_CONFIG_PATH) and turn it into extra CLI args?",
+      "expect": ["crates/core/flags/config.rs"],
+      "tag": "en",
+      "why": "crates/core/flags/config.rs:16 pub fn args() reads RIPGREP_CONFIG_PATH and parses each line into an OsString argument"
+    },
+    {
+      "q": "How does ripgrep turn on PCRE2's just-in-time compiler for faster matching?",
+      "expect": ["crates/pcre2/src/matcher.rs"],
+      "tag": "en",
+      "why": "crates/pcre2/src/matcher.rs:258 pub fn jit(&mut self, yes: bool) on RegexMatcherBuilder forwards to pcre2's JIT setting"
+    },
+    {
+      "q": "Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ?",
+      "expect": ["crates/ignore/src/default_types.rs"],
+      "tag": "fr",
+      "why": "crates/ignore/src/default_types.rs liste, par type, les motifs de fichiers que ripgrep reconnaît nativement"
+    },
+    {
+      "q": "Comment ripgrep convertit-il une taille lisible par un humain comme \"10M\" ou \"2K\" (pour --max-filesize) en nombre d'octets ?",
+      "expect": ["crates/cli/src/human.rs"],
+      "tag": "fr",
+      "why": "crates/cli/src/human.rs:79 pub fn parse_human_readable_size() parse la chaîne et applique le multiplicateur d'unité"
+    },
+    {
+      "q": "Où ripgrep lit-il la liste de motifs de recherche fournie via un fichier avec l'option -f ?",
+      "expect": ["crates/cli/src/pattern.rs"],
+      "tag": "fr",
+      "why": "crates/cli/src/pattern.rs:82 pub fn patterns_from_path() lit le fichier ligne par ligne pour construire les motifs"
+    },
+    {
+      "q": "Comment ripgrep verrouille-t-il la sortie standard pour éviter que les messages d'erreur sur stderr ne s'entremêlent avec les résultats ?",
+      "expect": ["crates/core/messages.rs"],
+      "tag": "fr",
+      "why": "crates/core/messages.rs:33 macro eprintln_locked! verrouille stdout avant d'écrire sur stderr pour éviter l'entrelacement"
+    },
+    {
+      "q": "Matcher trait definition find_at is_match capture group semantics",
+      "expect": ["crates/matcher/src/lib.rs"],
+      "tag": "tech",
+      "why": "crates/matcher/src/lib.rs:546 pub trait Matcher defines find_at, is_match and the capture-group API all backends implement"
+    },
+    {
+      "q": "non_matching_bytes ByteSet Hir",
+      "expect": ["crates/regex/src/non_matching.rs"],
+      "tag": "tech",
+      "why": "crates/regex/src/non_matching.rs:10 pub(crate) fn non_matching_bytes(expr: &Hir) -> ByteSet builds a confirmed non-matching byte set"
+    },
+    {
+      "q": "WalkParallel struct run WalkState",
+      "expect": ["crates/ignore/src/walk.rs"],
+      "tag": "tech",
+      "why": "crates/ignore/src/walk.rs:1352 pub struct WalkParallel and its run() method at line 1369 drive the multi-threaded directory walk"
+    },
+    {
+      "q": "JSONSink struct definition",
+      "expect": ["crates/printer/src/json.rs"],
+      "tag": "tech",
+      "why": "crates/printer/src/json.rs:596 pub struct JSONSink<'p, 's, M: Matcher, W> implements Sink for the JSON printer"
+    }
+  ]
+}

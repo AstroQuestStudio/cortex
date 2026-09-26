@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.3.0"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="cortex-${{ matrix.target }}"
+          mkdir -p dist/stage
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            cp "target/${{ matrix.target }}/release/cortex.exe" dist/stage/
+          else
+            cp "target/${{ matrix.target }}/release/cortex" dist/stage/
+          fi
+          cp README.md LICENSE CHANGELOG.md dist/stage/
+          cd dist/stage
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a -tzip "../$name.zip" . > /dev/null
+            echo "file=dist/$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "../$name.tar.gz" .
+            echo "file=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+      - name: smoke test
+        if: matrix.target != 'x86_64-apple-darwin' || runner.arch == 'X64'
+        shell: bash
+        run: ./dist/stage/cortex --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ steps.package.outputs.file }}
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        run: |
+          cd dist
+          sha256sum cortex-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: release notes
+        run: |
+          version="${TAG#v}"
+          # Section "## [<version>]" of the changelog, without the link references.
+          awk -v h="## [$version]" '
+            index($0, h) == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on && /^\[[^]]*\]: / { next }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "No CHANGELOG section for $version" > notes.md
+          fi
+          printf '\n---\nCortex is made by [AstroQuest](https://astroquest.fr). Checksums: `SHA256SUMS.txt`.\n' >> notes.md
+          cat notes.md
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --title "Cortex ${TAG#v}" --notes-file notes.md
+          fi

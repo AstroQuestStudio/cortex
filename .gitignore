@@ -1,0 +1,17 @@
+/target
+
+# Local, personal files (never committed)
+/.claude/
+/infra/
+/docs-all.txt
+/docs-sites.txt
+/docs-stack.txt
+/docs-stack-2.txt
+
+# Public benchmark: fetched repositories, their atlases, per-run JSON
+/bench/public/.repos/
+/bench/public/.cortex-home/
+/bench/public/results/*.json
+
+# npm package: downloaded binary
+/npm/vendor/

@@ -1,0 +1,44 @@
+[ 1] rang  1  where does Flask sign and encode the session cookie attendu src/flask/sessions.py
+[ 2] rang  1  how does Flask find the CLI auto-reload environment variables from a .env file attendu src/flask/cli.py
+[ 3] rang  1  where is a blueprint's URL prefix combined with its routes when it gets registered on the app attendu src/flask/sansio/blueprints.py | src/flask/sansio/app.py
+[ 4] rang  1  how does Flask decide which function handles an uncaught exception and turns it into a 500 response attendu src/flask/app.py
+[ 5] rang  5  where does the test client keep cookies between requests so a login session persists across calls attendu src/flask/testing.py
+        1. src/flask/app.py
+        2. examples/tutorial/tests/conftest.py
+        3. examples/tutorial/flaskr/auth.py
+[ 6] rang  1  what code renders a Jinja template and fires the template_rendered signal attendu src/flask/templating.py
+[ 7] rang  2  how are JSON responses serialized, e.g. what turns a dict returned from a view into a Response object attendu src/flask/json/__init__.py | src/flask/json/provider.py
+        1. src/flask/json/tag.py
+        2. src/flask/json/provider.py
+        3. src/flask/json/__init__.py
+[ 8] rang  1  how does class-based dispatch work, the View class that as_view converts to a route function attendu src/flask/views.py
+[ 9] rang  1  where does Flask load config values out of a Python file, like app.config.from_pyfile attendu src/flask/config.py
+[10] rang  1  what happens when a Flask app receives a WSGI request, the top-level entry point that runs before/after hooks and error handling attendu src/flask/app.py
+[11] rang  1  how does flash() store a message so it survives a redirect, and where does get_flashed_messages read it back attendu src/flask/helpers.py
+[12] rang  1  how does Flask push and pop the application context, and what happens to the g object when it's popped attendu src/flask/ctx.py
+[13] rang  1  où est chargée la configuration depuis un fichier ou une variable d'environnement dans Flask attendu src/flask/config.py
+[14] rang  3  où Flask envoie-t-il un fichier statique au navigateur, comme send_file attendu src/flask/helpers.py
+        1. src/flask/app.py
+        2. src/flask/blueprints.py
+        3. src/flask/helpers.py
+[15] rang  2  comment Flask retrouve-t-il l'application à lancer quand on fait 'flask run' sans préciser de module attendu src/flask/cli.py
+        1. src/flask/app.py
+        2. src/flask/cli.py
+        3. tests/test_cli.py
+[16] rang  -  où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence attendu src/flask/signals.py
+        1. src/flask/app.py
+        2. src/flask/testing.py
+        3. src/flask/cli.py
+[17] rang  4  SECRET_KEY_FALLBACKS                             attendu src/flask/sessions.py | src/flask/app.py
+        1. tests/test_basic.py
+        2. src/flask/cli.py
+        3. src/flask/debughelpers.py
+[18] rang  1  NoAppException Failed to find Flask application or factory attendu src/flask/cli.py
+[19] rang  1  BlueprintSetupState.add_url_rule                 attendu src/flask/sansio/blueprints.py
+[20] rang  1  DefaultJSONProvider                              attendu src/flask/json/provider.py
+
+== moteur atlas · 20 questions · 94 ms ==
+top-1 70.0%  top-5 95.0%  MRR 0.789
+  [en] n=12 top-1 83.3%  top-5 100.0%  MRR 0.892
+  [fr] n=4 top-1 25.0%  top-5 75.0%  MRR 0.458
+  [tech] n=4 top-1 75.0%  top-5 100.0%  MRR 0.812

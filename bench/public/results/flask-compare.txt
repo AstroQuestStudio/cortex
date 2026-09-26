@@ -1,0 +1,69 @@
+== Banc comparatif — bench-flask · 20 questions · 127 fichiers ==
+corpus relu : 127 fichiers, 19168 lignes, 0.6 Mio en 0.00s
+morceaux : 681 (40 lignes, recouvrement 10)
+dense : dim 256, 0 morceaux du cache, 681 calculés ; modèle chargé en 2.21s
+mesure de la construction d'un atlas Cortex complet…
+
+── Global (20 questions) ─ tokens = caractères/4 ; « 1er bon » = médiane sur les trouvées ; « moy. » = échec compté comme la sortie complète
+approche              top-1  top-5    MRR  lat méd  lat p95  1er bon     moy.    top-5   sortie
+rg-compte             10.0%  65.0%  0.347   0.82ms   1.30ms     8411    12623    12003    31624
+rg-termes             30.0%  85.0%  0.515   0.89ms   1.50ms     5141     7412     9700    31624
+bm25-fich             60.0%  95.0%  0.758   0.02ms   0.02ms        8       16       32      136
+rag-dense             55.0%  90.0%  0.702   0.25ms   0.30ms      417      812     2924     3570
+hybride               65.0%  95.0%  0.783   0.40ms   0.47ms      403      650     3940     3490
+cortex                70.0%  95.0%  0.789   8.56ms  12.27ms       14       56       62      752
+exp:cortex+dense      65.0%  95.0%  0.787   8.80ms  13.55ms        6       15       32      130
+exp:rerank20-dense    65.0%  95.0%  0.787   9.16ms  13.48ms        6       15       30      132
+exp:cortex+bm25       80.0%  95.0%  0.867   8.59ms  13.19ms        6       13       32      131
+exp:rerank20-bm25     75.0%  95.0%  0.829   7.81ms  12.28ms        6       14       32      132
+
+── Par catégorie : top-1 / top-5 / MRR
+approche                           fr (n=4)              en (n=12)             tech (n=4)
+rg-compte                  0% / 50% / 0.188       8% / 67% / 0.351      25% / 75% / 0.494
+rg-termes                  0% / 75% / 0.333      33% / 83% / 0.511     50% / 100% / 0.708
+bm25-fich                 25% / 75% / 0.458     67% / 100% / 0.819     75% / 100% / 0.875
+rag-dense                 50% / 50% / 0.542     67% / 100% / 0.833     25% / 100% / 0.467
+hybride                   75% / 75% / 0.750     67% / 100% / 0.819     50% / 100% / 0.708
+cortex                    25% / 75% / 0.458     83% / 100% / 0.892     75% / 100% / 0.812
+exp:cortex+dense          50% / 75% / 0.625     83% / 100% / 0.917     25% / 100% / 0.562
+exp:rerank20-dense        50% / 75% / 0.625     83% / 100% / 0.917     25% / 100% / 0.562
+exp:cortex+bm25           25% / 75% / 0.458     92% / 100% / 0.958    100% / 100% / 1.000
+exp:rerank20-bm25         25% / 75% / 0.396     92% / 100% / 0.958     75% / 100% / 0.875
+
+── Construction de l'index
+rg-compte                0.00s     1.2 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
+rg-termes                0.00s     1.2 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
+bm25-fich                0.01s     0.2 Mio  index inversé en RAM (taille estimée)
+rag-dense                2.22s   507.1 Mio  681 morceaux ; vecteurs 0.7 Mio + modèle 506.4 Mio ; embedding à froid 0.0s (rayon)
+hybride                  2.23s   507.5 Mio  dense + BM25 sur les mêmes morceaux, RRF k=60 sur les 3000 premiers de chaque
+cortex                   0.07s     0.8 Mio  atlas complet (rayon, 16 threads), segment rkyv
+exp:cortex+dense             —           —  RRF k=60 : 100 fichiers Cortex + 100 fichiers dense
+exp:rerank20-dense           —           —  top-20 Cortex re-classé par RRF(rang Cortex, rang dense)
+exp:cortex+bm25              —           —  RRF k=60 : 100 fichiers Cortex + 100 fichiers BM25 (contenu)
+exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF(rang Cortex, rang BM25 contenu)
+
+── Rang du bon fichier par question (- = absent du top-20)
+   # tag    a1  a2  a3  a4  a5  a6  a7  a8  a9 a10  question
+   1 en      2   5   2   1   1   1   1   1   1   1  where does Flask sign and encode the session cookie
+   2 en      2   1   1   2   1   1   1   1   1   1  how does Flask find the CLI auto-reload environment variables from a .env file
+   3 en      3   2   1   1   1   1   1   1   1   1  where is a blueprint's URL prefix combined with its routes when it gets registered on the app
+   4 en      1   1   2   1   1   1   1   1   1   1  how does Flask decide which function handles an uncaught exception and turns it into a 500 response
+   5 en     12   3   2   2   1   5   2   2   2   2  where does the test client keep cookies between requests so a login session persists across calls
+   6 en      3   1   3   1   2   1   1   1   1   1  what code renders a Jinja template and fires the template_rendered signal
+   7 en      9   4   1   2   2   2   2   2   1   1  how are JSON responses serialized, e.g. what turns a dict returned from a view into a Response object
+   8 en      6   7   1   1   1   1   1   1   1   1  how does class-based dispatch work, the View class that as_view converts to a route function
+   9 en     10   5   1   1   1   1   1   1   1   1  where does Flask load config values out of a Python file, like app.config.from_pyfile
+  10 en      2   1   1   1   3   1   1   1   1   1  what happens when a Flask app receives a WSGI request, the top-level entry point that runs before/after hooks and error handling
+  11 en      3   3   1   2   2   1   1   1   1   1  how does flash() store a message so it survives a redirect, and where does get_flashed_messages read it back
+  12 en      4   6   1   1   1   1   1   1   1   1  how does Flask push and pop the application context, and what happens to the g object when it's popped
+  13 fr     12   3   1   1   1   1   1   1   1   1  où est chargée la configuration depuis un fichier ou une variable d'environnement dans Flask
+  14 fr      3   2   3   1   1   3   2   2   3   4  où Flask envoie-t-il un fichier statique au navigateur, comme send_file
+  15 fr      3   2   2   6   1   2   1   1   2   3  comment Flask retrouve-t-il l'application à lancer quand on fait 'flask run' sans préciser de module
+  16 fr      -   -   -   -   -   -   -   -   -   -  où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence
+  17 tech    7   2   1   1   1   4   2   2   1   2  SECRET_KEY_FALLBACKS
+  18 tech    2   1   1   3   1   1   1   1   1   1  NoAppException Failed to find Flask application or factory
+  19 tech    1   1   1   3   2   1   2   2   1   1  BlueprintSetupState.add_url_rule
+  20 tech    3   3   2   5   3   1   4   4   1   1  DefaultJSONProvider
+      a1=rg-compte  a2=rg-termes  a3=bm25-fich  a4=rag-dense  a5=hybride  a6=cortex  a7=exp:cortex+dense  a8=exp:rerank20-dense  a9=exp:cortex+bm25  a10=exp:rerank20-bm25
+
+résultats : bench/public/results\comparatif-2026-09-26-9668092.json

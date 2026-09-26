@@ -1,0 +1,107 @@
+[package]
+name = "astroquest-cortex"
+version = "0.3.0"
+edition = "2021"
+authors = ["AstroQuest"]
+description = "Cortex by AstroQuest: the code-context engine for AI agents. Find, card, read, impact: understand a codebase in a few calls and ~10x fewer tokens than grep + read. CLI and MCP server."
+license = "MIT"
+repository = "https://github.com/AstroQuestStudio/cortex"
+homepage = "https://astroquest.fr/cortex"
+documentation = "https://github.com/AstroQuestStudio/cortex#readme"
+readme = "README.md"
+keywords = ["mcp", "code-search", "ai-agents", "code-intelligence", "context"]
+categories = ["command-line-utilities", "development-tools", "text-processing"]
+# Ce qui part sur crates.io : le code, le viewer embarqué, la doc de référence.
+# Jamais les bancs (ni publics : ils clonent des dépôts tiers ; ni privés).
+include = [
+    "/src/**/*.rs",
+    "/viewer/cortex-viewer.html",
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+    "/docs/SPEC.md",
+]
+
+[[bin]]
+name = "cortex"
+path = "src/main.rs"
+
+[dependencies]
+# Walk gitignore-aware (le crate de ripgrep) — n'indexe jamais node_modules/.git
+ignore = "0.4"
+# Parallélisme data (indexation multi-cœurs)
+rayon = "1.10"
+# CLI
+clap = { version = "4", features = ["derive"] }
+# Sérialisation (manifeste JSON, banc, MCP)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Hash rapide (détection de changement incrémental)
+blake3 = "1.5"
+# memchr (MIT/Unlicense, déjà tiré par `ignore`) : recherche de sous-chaîne SIMD
+# (memmem) pour `cortex grep` — un passage par fichier au lieu d'une copie en
+# minuscules PAR LIGNE.
+memchr = "2"
+
+# Tree-sitter : extraction de symboles robuste (vs regex). Grammars par langage.
+tree-sitter = "0.22"
+tree-sitter-typescript = "0.21"
+tree-sitter-javascript = "0.21"
+tree-sitter-python = "0.21"
+tree-sitter-rust = "0.21"
+tree-sitter-c-sharp = "0.21"
+tree-sitter-md = "0.2"
+
+# Scraper documentaire offline (Module B)
+ureq = { version = "2.10", features = ["tls"] }  # HTTP client léger blocking (pas de tokio)
+scraper = "0.20"                                  # parsing HTML + sélecteurs CSS
+ego-tree = "0.6"                                  # arbre DOM (utilisé par scraper)
+url = "2.5"                                       # résolution d'URLs relatives
+
+# Dashboard TUI du scraper batch (affichage live + contrôles clavier)
+crossterm = "0.27"                                # curseur terminal + lecture clavier non-bloquante
+
+# Atlas (Cortex 2, étape 1) : archives zero-copy + lecture par mmap.
+# rkyv (MIT/Apache-2.0) : sérialisation dont la forme sur disque EST la forme mémoire
+# (pas de désérialisation ⇒ ouverture en microsecondes au lieu de décoder 18 Mo bincode).
+rkyv = { version = "0.7", features = ["validation"] }
+# memmap2 (MIT/Apache-2.0) : mmap portable, lecture d'un segment sans le copier en RAM.
+memmap2 = "0.9"
+# mimalloc (MIT) : allocateur qui passe à l'échelle en multithread (mesuré sur
+# un monorepo de 8 000 fichiers à 8 threads, contre celui de Windows : construction −10 %, compaction −25 %).
+mimalloc = { version = "0.1", default-features = false }
+# fst (MIT/Unlicense) : automate sur le VOCABULAIRE trié — préfixe et Levenshtein en
+# O(longueur du terme), au lieu du balayage flou de tout le vocabulaire à chaque
+# requête (voir `atlas::query`, étape 3 de la mission Cortex 2).
+fst = { version = "0.4", features = ["levenshtein"] }
+
+# Banc comparatif (`cortex bench-compare`, architecture v2 §11) : RAG dense de
+# référence. Derrière la feature `bench` pour ne pas alourdir le binaire
+# principal. model2vec-rs (MIT) : embeddings statiques pur Rust ; son crate
+# `tokenizers` en `fancy-regex` (pas `onig`, qui ne compile pas sous MinGW),
+# sans téléchargement réseau (modèle lu dans un dossier local).
+model2vec-rs = { version = "0.3", default-features = false, features = ["fancy-regex"], optional = true }
+
+[features]
+default = []
+bench = ["dep:model2vec-rs"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+
+# Lints de style assumés (le reste de clippy est exigé par la CI avec -D warnings).
+[lints.clippy]
+doc_lazy_continuation = "allow"
+type_complexity = "allow"
+too_many_arguments = "allow"
+explicit_counter_loop = "allow"
+manual_strip = "allow"
+declare_interior_mutable_const = "allow"
+large_enum_variant = "allow"
+unnecessary_sort_by = "allow"
+sliced_string_as_bytes = "allow"

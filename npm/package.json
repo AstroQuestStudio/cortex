@@ -1,0 +1,28 @@
+{
+  "name": "astroquest-cortex",
+  "version": "0.3.0",
+  "description": "Cortex by AstroQuest: the code-context engine for AI agents (CLI + MCP server). This package downloads the native binary from the GitHub release.",
+  "mcpName": "io.github.AstroQuestStudio/cortex",
+  "license": "MIT",
+  "author": "AstroQuest (https://astroquest.fr)",
+  "homepage": "https://astroquest.fr/cortex",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AstroQuestStudio/cortex.git",
+    "directory": "npm"
+  },
+  "bugs": "https://github.com/AstroQuestStudio/cortex/issues",
+  "keywords": ["mcp", "mcp-server", "code-search", "ai-agents", "claude", "cursor", "code-intelligence"],
+  "bin": {
+    "cortex": "bin/cortex.js"
+  },
+  "files": ["bin/", "install.js", "README.md"],
+  "scripts": {
+    "postinstall": "node install.js --postinstall"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": ["linux", "darwin", "win32"],
+  "cpu": ["x64", "arm64"]
+}

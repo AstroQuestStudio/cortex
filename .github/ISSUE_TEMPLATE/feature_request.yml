@@ -1,0 +1,21 @@
+name: Feature request
+description: A tool, a language, an output or an integration you need.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The agent's question you cannot answer today
+      description: Describe the task (e.g. "which SQL tables does this endpoint write?"), not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Tool, input and output you imagine. See docs/SPEC.md for the current formats.
+  - type: textarea
+    id: measure
+    attributes:
+      label: How would we measure it?
+      description: Cortex adopts changes with numbers (relevance, tokens, calls, latency). What would prove it helps?

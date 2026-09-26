@@ -1,0 +1,50 @@
+[ 1] rang  2  where are signed cookies verified against their HMAC signature attendu src/utils/cookie.ts
+        1. src/utils/jwt/jws.ts
+        2. src/utils/cookie.ts
+        3. src/utils/jwt/jwt.ts
+[ 2] rang 18  how does Hono automatically pick the fastest router implementation at runtime attendu src/router/smart-router/router.ts
+        1. src/hono-base.ts
+        2. src/hono.ts
+        3. src/router.ts
+[ 3] rang  2  how does the trie-based router walk path segments to find a matching node attendu src/router/trie-router/node.ts | src/router/trie-router/router.ts
+        1. src/helper/route/index.ts
+        2. src/router/trie-router/router.ts
+        3. src/hono-base.ts
+[ 4] rang  1  where is a JWT checked for expiration and unsupported algorithms attendu src/utils/jwt/jwt.ts | src/utils/jwt/types.ts
+[ 5] rang  1  how does the CSRF middleware decide whether a request's origin is allowed attendu src/middleware/csrf/index.ts
+[ 6] rang  1  where does hono compute and compare the ETag header for caching responses attendu src/middleware/etag/index.ts
+[ 7] rang  1  how does the compress middleware choose between gzip and deflate encoding attendu src/middleware/compress/index.ts
+[ 8] rang  3  where does the streaming helper abort the stream when the client disconnects attendu src/helper/streaming/stream.ts
+        1. src/utils/stream.ts
+        2. src/jsx/streaming.ts
+        3. src/helper/streaming/stream.ts
+[ 9] rang  2  how is the useState hook implemented for hono's own JSX runtime attendu src/jsx/hooks/index.ts
+        1. src/jsx/dom/hooks/index.ts
+        2. src/jsx/hooks/index.ts
+        3. src/jsx/jsx-runtime.ts
+[10] rang  7  how does the type-safe RPC client build a fetch request from the app's route types attendu src/client/client.ts
+        1. src/client/types.ts
+        2. src/adapter/service-worker/index.ts
+        3. src/client/fetch-result-please.ts
+[11] rang  4  where does the static site generation helper turn app routes into files on disk attendu src/helper/ssg/ssg.ts
+        1. src/helper/route/index.ts
+        2. src/helper/ssg/utils.ts
+        3. src/helper/dev/index.ts
+[12] rang  1  where does basic auth compare the supplied username and password without timing leaks attendu src/middleware/basic-auth/index.ts | src/utils/buffer.ts
+[13] rang  1  où est limitée la taille maximale du corps d'une requête attendu src/middleware/body-limit/index.ts
+[14] rang  1  où est construit l'en-tête Content-Security-Policy des réponses attendu src/middleware/secure-headers/secure-headers.ts
+[15] rang  1  où est détectée la langue préférée du client à partir de l'en-tête Accept-Language attendu src/middleware/language/language.ts
+[16] rang  1  où le helper de test simule-t-il des requêtes vers une app Hono sans lancer de serveur attendu src/helper/testing/index.ts
+[17] rang  1  JwtTokenExpired                                  attendu src/utils/jwt/types.ts
+[18] rang 13  createMiddleware                                 attendu src/helper/factory/index.ts
+        1. benchmarks/jsx-dom/benchmark.ts
+        2. src/middleware/cache/index.ts
+        3. src/middleware/jsx-renderer/index.ts
+[19] rang  1  UnsupportedPathError                             attendu src/router.ts
+[20] rang  1  defaultTimeoutException 504                      attendu src/middleware/timeout/index.ts
+
+== moteur atlas · 20 questions · 94 ms ==
+top-1 60.0%  top-5 85.0%  MRR 0.718
+  [en] n=12 top-1 41.7%  top-5 83.3%  MRR 0.607
+  [fr] n=4 top-1 100.0%  top-5 100.0%  MRR 1.000
+  [tech] n=4 top-1 75.0%  top-5 75.0%  MRR 0.769

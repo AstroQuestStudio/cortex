@@ -1,0 +1,128 @@
+{
+  "project": "bench-flask",
+  "repo": "https://github.com/pallets/flask",
+  "commit": "22d924701a6ae2e4cd01e9a15bbaf3946094af65",
+  "written": "2026-09-27, before any run of Cortex on this repository",
+  "queries": [
+    {
+      "q": "where does Flask sign and encode the session cookie",
+      "expect": ["src/flask/sessions.py"],
+      "tag": "en",
+      "why": "src/flask/sessions.py:303 get_signing_serializer builds a URLSafeTimedSerializer with app.secret_key"
+    },
+    {
+      "q": "how does Flask find the CLI auto-reload environment variables from a .env file",
+      "expect": ["src/flask/cli.py"],
+      "tag": "en",
+      "why": "src/flask/cli.py:706 def load_dotenv reads .env/.flaskenv files"
+    },
+    {
+      "q": "where is a blueprint's URL prefix combined with its routes when it gets registered on the app",
+      "expect": ["src/flask/sansio/blueprints.py", "src/flask/sansio/app.py"],
+      "tag": "en",
+      "why": "src/flask/sansio/blueprints.py:34 class BlueprintSetupState handles url_prefix joining; sansio/app.py:570 register_blueprint calls it"
+    },
+    {
+      "q": "how does Flask decide which function handles an uncaught exception and turns it into a 500 response",
+      "expect": ["src/flask/app.py"],
+      "tag": "en",
+      "why": "src/flask/app.py:811 def handle_exception builds the InternalServerError response"
+    },
+    {
+      "q": "where does the test client keep cookies between requests so a login session persists across calls",
+      "expect": ["src/flask/testing.py"],
+      "tag": "en",
+      "why": "src/flask/testing.py:109 class FlaskClient(Client) with cookie jar handling in open()"
+    },
+    {
+      "q": "what code renders a Jinja template and fires the template_rendered signal",
+      "expect": ["src/flask/templating.py"],
+      "tag": "en",
+      "why": "src/flask/templating.py:127 def _render calls template_rendered.send after rendering"
+    },
+    {
+      "q": "how are JSON responses serialized, e.g. what turns a dict returned from a view into a Response object",
+      "expect": ["src/flask/json/__init__.py", "src/flask/json/provider.py"],
+      "tag": "en",
+      "why": "src/flask/json/__init__.py:138 def jsonify builds a Response using the app's json provider"
+    },
+    {
+      "q": "how does class-based dispatch work, the View class that as_view converts to a route function",
+      "expect": ["src/flask/views.py"],
+      "tag": "en",
+      "why": "src/flask/views.py:16 class View and its as_view classmethod"
+    },
+    {
+      "q": "where does Flask load config values out of a Python file, like app.config.from_pyfile",
+      "expect": ["src/flask/config.py"],
+      "tag": "en",
+      "why": "src/flask/config.py:187 def from_pyfile executes the file and copies uppercase names into config"
+    },
+    {
+      "q": "what happens when a Flask app receives a WSGI request, the top-level entry point that runs before/after hooks and error handling",
+      "expect": ["src/flask/app.py"],
+      "tag": "en",
+      "why": "src/flask/app.py:1479 def wsgi_app is the actual WSGI application called by __call__"
+    },
+    {
+      "q": "how does flash() store a message so it survives a redirect, and where does get_flashed_messages read it back",
+      "expect": ["src/flask/helpers.py"],
+      "tag": "en",
+      "why": "src/flask/helpers.py:318 def flash stores into session['_flashes']; get_flashed_messages at line 352 reads it"
+    },
+    {
+      "q": "how does Flask push and pop the application context, and what happens to the g object when it's popped",
+      "expect": ["src/flask/ctx.py"],
+      "tag": "en",
+      "why": "src/flask/ctx.py:238 class AppContext with push()/pop() at lines 251/256, resetting self.g"
+    },
+    {
+      "q": "où est chargée la configuration depuis un fichier ou une variable d'environnement dans Flask",
+      "expect": ["src/flask/config.py"],
+      "tag": "fr",
+      "why": "src/flask/config.py:102 def from_envvar lit le chemin d'un fichier depuis une variable d'environnement puis appelle from_pyfile"
+    },
+    {
+      "q": "où Flask envoie-t-il un fichier statique au navigateur, comme send_file",
+      "expect": ["src/flask/helpers.py"],
+      "tag": "fr",
+      "why": "src/flask/helpers.py:407 def send_file construit la réponse de fichier avec les en-têtes de cache"
+    },
+    {
+      "q": "comment Flask retrouve-t-il l'application à lancer quand on fait 'flask run' sans préciser de module",
+      "expect": ["src/flask/cli.py"],
+      "tag": "fr",
+      "why": "src/flask/cli.py:41 def find_best_app cherche 'app'/'application' puis une factory create_app à la ligne 67"
+    },
+    {
+      "q": "où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence",
+      "expect": ["src/flask/signals.py"],
+      "tag": "fr",
+      "why": "src/flask/signals.py:9 request_started = _signals.signal('request-started')"
+    },
+    {
+      "q": "SECRET_KEY_FALLBACKS",
+      "expect": ["src/flask/sessions.py", "src/flask/app.py"],
+      "tag": "tech",
+      "why": "src/flask/sessions.py:308-312 reads app.config['SECRET_KEY_FALLBACKS'] to build the itsdangerous key list; default set in app.py:184"
+    },
+    {
+      "q": "NoAppException Failed to find Flask application or factory",
+      "expect": ["src/flask/cli.py"],
+      "tag": "tech",
+      "why": "src/flask/cli.py:87-89 raises NoAppException with that exact message text when no app/factory is found"
+    },
+    {
+      "q": "BlueprintSetupState.add_url_rule",
+      "expect": ["src/flask/sansio/blueprints.py"],
+      "tag": "tech",
+      "why": "src/flask/sansio/blueprints.py:34 class BlueprintSetupState defines add_url_rule used during deferred blueprint registration"
+    },
+    {
+      "q": "DefaultJSONProvider",
+      "expect": ["src/flask/json/provider.py"],
+      "tag": "tech",
+      "why": "src/flask/json/provider.py:124 class DefaultJSONProvider(JSONProvider) implements dumps/loads with Flask's default JSON behavior"
+    }
+  ]
+}

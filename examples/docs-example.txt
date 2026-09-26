@@ -1,0 +1,21 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Cortex — example config for `cortex docs batch`
+# Format : nom | url | max_pages? | lang?
+#   lang : en (défaut, anglais only) · fr (garde FR+EN, pour conformité) · * (toutes)
+#
+# Lancer :  cortex docs batch examples/docs-example.txt --concurrency 16
+#   Auto-relance ON : chaque site finit seul. Contrôles : ↑↓←→ +/- p/r R a [ ] q
+# ════════════════════════════════════════════════════════════════════════════
+
+# Quelques docs populaires, scrapables (SSR/SSG, pas de SPA pure) :
+React           | https://react.dev/reference/react               | 600
+TailwindCSS     | https://tailwindcss.com/docs/installation         | 600
+Tauri           | https://v2.tauri.app/                             | 1100
+PostgreSQL      | https://www.postgresql.org/docs/16/               | 1500
+RustBook        | https://doc.rust-lang.org/book/                   | 250
+
+# Sites en français (garde le contenu FR) :
+# CNIL          | https://www.cnil.fr/fr/...                        | 400 | fr
+
+# ⚠ Les SPA pures (contenu rendu en JS, ex zod.dev, threejs.org/docs) renvoient
+#   peu/pas de contenu sans navigateur headless → préférer leur source GitHub.
