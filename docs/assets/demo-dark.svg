@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="454" viewBox="0 0 900 454" role="img" aria-labelledby="t d">
+<title id="t">Cortex terminal session on hono</title>
+<desc id="d">Four chained calls: cortex find locates parseFormData, card shows its signature, callers and tests, read prints lines 126-150, impact lists 10 dependents and the 4 test files to rerun. About 1,070 tokens in total, versus about 9,000 with grep and file reads.</desc>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono","DejaVu Sans Mono",monospace;font-size:14px;white-space:pre;fill:#e6edf3}
+.cm{font-weight:600}.dm{fill:#8b949e}.id{fill:#a5b4fc}.nx{fill:#e3b341;font-weight:600}.pr{fill:#3fb950;font-weight:700}
+.cur{fill:#e6edf3}.ti{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:12.5px;fill:#8b949e}
+@keyframes v0{0%,0.597%{opacity:0}0.617%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v0{animation:v0 33.51s infinite}
+@keyframes v1{0%,0.597%{opacity:0}0.617%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v1{animation:v1 33.51s infinite}
+@keyframes k0{0%{transform:translateX(0);opacity:0}0.597%{opacity:0}0.617%{opacity:1}1.940%{transform:translateX(0);animation-timing-function:steps(59,end)}7.013%{transform:translateX(495.6px);opacity:1}7.033%{opacity:0}100%{transform:translateX(495.6px);opacity:0}}
+.k0{animation:k0 33.51s infinite}
+@keyframes v2{0%,7.909%{opacity:0}7.929%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v2{animation:v2 33.51s infinite}
+@keyframes v3{0%,8.058%{opacity:0}8.078%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v3{animation:v3 33.51s infinite}
+@keyframes v4{0%,8.207%{opacity:0}8.227%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v4{animation:v4 33.51s infinite}
+@keyframes v5{0%,8.356%{opacity:0}8.376%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v5{animation:v5 33.51s infinite}
+@keyframes v6{0%,8.505%{opacity:0}8.525%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v6{animation:v6 33.51s infinite}
+@keyframes v7{0%,8.655%{opacity:0}8.675%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v7{animation:v7 33.51s infinite}
+@keyframes v8{0%,8.804%{opacity:0}8.824%,18.652%{opacity:1}18.672%,100%{opacity:0}}
+.v8{animation:v8 33.51s infinite}
+@keyframes v9{0%,19.398%{opacity:0}19.418%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v9{animation:v9 33.51s infinite}
+@keyframes v10{0%,19.398%{opacity:0}19.418%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v10{animation:v10 33.51s infinite}
+@keyframes k1{0%{transform:translateX(0);opacity:0}19.398%{opacity:0}19.418%{opacity:1}20.741%{transform:translateX(0);animation-timing-function:steps(45,end)}25.307%{transform:translateX(378.0px);opacity:1}25.327%{opacity:0}100%{transform:translateX(378.0px);opacity:0}}
+.k1{animation:k1 33.51s infinite}
+@keyframes v11{0%,26.203%{opacity:0}26.223%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v11{animation:v11 33.51s infinite}
+@keyframes v12{0%,26.352%{opacity:0}26.372%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v12{animation:v12 33.51s infinite}
+@keyframes v13{0%,26.501%{opacity:0}26.521%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v13{animation:v13 33.51s infinite}
+@keyframes v14{0%,26.650%{opacity:0}26.670%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v14{animation:v14 33.51s infinite}
+@keyframes v15{0%,26.800%{opacity:0}26.820%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v15{animation:v15 33.51s infinite}
+@keyframes v16{0%,26.949%{opacity:0}26.969%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v16{animation:v16 33.51s infinite}
+@keyframes v17{0%,27.098%{opacity:0}27.118%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v17{animation:v17 33.51s infinite}
+@keyframes v18{0%,27.247%{opacity:0}27.267%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v18{animation:v18 33.51s infinite}
+@keyframes v19{0%,27.396%{opacity:0}27.416%,37.543%{opacity:1}37.563%,100%{opacity:0}}
+.v19{animation:v19 33.51s infinite}
+@keyframes v20{0%,38.289%{opacity:0}38.309%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v20{animation:v20 33.51s infinite}
+@keyframes v21{0%,38.289%{opacity:0}38.309%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v21{animation:v21 33.51s infinite}
+@keyframes k2{0%{transform:translateX(0);opacity:0}38.289%{opacity:0}38.309%{opacity:1}39.632%{transform:translateX(0);animation-timing-function:steps(45,end)}44.198%{transform:translateX(378.0px);opacity:1}44.218%{opacity:0}100%{transform:translateX(378.0px);opacity:0}}
+.k2{animation:k2 33.51s infinite}
+@keyframes v22{0%,45.094%{opacity:0}45.114%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v22{animation:v22 33.51s infinite}
+@keyframes v23{0%,45.243%{opacity:0}45.263%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v23{animation:v23 33.51s infinite}
+@keyframes v24{0%,45.392%{opacity:0}45.412%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v24{animation:v24 33.51s infinite}
+@keyframes v25{0%,45.541%{opacity:0}45.561%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v25{animation:v25 33.51s infinite}
+@keyframes v26{0%,45.691%{opacity:0}45.711%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v26{animation:v26 33.51s infinite}
+@keyframes v27{0%,45.840%{opacity:0}45.860%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v27{animation:v27 33.51s infinite}
+@keyframes v28{0%,45.989%{opacity:0}46.009%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v28{animation:v28 33.51s infinite}
+@keyframes v29{0%,46.138%{opacity:0}46.158%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v29{animation:v29 33.51s infinite}
+@keyframes v30{0%,46.287%{opacity:0}46.307%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v30{animation:v30 33.51s infinite}
+@keyframes v31{0%,46.437%{opacity:0}46.457%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v31{animation:v31 33.51s infinite}
+@keyframes v32{0%,46.586%{opacity:0}46.606%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v32{animation:v32 33.51s infinite}
+@keyframes v33{0%,46.735%{opacity:0}46.755%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v33{animation:v33 33.51s infinite}
+@keyframes v34{0%,46.884%{opacity:0}46.904%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v34{animation:v34 33.51s infinite}
+@keyframes v35{0%,47.034%{opacity:0}47.054%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v35{animation:v35 33.51s infinite}
+@keyframes v36{0%,47.183%{opacity:0}47.203%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v36{animation:v36 33.51s infinite}
+@keyframes v37{0%,47.332%{opacity:0}47.352%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v37{animation:v37 33.51s infinite}
+@keyframes v38{0%,47.481%{opacity:0}47.501%,58.822%{opacity:1}58.842%,100%{opacity:0}}
+.v38{animation:v38 33.51s infinite}
+@keyframes v39{0%,59.568%{opacity:0}59.588%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v39{animation:v39 33.51s infinite}
+@keyframes v40{0%,59.568%{opacity:0}59.588%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v40{animation:v40 33.51s infinite}
+@keyframes k3{0%{transform:translateX(0);opacity:0}59.568%{opacity:0}59.588%{opacity:1}60.911%{transform:translateX(0);animation-timing-function:steps(47,end)}65.680%{transform:translateX(394.8px);opacity:1}65.700%{opacity:0}100%{transform:translateX(394.8px);opacity:0}}
+.k3{animation:k3 33.51s infinite}
+@keyframes v41{0%,66.575%{opacity:0}66.595%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v41{animation:v41 33.51s infinite}
+@keyframes v42{0%,66.724%{opacity:0}66.744%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v42{animation:v42 33.51s infinite}
+@keyframes v43{0%,66.874%{opacity:0}66.894%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v43{animation:v43 33.51s infinite}
+@keyframes v44{0%,67.023%{opacity:0}67.043%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v44{animation:v44 33.51s infinite}
+@keyframes v45{0%,67.172%{opacity:0}67.192%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v45{animation:v45 33.51s infinite}
+@keyframes v46{0%,67.321%{opacity:0}67.341%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v46{animation:v46 33.51s infinite}
+@keyframes v47{0%,67.470%{opacity:0}67.490%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v47{animation:v47 33.51s infinite}
+@keyframes v48{0%,67.620%{opacity:0}67.640%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v48{animation:v48 33.51s infinite}
+@keyframes v49{0%,67.769%{opacity:0}67.789%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v49{animation:v49 33.51s infinite}
+@keyframes v50{0%,67.918%{opacity:0}67.938%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v50{animation:v50 33.51s infinite}
+@keyframes v51{0%,68.067%{opacity:0}68.087%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v51{animation:v51 33.51s infinite}
+@keyframes v52{0%,68.217%{opacity:0}68.237%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v52{animation:v52 33.51s infinite}
+@keyframes v53{0%,68.366%{opacity:0}68.386%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v53{animation:v53 33.51s infinite}
+@keyframes v54{0%,68.515%{opacity:0}68.535%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v54{animation:v54 33.51s infinite}
+@keyframes v55{0%,68.664%{opacity:0}68.684%,79.706%{opacity:1}79.726%,100%{opacity:0}}
+.v55{animation:v55 33.51s infinite}
+@keyframes v56{0%,80.452%{opacity:0}80.472%,99.254%{opacity:1}99.274%,100%{opacity:0}}
+.v56{animation:v56 33.51s infinite}
+@keyframes v57{0%,80.452%{opacity:0}80.472%,99.254%{opacity:1}99.274%,100%{opacity:0}}
+.v57{animation:v57 33.51s infinite}
+@keyframes k4{0%{transform:translateX(0);opacity:0}80.452%{opacity:0}80.472%{opacity:1}81.795%{transform:translateX(0);animation-timing-function:steps(89,end)}86.869%{transform:translateX(747.6px);opacity:1}86.889%{opacity:0}100%{transform:translateX(747.6px);opacity:0}}
+.k4{animation:k4 33.51s infinite}
+@keyframes v58{0%,87.764%{opacity:0}87.784%,99.254%{opacity:1}99.274%,100%{opacity:0}}
+.v58{animation:v58 33.51s infinite}
+@media (prefers-reduced-motion:reduce){.sc *{animation:none!important}.sc:not(.still){display:none}.mask{display:none}}</style>
+<rect x="0.5" y="0.5" width="899" height="453" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M0.5 10.5a10 10 0 0 1 10-10h879a10 10 0 0 1 10 10v22h-899z" fill="#1c2129"/>
+<line x1="0.5" y1="32.5" x2="899.5" y2="32.5" stroke="#30363d"/>
+<circle cx="20" cy="16.5" r="5.5" fill="#f85149"/><circle cx="38" cy="16.5" r="5.5" fill="#d29922"/><circle cx="56" cy="16.5" r="5.5" fill="#3fb950"/>
+<text x="450" y="21" text-anchor="middle" class="ti">hono · 421 files — 4 calls, ~1,070 tokens</text>
+<g class="sc"><text x="22" y="58" class="pr v0">$</text><text x="38.8" y="58" textLength="495.6" lengthAdjust="spacing" class="cm v1">cortex find "where is the request body parsed as form data"</text><g class="mask k0"><rect x="38.8" y="43" width="520.8" height="20" fill="#161b22"/><rect x="38.8" y="44" width="8.4" height="18" class="cur"/></g><text x="22" y="79" textLength="672.0" lengthAdjust="spacing" class="tx v2"><tspan class="id">S:src/utils/body.ts#parseFormData</tspan> fn L126-150 — Parses form data from a request.</text><text x="22" y="100" textLength="688.8" lengthAdjust="spacing" class="tx v3"><tspan class="id">S:src/request.ts#formData</tspan> method L334-336 — Parses the request body as `FormData`.</text><text x="22" y="121" textLength="848.4" lengthAdjust="spacing" class="tx v4"><tspan class="id">S:src/utils/body.ts#convertFormDataToBodyData</tspan> fn L160-189 — Converts form data to body data based on…</text><text x="22" y="142" textLength="840.0" lengthAdjust="spacing" class="tx v5"><tspan class="id">S:src/utils/body.ts#ParseBody</tspan> interface L90-94 — Parses the body of a request based on the provided…</text><text x="22" y="163" textLength="764.4" lengthAdjust="spacing" class="tx v6"><tspan class="id">S:src/middleware/body-limit/index.ts#bodyLimit</tspan> fn L50-111 — Body Limit Middleware for Hono.</text><text x="22" y="184" textLength="8.4" lengthAdjust="spacing" class="tx v7"><tspan class="dm">…</tspan></text><text x="22" y="205" textLength="386.4" lengthAdjust="spacing" class="tx v8"><tspan class="dm">suite : </tspan><tspan class="nx">card S:src/utils/body.ts#parseFormData</tspan></text></g>
+<g class="sc still"><text x="22" y="58" class="pr v9">$</text><text x="38.8" y="58" textLength="378.0" lengthAdjust="spacing" class="cm v10">cortex card <tspan class="id">S:src/utils/body.ts#parseFormData</tspan></text><g class="mask k1"><rect x="38.8" y="43" width="403.2" height="20" fill="#161b22"/><rect x="38.8" y="44" width="8.4" height="18" class="cur"/></g><text x="22" y="79" textLength="378.0" lengthAdjust="spacing" class="tx v11"><tspan class="id">S:src/utils/body.ts#parseFormData</tspan><tspan class="dm"> fn L126-150</tspan></text><text x="22" y="100" textLength="814.8" lengthAdjust="spacing" class="tx v12"><tspan class="dm">sig:</tspan> async function parseFormData&lt;T extends BodyData&gt;( request: HonoRequest | Request, options: …</text><text x="22" y="121" textLength="319.2" lengthAdjust="spacing" class="tx v13"><tspan class="dm">rôle:</tspan> Parses form data from a request.</text><text x="22" y="142" textLength="823.2" lengthAdjust="spacing" class="tx v14"><tspan class="dm">appelle 3 (+1 ambigu): </tspan><tspan class="id">S:src/utils/body.ts#isRawRequest</tspan>, <tspan class="id">S:src/utils/body.ts#convertFormDataToBod…</tspan></text><text x="22" y="163" textLength="697.2" lengthAdjust="spacing" class="tx v15"><tspan class="dm">appelé par 1 (1 fichiers, L = ligne de l'appel): </tspan><tspan class="id">S:src/utils/body.ts#parseBody</tspan><tspan class="dm"> L112</tspan></text><text x="22" y="184" textLength="268.8" lengthAdjust="spacing" class="tx v16"><tspan class="dm">fichier importé par 4 fichier(s)</tspan></text><text x="22" y="205" textLength="260.4" lengthAdjust="spacing" class="tx v17"><tspan class="dm">tests: </tspan><tspan class="id">F:src/utils/body.test.ts</tspan></text><text x="22" y="226" textLength="823.2" lengthAdjust="spacing" class="tx v18"><tspan class="dm">autres exports du fichier 3: </tspan><tspan class="id">S:src/utils/body.ts#BodyData</tspan>, <tspan class="id">S:src/utils/body.ts#ParseBodyOptions</tspan><tspan class="dm">, …</tspan></text><text x="22" y="247" textLength="386.4" lengthAdjust="spacing" class="tx v19"><tspan class="dm">suite : </tspan><tspan class="nx">read S:src/utils/body.ts#parseFormData</tspan></text></g>
+<g class="sc"><text x="22" y="58" class="pr v20">$</text><text x="38.8" y="58" textLength="378.0" lengthAdjust="spacing" class="cm v21">cortex read <tspan class="id">S:src/utils/body.ts#parseFormData</tspan></text><g class="mask k2"><rect x="38.8" y="43" width="403.2" height="20" fill="#161b22"/><rect x="38.8" y="44" width="8.4" height="18" class="cur"/></g><text x="22" y="79" textLength="378.0" lengthAdjust="spacing" class="tx v22"><tspan class="id">S:src/utils/body.ts#parseFormData</tspan><tspan class="dm"> fn L126-150</tspan></text><text x="22" y="100" textLength="445.2" lengthAdjust="spacing" class="tx v23"><tspan class="dm">126│</tspan>async function parseFormData&lt;T extends BodyData&gt;(</text><text x="22" y="121" textLength="310.8" lengthAdjust="spacing" class="tx v24"><tspan class="dm">127│</tspan>  request: HonoRequest | Request,</text><text x="22" y="142" textLength="260.4" lengthAdjust="spacing" class="tx v25"><tspan class="dm">128│</tspan>  options: ParseBodyOptions</text><text x="22" y="163" textLength="159.6" lengthAdjust="spacing" class="tx v26"><tspan class="dm">129│</tspan>): Promise&lt;T&gt; {</text><text x="22" y="184" textLength="546.0" lengthAdjust="spacing" class="tx v27"><tspan class="dm">130│</tspan>  if (!isRawRequest(request) &amp;&amp; request.bodyCache.formData) {</text><text x="22" y="205" textLength="369.6" lengthAdjust="spacing" class="tx v28"><tspan class="dm">131│</tspan>    return convertFormDataToBodyData&lt;T&gt;(</text><text x="22" y="226" textLength="646.8" lengthAdjust="spacing" class="tx v29"><tspan class="dm">132│</tspan>      await (request.bodyCache.formData as FormData | Promise&lt;FormData&gt;),</text><text x="22" y="247" textLength="142.8" lengthAdjust="spacing" class="tx v30"><tspan class="dm">133│</tspan>      options</text><text x="22" y="268" textLength="75.6" lengthAdjust="spacing" class="tx v31"><tspan class="dm">134│</tspan>    )</text><text x="22" y="289" textLength="58.8" lengthAdjust="spacing" class="tx v32"><tspan class="dm">135│</tspan>  }</text><text x="22" y="310" textLength="697.2" lengthAdjust="spacing" class="tx v33"><tspan class="dm">136│</tspan>  const headers = isRawRequest(request) ? request.headers : request.raw.headers</text><text x="22" y="331" textLength="554.4" lengthAdjust="spacing" class="tx v34"><tspan class="dm">137│</tspan>  const arrayBuffer = await (request as Request).arrayBuffer()</text><text x="22" y="352" textLength="789.6" lengthAdjust="spacing" class="tx v35"><tspan class="dm">138│</tspan>  const formDataPromise = bufferToFormData(arrayBuffer, headers.get('Content-Type') || '')</text><text x="22" y="373" textLength="33.6" lengthAdjust="spacing" class="tx v36"><tspan class="dm">   …</tspan></text><text x="22" y="394" textLength="42.0" lengthAdjust="spacing" class="tx v37"><tspan class="dm">150│</tspan>}</text><text x="22" y="415" textLength="403.2" lengthAdjust="spacing" class="tx v38"><tspan class="dm">suite : </tspan><tspan class="nx">impact S:src/utils/body.ts#parseFormData</tspan></text></g>
+<g class="sc"><text x="22" y="58" class="pr v39">$</text><text x="38.8" y="58" textLength="394.8" lengthAdjust="spacing" class="cm v40">cortex impact <tspan class="id">S:src/utils/body.ts#parseFormData</tspan></text><g class="mask k3"><rect x="38.8" y="43" width="420.0" height="20" fill="#161b22"/><rect x="38.8" y="44" width="8.4" height="18" class="cur"/></g><text x="22" y="79" textLength="436.8" lengthAdjust="spacing" class="tx v41">impact <tspan class="id">S:src/utils/body.ts#parseFormData</tspan><tspan class="dm"> fn L126-150</tspan></text><text x="22" y="100" textLength="378.0" lengthAdjust="spacing" class="tx v42"><tspan class="dm">10 dépendant(s) sur 3 niveau(x), 9 fichier(s)</tspan></text><text x="22" y="121" textLength="772.8" lengthAdjust="spacing" class="tx v43"><tspan class="dm">tests à relancer 4: </tspan><tspan class="id">F:src/middleware/method-override/index.test.ts</tspan>, <tspan class="id">F:src/request.test.ts</tspan><tspan class="dm">, …</tspan></text><text x="22" y="142" textLength="428.4" lengthAdjust="spacing" class="tx v44">profondeur 1 — 1 (1 fichiers), L = ligne de l'appel</text><text x="22" y="163" textLength="302.4" lengthAdjust="spacing" class="tx v45">  <tspan class="id">S:src/utils/body.ts#parseBody</tspan><tspan class="dm"> L112</tspan></text><text x="22" y="184" textLength="243.6" lengthAdjust="spacing" class="tx v46">profondeur 2 — 3 (3 fichiers)</text><text x="22" y="205" textLength="361.2" lengthAdjust="spacing" class="tx v47">  <tspan class="id">F:src/middleware/method-override/index.ts</tspan></text><text x="22" y="226" textLength="151.2" lengthAdjust="spacing" class="tx v48">  <tspan class="id">F:src/request.ts</tspan></text><text x="22" y="247" textLength="218.4" lengthAdjust="spacing" class="tx v49">  <tspan class="id">F:src/utils/body.test.ts</tspan></text><text x="22" y="268" textLength="243.6" lengthAdjust="spacing" class="tx v50">profondeur 3 — 6 (6 fichiers)</text><text x="22" y="289" textLength="151.2" lengthAdjust="spacing" class="tx v51">  <tspan class="id">F:src/context.ts</tspan></text><text x="22" y="310" textLength="277.2" lengthAdjust="spacing" class="tx v52">  <tspan class="id">F:src/middleware/cache/index.ts</tspan></text><text x="22" y="331" textLength="176.4" lengthAdjust="spacing" class="tx v53">  <tspan class="id">F:src/utils/body.ts</tspan></text><text x="22" y="352" textLength="25.2" lengthAdjust="spacing" class="tx v54"><tspan class="dm">  …</tspan></text><text x="22" y="373" textLength="352.8" lengthAdjust="spacing" class="tx v55"><tspan class="dm">suite : </tspan><tspan class="nx">read S:src/utils/body.ts#parseBody</tspan></text></g>
+<g class="sc"><text x="22" y="58" class="pr v56">$</text><text x="38.8" y="58" textLength="747.6" lengthAdjust="spacing" class="dm v57"><tspan class="dm"># 4 calls, </tspan><tspan class="nx">~1,070 tokens</tspan><tspan class="dm">: location, signature, callers, code, dependents, tests to rerun.</tspan></text><g class="mask k4"><rect x="38.8" y="43" width="772.8" height="20" fill="#161b22"/><rect x="38.8" y="44" width="8.4" height="18" class="cur"/></g><text x="22" y="79" class="pr v58">$</text><text x="38.8" y="79" textLength="680.4" lengthAdjust="spacing" class="dm v58"><tspan class="dm"># grep + read to the same point: </tspan><tspan class="nx">~9,000 tokens</tspan><tspan class="dm">, and still no dependents or tests.</tspan></text></g>
+</svg>

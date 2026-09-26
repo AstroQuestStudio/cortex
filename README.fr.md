@@ -6,7 +6,20 @@
 find, card, read, impact : un agent comprend une base de code en quelques appels et avec ~10 fois
 moins de tokens que grep + lecture de fichiers. Local, instantané, open source.
 
-**par [AstroQuest](https://astroquest.fr)** · [English](README.md) · [Spécification](docs/SPEC.md) · [Bancs](docs/BENCHMARKS.md) · [Architecture](docs/ARCHITECTURE.md)
+[![CI](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml/badge.svg)](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/AstroQuestStudio/cortex?sort=semver)](https://github.com/AstroQuestStudio/cortex/releases/latest)
+[![Téléchargements](https://img.shields.io/github/downloads/AstroQuestStudio/cortex/total?label=t%C3%A9l%C3%A9chargements)](https://github.com/AstroQuestStudio/cortex/releases)
+[![Licence : MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![Serveur MCP](https://img.shields.io/badge/MCP-serveur-8A2BE2)](#brancher-son-agent)
+
+**par [AstroQuest](https://astroquest.fr)** · [astroquest.fr/cortex](https://astroquest.fr/cortex) · [English](README.md) · [Spécification](docs/SPEC.md) · [Bancs](docs/BENCHMARKS.md) · [Architecture](docs/ARCHITECTURE.md)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.svg">
+  <img src="docs/assets/demo-light.svg" width="900" alt="Une session Cortex sur hono : find trouve parseFormData, card montre sa signature, ses appelants et ses tests, read affiche la fonction, impact liste 10 dépendants et 4 tests à relancer. Environ 1 070 tokens, contre environ 9 000 avec grep et lecture de fichiers.">
+</picture>
+
+<sub>Une vraie session sur <a href="https://github.com/honojs/hono">hono</a> (421 fichiers), rejouée à partir des sorties de Cortex 0.3.0. Transcription complète <a href="#une-vraie-session">plus bas</a>.</sub>
 
 </div>
 
@@ -18,9 +31,95 @@ grep encore, en ouvrir un autre. Cortex indexe le dépôt une fois (quelques sec
 vraiment les agents — *où est X, c'est quoi, qui l'appelle, qu'est-ce qui casse si je le change* —
 par des sorties courtes et enchaînables.
 
+## Installation
+
+**Linux, macOS**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/AstroQuestStudio/cortex/main/install.sh | sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/AstroQuestStudio/cortex/main/install.ps1 | iex
+```
+
+Les deux scripts téléchargent le binaire de votre plateforme depuis la
+[dernière release](https://github.com/AstroQuestStudio/cortex/releases/latest), **refusent de
+l'installer si son SHA-256 ne correspond pas à `SHA256SUMS.txt`**, et ne demandent jamais de
+droits administrateur : `~/.local/bin` sous Linux et macOS (le script signale si ce dossier
+n'est pas dans le `PATH`, il ne modifie pas votre profil shell), `%LOCALAPPDATA%\cortex\bin`
+sous Windows (ajouté au `PATH` *utilisateur*). À lire avant si vous le souhaitez :
+[install.sh](install.sh), [install.ps1](install.ps1). Options : `CORTEX_INSTALL_DIR`,
+`CORTEX_VERSION` (et `CORTEX_NO_MODIFY_PATH=1` sous Windows).
+
+<details>
+<summary>Binaires précompilés, ou compilation depuis les sources</summary>
+
+| Plateforme | Archive (de la [dernière release](https://github.com/AstroQuestStudio/cortex/releases/latest)) |
+|---|---|
+| Linux x86_64 (glibc 2.35+ : Ubuntu 22.04, Debian 12 ou plus récent) | `cortex-x86_64-unknown-linux-gnu.tar.gz` |
+| macOS Apple silicon | `cortex-aarch64-apple-darwin.tar.gz` |
+| macOS Intel | `cortex-x86_64-apple-darwin.tar.gz` |
+| Windows x86_64 | `cortex-x86_64-pc-windows-msvc.zip` |
+
+Chaque archive contient le binaire `cortex`, le README, la licence et le changelog ; les sommes
+de contrôle sont dans `SHA256SUMS.txt`. Depuis les sources (Rust stable et un compilateur C,
+pour les grammaires tree-sitter) :
+
+```sh
+cargo install --locked --git https://github.com/AstroQuestStudio/cortex
+```
+
+Les paquets crates.io et npm (`astroquest-cortex`) sont prêts dans ce dépôt mais pas encore
+publiés.
+
+</details>
+
+Puis indexer un projet et l'interroger :
+
+```sh
+cd mon-projet
+cortex index . --name MonProjet     # quelques secondes ; l'index se tient ensuite à jour seul
+cortex find "où sont signées les sessions"
+```
+
+## Mesuré, pas promis
+
+**Banc public** : 60 questions sur [flask](https://github.com/pallets/flask) (Python),
+[hono](https://github.com/honojs/hono) (TypeScript) et
+[ripgrep](https://github.com/BurntSushi/ripgrep) (Rust) à des commits épinglés, écrites par des
+personnes qui n'ont jamais vu une sortie de Cortex, avant tout passage de Cortex sur ces dépôts.
+Même corpus, même juge pour chaque approche. Rejouable par tous :
+[`bench/public/run.sh`](bench/public/run.sh).
+
+| Approche | top-1 | top-5 | MRR | tokens lus avant le bon fichier (médiane par dépôt) |
+|---|---:|---:|---:|---:|
+| grep par mots-clés (`rg`, fichiers classés par mots distincts) | 16,7 % | 58,3 % | 0,345 | 5 141 – 31 710 |
+| RAG dense (morceaux de 40 lignes, model2vec) | 38,3 % | 68,3 % | 0,516 | 417 – 1 782 |
+| RAG hybride (BM25 + dense, RRF) | 41,7 % | 81,7 % | 0,580 | 403 – 1 270 |
+| BM25 sur les fichiers entiers | 50,0 % | 78,3 % | 0,625 | 8 – 22 |
+| **Cortex 0.3.0** | **55,0 %** | **88,3 %** | **0,685** | **14 – 29** |
+
+Là où Cortex **ne gagne pas** : BM25 sur les fichiers entiers le bat en top-1 sur ripgrep (50 %
+contre 35 %), où un symbole homonyme d'un fichier voisin passe parfois en tête ; Cortex garde le
+meilleur top-5 sur chaque dépôt. Une fusion Cortex + BM25 fait mieux sur ce banc (63,3 % en
+top-1) mais *moins bien* sur le banc caché privé ci-dessous : elle n'est donc pas livrée. Avec
+20 questions par dépôt, une question vaut 5 points de top-1 : un écart de moins de deux
+questions est du bruit. Tout le détail, dépôt par dépôt : [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+
+**Vitrine réelle** : le monorepo propriétaire d'AstroQuest (8 069 fichiers, 1,7 M lignes de
+TypeScript, Rust et SQL), questions cachées écrites avant tout réglage : **67,5 % en top-1,
+85 % en top-5** (BM25 : 30 % / 57,5 %, RAG dense : 25 % / 35 %, grep : 7,5 % / 30 %). Sur 10
+tâches de compréhension d'agent (impact, flux de données, vue d'un module, tests à relancer) :
+86 % des faits couverts contre 89 % avec grep + lecture, pour **10,9 fois moins de tokens et
+40 % d'appels en moins**. Latence : `find` 5–9 ms, `card` ~2 ms, `impact` ~2 ms, mise à jour
+d'un fichier modifié 7 ms, index complet ~5 s.
+
 ## Une vraie session
 
-Sur [hono](https://github.com/honojs/hono) (421 fichiers), un agent veut modifier l'analyse des
+La session animée plus haut, en texte. Sur [hono](https://github.com/honojs/hono) (421 fichiers), un agent veut modifier l'analyse des
 formulaires. Quatre appels, **~1 070 tokens** en tout :
 
 ```console
@@ -55,23 +154,6 @@ Chaque résultat porte un **identifiant stable** (`S:chemin#symbole`, `F:chemin`
 ligne `suite :` qui propose l'appel le plus utile ensuite. Format spécifié dans
 [docs/SPEC.md](docs/SPEC.md).
 
-## Installation
-
-| Plateforme | En une ligne |
-|---|---|
-| Toutes (Rust) | `cargo install astroquest-cortex` |
-| Toutes (Node ≥ 18) | `npx -y astroquest-cortex --version` (ou `npm i -g astroquest-cortex`) |
-| Linux x86_64 | `curl -fsSL https://github.com/AstroQuestStudio/cortex/releases/latest/download/cortex-x86_64-unknown-linux-gnu.tar.gz \| tar -xz -C ~/.local/bin cortex` |
-| macOS (Apple silicon) | `curl -fsSL https://github.com/AstroQuestStudio/cortex/releases/latest/download/cortex-aarch64-apple-darwin.tar.gz \| sudo tar -xz -C /usr/local/bin cortex` |
-| macOS (Intel) | `curl -fsSL https://github.com/AstroQuestStudio/cortex/releases/latest/download/cortex-x86_64-apple-darwin.tar.gz \| sudo tar -xz -C /usr/local/bin cortex` |
-| Windows (PowerShell) | `iwr https://github.com/AstroQuestStudio/cortex/releases/latest/download/cortex-x86_64-pc-windows-msvc.zip -OutFile cortex.zip; Expand-Archive cortex.zip "$env:USERPROFILE\.cortex\bin" -Force` (puis ajouter ce dossier au `PATH`) |
-
-```sh
-cd mon-projet
-cortex index . --name MonProjet     # quelques secondes ; l'index se tient ensuite à jour seul
-cortex find "où sont signées les sessions"
-```
-
 ## Brancher son agent
 
 Cortex est un serveur [MCP](https://modelcontextprotocol.io) en stdio : `cortex mcp`.
@@ -85,8 +167,6 @@ Cortex est un serveur [MCP](https://modelcontextprotocol.io) en stdio : `cortex 
   `args = ["mcp"]`.
 - **VS Code** (`.vscode/mcp.json`) :
   `{ "servers": { "cortex": { "type": "stdio", "command": "cortex", "args": ["mcp"] } } }`
-
-Sans installation globale : `"command": "npx", "args": ["-y", "astroquest-cortex", "mcp"]`.
 
 ## Les outils
 
@@ -102,26 +182,6 @@ Sans installation globale : `"command": "npx", "args": ["-y", "astroquest-cortex
 | `changed` / `cortex_changed` | Qu'ai-je modifié, qui l'appelle, quels tests ? |
 | `grep`, `files`, `docs` | Texte exact avec la fonction englobante, fichiers par nom, docs hors ligne |
 
-## Mesuré, pas promis
-
-**Banc public** : 60 questions sur flask, hono et ripgrep (commits épinglés), écrites par des
-personnes qui n'ont jamais vu une sortie de Cortex, avant tout passage de Cortex sur ces dépôts.
-Rejouable par tous : `bench/public/run.sh`.
-
-| Approche (même corpus, même juge) | top-1 | top-5 | MRR |
-|---|---:|---:|---:|
-| grep par mots-clés | 16,7 % | 58,3 % | 0,345 |
-| RAG dense | 38,3 % | 68,3 % | 0,516 |
-| RAG hybride | 41,7 % | 81,7 % | 0,580 |
-| BM25 sur les fichiers | 50,0 % | 78,3 % | 0,625 |
-| **Cortex 0.3.0** | **55,0 %** | **88,3 %** | **0,685** |
-
-**Vitrine réelle** : le monorepo propriétaire d'AstroQuest (8 069 fichiers, 1,7 M lignes),
-questions cachées écrites avant tout réglage : **67,5 % en top-1, 85 % en top-5** (BM25 30 %,
-RAG dense 25 %, grep 7,5 %). Sur 10 tâches de compréhension d'agent : 86 % des faits couverts
-contre 89 % avec grep + lecture, pour **10,9 fois moins de tokens et 40 % d'appels en moins**.
-Détails, et ce que Cortex ne gagne pas encore : [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
-
 ## Feuille de route
 
 Ingesteurs git (`why`), SQL (`schema`) et docs ; I1 `ask` sous budget ; I2 contexte
@@ -131,6 +191,8 @@ Ruby, Kotlin, Swift ; libellés de sortie en anglais et spécification v1.0. Dé
 
 ## Contribuer, licence
 
-Voir [CONTRIBUTING.md](CONTRIBUTING.md) : des chiffres avant et après chaque changement.
+Si Cortex fait économiser des tokens à votre agent, **mettez une étoile au dépôt** : c'est ainsi
+que d'autres développeurs le trouvent. Voir [CONTRIBUTING.md](CONTRIBUTING.md) : des chiffres
+avant et après chaque changement.
 Licence [MIT](LICENSE) © 2026 [AstroQuest](https://astroquest.fr), qui s'en sert chaque jour sur
 son propre monorepo de 8 000 fichiers.

@@ -6,6 +6,20 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- One-line installers: `install.sh` (Linux, macOS, Git Bash) and `install.ps1` (Windows). They
+  download the release archive, refuse it unless its SHA-256 matches `SHA256SUMS.txt`, and
+  install without administrator rights (`~/.local/bin`, `%LOCALAPPDATA%\cortex\bin`).
+- README: animated terminal demo (light and dark themes), installation first, public benchmark
+  table near the top; social preview image in `.github/`.
+
+### Changed
+- Release archives (from the next release): `.tar.gz` members no longer start with `./`.
+
+### Fixed
+- README: the manual `tar -xz … cortex` one-liners did not work with the 0.3.0 archives, whose
+  members are named `./cortex`; they are replaced by the installers.
+
 ## [0.3.0] — 2026-09-27
 
 First public release of **Cortex by AstroQuest**.

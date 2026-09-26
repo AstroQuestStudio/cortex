@@ -53,3 +53,18 @@ jobs:
           $BIN index . --name cortex-self
           $BIN find "stable identifiers" -p cortex-self | tee find.txt
           grep -q "suite :" find.txt
+
+  installers:
+    name: installers (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck install.sh
+        run: shellcheck -s sh install.sh
+      - name: parse install.ps1
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/install.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+          Write-Host 'install.ps1 parses'

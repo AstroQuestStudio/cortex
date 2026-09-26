@@ -48,9 +48,11 @@ cortex index /path/to/project --name MyProject   # a few seconds for 10k files
 ```
 
 The index stays fresh by itself: every call checks modified files and re-indexes them
-incrementally (a few ms per file). If `cortex` is not found, install it:
-`cargo install astroquest-cortex` or grab a binary from
-https://github.com/AstroQuestStudio/cortex/releases.
+incrementally (a few ms per file). If `cortex` is not found, install it (checksum-verified):
+`curl -fsSL https://raw.githubusercontent.com/AstroQuestStudio/cortex/main/install.sh | sh`
+(Linux, macOS) or
+`irm https://raw.githubusercontent.com/AstroQuestStudio/cortex/main/install.ps1 | iex`
+(Windows), or grab a binary from https://github.com/AstroQuestStudio/cortex/releases.
 
 ## When Cortex misses
 
