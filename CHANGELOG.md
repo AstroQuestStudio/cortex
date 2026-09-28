@@ -6,6 +6,13 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+### Licence change
+- Licence change: versions after 0.3.0 are PolyForm Shield 1.0.0 (SPDX: `PolyForm-Shield-1.0.0`);
+  0.3.0 and earlier remain MIT for those who obtained them under it. Cortex stays free to use,
+  including commercially; the licence forbids using it to provide a competing product. Cortex is
+  source-available, not open source. Contributions now grant AstroQuest a perpetual license
+  (see CONTRIBUTING.md).
+
 ### Added
 - One-line installers: `install.sh` (Linux, macOS, Git Bash) and `install.ps1` (Windows). They
   download the release archive, refuse it unless its SHA-256 matches `SHA256SUMS.txt`, and
