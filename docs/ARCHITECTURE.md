@@ -1,6 +1,6 @@
 # Cortex architecture
 
-Cortex is an open-source Rust engine that lets an AI coding agent **understand** a codebase in
+Cortex is a source-available Rust engine that lets an AI coding agent **understand** a codebase in
 a few calls, without `find`, `grep`, or reading whole files. It aims to do better than Obsidian
 (hand-placed links, notes only) and better than graphify (a static code graph with no history).
 The numbers in this document come from two sources: AstroQuest's private monorepo — a

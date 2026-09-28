@@ -4,12 +4,12 @@
 
 **The code-context engine for AI agents.**<br>
 Find, card, read, impact: an agent understands a codebase in a few calls and ~10× fewer tokens
-than grep + read. Local, instant, open source.
+than grep + read. Local, instant, source-available, free to use.
 
 [![CI](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml/badge.svg)](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AstroQuestStudio/cortex?sort=semver)](https://github.com/AstroQuestStudio/cortex/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AstroQuestStudio/cortex/total?label=downloads)](https://github.com/AstroQuestStudio/cortex/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue.svg)](LICENSE)
 [![MCP server](https://img.shields.io/badge/MCP-server-8A2BE2)](#connect-your-agent)
 
 **by [AstroQuest](https://astroquest.fr)** · [astroquest.fr/cortex](https://astroquest.fr/cortex) · [Français](README.fr.md) · [Spec](docs/SPEC.md) · [Benchmarks](docs/BENCHMARKS.md) · [Architecture](docs/ARCHITECTURE.md)
@@ -279,5 +279,10 @@ Open a **"Cortex missed"** issue — misses become benchmark questions.
 
 ## License
 
-[MIT](LICENSE) © 2026 [AstroQuest](https://astroquest.fr). Cortex is built and maintained by
-AstroQuest, which uses it every day on its own 8,000-file monorepo.
+[PolyForm Shield 1.0.0](LICENSE) © 2026 [AstroQuest](https://astroquest.fr). Free to use,
+including commercially. You may not use it to build a competing product or service.
+Contributions welcome. Source-available, not open source.
+
+Cortex is built and maintained by AstroQuest, which uses it every day on its own 8,000-file
+monorepo. Versions up to 0.3.0 were released under the MIT license and remain available under it;
+later versions are PolyForm Shield 1.0.0 (see the [changelog](CHANGELOG.md)).

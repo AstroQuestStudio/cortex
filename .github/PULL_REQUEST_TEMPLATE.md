@@ -19,3 +19,4 @@
 - [ ] docs/SPEC.md updated if a tool input or output format changed
 - [ ] CHANGELOG.md updated (Unreleased section)
 - [ ] new dependencies are permissively licensed (no GPL/LGPL/AGPL)
+- [ ] I have the right to contribute this code and agree to the terms in CONTRIBUTING.md

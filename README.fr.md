@@ -4,12 +4,12 @@
 
 **Le moteur de contexte code pour agents IA.**<br>
 find, card, read, impact : un agent comprend une base de code en quelques appels et avec ~10 fois
-moins de tokens que grep + lecture de fichiers. Local, instantané, open source.
+moins de tokens que grep + lecture de fichiers. Local, instantané, source disponible, gratuit.
 
 [![CI](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml/badge.svg)](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AstroQuestStudio/cortex?sort=semver)](https://github.com/AstroQuestStudio/cortex/releases/latest)
 [![Téléchargements](https://img.shields.io/github/downloads/AstroQuestStudio/cortex/total?label=t%C3%A9l%C3%A9chargements)](https://github.com/AstroQuestStudio/cortex/releases)
-[![Licence : MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![Licence : PolyForm Shield 1.0.0](https://img.shields.io/badge/licence-PolyForm%20Shield%201.0.0-blue.svg)](LICENSE)
 [![Serveur MCP](https://img.shields.io/badge/MCP-serveur-8A2BE2)](#brancher-son-agent)
 
 **par [AstroQuest](https://astroquest.fr)** · [astroquest.fr/cortex](https://astroquest.fr/cortex) · [English](README.md) · [Spécification](docs/SPEC.md) · [Bancs](docs/BENCHMARKS.md) · [Architecture](docs/ARCHITECTURE.md)
@@ -194,5 +194,11 @@ Ruby, Kotlin, Swift ; libellés de sortie en anglais et spécification v1.0. Dé
 Si Cortex fait économiser des tokens à votre agent, **mettez une étoile au dépôt** : c'est ainsi
 que d'autres développeurs le trouvent. Voir [CONTRIBUTING.md](CONTRIBUTING.md) : des chiffres
 avant et après chaque changement.
-Licence [MIT](LICENSE) © 2026 [AstroQuest](https://astroquest.fr), qui s'en sert chaque jour sur
-son propre monorepo de 8 000 fichiers.
+Licence [PolyForm Shield 1.0.0](LICENSE) © 2026 [AstroQuest](https://astroquest.fr). Gratuit,
+y compris en usage commercial. Vous ne pouvez pas l'utiliser pour construire un produit ou un
+service concurrent. Contributions bienvenues. Code source disponible (« source-available »), pas
+open source.
+
+AstroQuest s'en sert chaque jour sur son propre monorepo de 8 000 fichiers. Les versions jusqu'à
+la 0.3.0 ont été publiées sous licence MIT et le restent ; les suivantes sont sous PolyForm Shield
+1.0.0 (voir le [changelog](CHANGELOG.md)).

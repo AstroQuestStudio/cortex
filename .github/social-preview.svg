@@ -18,7 +18,7 @@
   <text x="100" y="352" font-size="28" fill="#a0a6bd">Find, card, read, impact: understand a codebase in a few</text>
   <text x="100" y="390" font-size="28" fill="#a0a6bd">calls and ~10× fewer tokens than grep + read.</text>
   <text x="100" y="572" font-size="26" fill="#a0a6bd">by <tspan fill="#f5f7ff" font-weight="700">AstroQuest</tspan></text>
-  <text x="1180" y="572" font-size="22" fill="#7d84a0" text-anchor="end">Open source (MIT) · Rust · MCP server · local</text>
+  <text x="1180" y="572" font-size="22" fill="#7d84a0" text-anchor="end">Source-available · Free to use · Rust · MCP server · local</text>
 </g>
 <g transform="translate(100 432)">
   <rect width="1080" height="96" rx="12" fill="#12151f" stroke="#262b3d"/>
