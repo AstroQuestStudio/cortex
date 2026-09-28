@@ -6,7 +6,7 @@
   "author": { "name": "AstroQuest", "url": "https://astroquest.fr" },
   "homepage": "https://astroquest.fr/cortex",
   "repository": "https://github.com/AstroQuestStudio/cortex",
-  "license": "MIT",
+  "license": "PolyForm-Shield-1.0.0",
   "keywords": ["code-search", "code-intelligence", "mcp", "context", "call-graph", "impact-analysis"],
   "mcpServers": {
     "cortex": {

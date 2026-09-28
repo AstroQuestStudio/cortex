@@ -10,7 +10,7 @@
       "description": "Cortex: the code-context engine for AI agents (MCP server + /cortex skill). Requires the `cortex` binary on PATH.",
       "author": { "name": "AstroQuest", "url": "https://astroquest.fr" },
       "homepage": "https://astroquest.fr/cortex",
-      "license": "MIT",
+      "license": "PolyForm-Shield-1.0.0",
       "keywords": ["code-search", "mcp", "context"],
       "category": "development"
     }
