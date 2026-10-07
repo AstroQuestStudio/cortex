@@ -439,7 +439,7 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
             let g = pf.sym_gids[i];
             pend.insert(g, PSym { file: pf.gid, ord: i as u32, kind: s.kind, name: &s.name, path: &pf.e.path, homonym: homonyms[i] });
             if pf.sym_new[i] {
-                let l = s.name.to_ascii_lowercase();
+                let l = graph::call_key(&s.name);
                 new_defs.entry(l.clone()).or_default().push(g);
                 changed_names.insert(l);
             }
@@ -448,7 +448,7 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
     for &g in &tomb {
         if let Some(r) = h.node(g) {
             if r.n.kind == 1 {
-                changed_names.insert(r.name().to_ascii_lowercase());
+                changed_names.insert(graph::call_key(r.name()));
             }
         }
     }

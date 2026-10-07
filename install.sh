@@ -14,7 +14,7 @@
 #   CORTEX_INSTALL_DIR / --dir DIR       install folder (default: ~/.local/bin)
 #   CORTEX_VERSION     / --version X.Y.Z release to install (default: latest)
 #
-# Source: https://github.com/AstroQuestStudio/cortex (PolyForm Shield 1.0.0). Made by AstroQuest.
+# Source: https://github.com/AstroQuestStudio/cortex (MIT). Made by AstroQuest.
 
 set -eu
 

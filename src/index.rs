@@ -120,7 +120,10 @@ pub fn process_bytes(rel: String, bytes: &[u8], mtime: u64, hash: Option<String>
     let (symbols, refs, (header, summary), body) = if lang.has_parser() {
         match std::str::from_utf8(bytes) {
             Ok(src) => {
-                let (mut symbols, refs) = crate::extract::extract_symbols_and_refs(lang, src);
+                let (mut symbols, mut refs) = crate::extract::extract_symbols_and_refs(lang, src);
+                if lang == Lang::Cpp {
+                    crate::cpp::expand_includes(&rel, &mut refs);
+                }
                 let header = crate::extract::extract_comments(lang, src, &mut symbols);
                 // Le corps ne sert qu'à classer des symboles : inutile sans symbole.
                 // Pas de corps pour le markdown : sa prose double les titres et
@@ -173,7 +176,7 @@ pub fn build_index(name: &str, root: &Path) -> std::io::Result<(ProjectIndex, Tr
     let state = crate::walk::full_state(root, &w, files.iter().map(|f| f.path.as_str()).chain(skipped.iter().map(|s| s.path.as_str())));
     let idx = ProjectIndex { name: name.to_string(), root: normalize_root(root), generated_at: now_secs(), files };
     let (nf, _, nl) = idx.stats();
-    eprintln!("[cortex] indexé {} : {} fichiers, {} lignes en {:.2}s", name, nf, nl, t0.elapsed().as_secs_f64());
+    eprintln!("[cortex] indexed {}: {} files, {} lines in {:.2}s", name, nf, nl, t0.elapsed().as_secs_f64());
     Ok((idx, Tracked { skipped, walk: Some(state) }))
 }
 

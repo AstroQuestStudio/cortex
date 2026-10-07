@@ -158,7 +158,7 @@ pub fn scrape_site_progress(
     // on le signale clairement (sinon on "oublie" sans le savoir).
     if count >= max_pages && !queue.is_empty() {
         eprintln!(
-            "  ⚠ {} : limite {} pages atteinte, {} URL(s) encore en file — relance avec un max plus haut pour tout récupérer.",
+            "  ⚠ {}: limit of {} pages reached, {} URL(s) still queued; rerun with a higher max to fetch everything.",
             name,
             max_pages,
             queue.len()
@@ -659,7 +659,7 @@ pub fn search_docs(question: &str, source: Option<&str>, budget: usize) -> Strin
         out.push_str(&line);
     }
     if results.is_empty() {
-        out.push_str("(aucun passage — la doc est-elle scrapée ? cortex docs add <url> --name <nom>)\n");
+        out.push_str("(no passage: is the doc scraped? cortex docs add <url> --name <name>)\n");
     }
     out
 }

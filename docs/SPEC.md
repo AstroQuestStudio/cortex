@@ -72,8 +72,8 @@ Paths use `/`; implementations SHOULD also accept `\` on input.
 - **Encoding**: UTF-8 plain text, `\n` line endings, no ANSI escapes.
 - **Line ranges**: `L<start>-<end>` (1-based, inclusive); a single line is `L<n>`.
 - **Symbol lines**: `<id> <kind> <range>[ export][ — <role>]`. `kind` is one of `fn`, `method`,
-  `class`, `interface`, `struct`, `enum`, `type`, `const`, `component`, `hook`, `heading`
-  (`import`/`export` are internal and not listed). `role` is the first sentence of the doc
+  `class`, `interface`, `struct`, `enum`, `type`, `const`, `component`, `hook`, `heading`, `decl`
+  (a C/C++ prototype without a body; `import`/`export` are internal and not listed). `role` is the first sentence of the doc
   comment, or of the file header for a file, cut with `…` (90 characters in `find`, 70 in
   `outline`).
 - **Call sites**: in `card`, `impact` and `path`, a caller is followed by the line of the call:
@@ -85,15 +85,15 @@ Paths use `/`; implementations SHOULD also accept `\` on input.
   `… <n> ligne(s) coupée(s) : budget -b <budget> atteint` (the count MAY be omitted when unknown:
   `… budget -b atteint …`). Default budgets: `find` 1000, `card` 800, `path` 800, `read` 4000,
   others 1500.
-- **Next call**: the last line is `suite : <tool> <argument…>`, a complete call that can be
+- **Next call**: the last line is `next : <tool> <argument…>`, a complete call that can be
   replayed as is ("suite" means "next"). Implementations MUST end every successful output and
   every error with such a line when a useful next call exists.
 - **Errors**: an error is a normal output whose first line starts with `(cortex) `, followed by
-  a `suite :` line (for instance `suite : find <name>` when a symbol is unknown). Tools do not
+  a `next :` line (for instance `next : find <name>` when a symbol is unknown). Tools do not
   fail at the protocol level for a missing symbol.
 - **Labels**: v0.1 labels are French (Cortex's first users were French); their meaning is fixed
   by the table in section 6. Agents MUST NOT depend on labels for parsing: identifiers, ranges
-  and the `suite :` line are the stable surface. A future version will standardise English
+  and the `next :` line are the stable surface. A future version will standardise English
   labels.
 
 ## 4. Tools
@@ -106,13 +106,13 @@ Every tool exists under the same name in the CLI (`cortex <tool> …`) and in MC
 
 Input: `question` (string: natural language in English or French, or keywords).
 Output: one symbol line per result, best first, one result per ~40 tokens of budget (25 by
-default); the first five carry their role. Last line: `suite : card <first id>`.
+default); the first five carry their role. Last line: `next : card <first id>`.
 
 ```
 S:src/utils/body.ts#parseFormData fn L126-150 — Parses form data from a request.
 S:src/request.ts#formData method L334-336 — Parses the request body as `FormData`.
 S:src/utils/body.ts#convertFormDataToBodyData fn L160-189 — Converts form data to body data based on the provided options.
-suite : card S:src/utils/body.ts#parseFormData
+next : card S:src/utils/body.ts#parseFormData
 ```
 
 Ranking is implementation-defined. Implementations SHOULD publish their numbers on the public
@@ -134,7 +134,7 @@ tests: <test file ids>
 membres <n>: <member ids>                           (classes)
 autres exports du fichier <n>: <ids>
 homonymes: <ids of other definitions with the same name>
-suite : read <id>
+next : read <id>
 ```
 
 Calls that cannot be resolved to a single definition through the file's imports are counted as
@@ -145,15 +145,15 @@ Calls that cannot be resolved to a single definition through the file's imports 
 Input: `cible`, optional `contexte` (lines of context on each side, default 0).
 Output: a header line (`<id> <kind> <range>` or `F:<path> L<a>-<b>`), then the lines, each
 prefixed by its number and `│`. A doc-section target returns the whole section. When the budget
-cuts the range, the `suite :` line reads the rest: `suite : read <path>:<next>-<end>`; otherwise
-`suite : impact <id>` (or `outline` for a file range).
+cuts the range, the `next :` line reads the rest: `next : read <path>:<next>-<end>`; otherwise
+`next : impact <id>` (or `outline` for a file range).
 
 ```
 S:src/utils/body.ts#parseFormData fn L126-150
 126│async function parseFormData<T extends BodyData>(
 …
 150│}
-suite : impact S:src/utils/body.ts#parseFormData
+next : impact S:src/utils/body.ts#parseFormData
 ```
 
 ### 4.4 `outline` — what does this file contain?
@@ -169,7 +169,7 @@ Input: `dossier` (project-relative folder, `.` for the whole project).
 Output: `overview <dir>/ — <n> fichiers, <m> symboles`; entry points (files of the folder
 imported from outside, `×<importers>`), outgoing and incoming dependencies by folder, external
 files using it, external packages (unresolved import specifiers), sub-folders. Last line:
-`suite : outline <first entry point>`.
+`next : outline <first entry point>`.
 
 ### 4.6 `impact` — what breaks if I change this?
 
@@ -193,14 +193,14 @@ imports 2 saut(s):
 F:src/request.ts
   → importe F:src/utils/body.ts
   → importe F:src/utils/buffer.ts
-suite : read F:src/utils/body.ts
+next : read F:src/utils/body.ts
 ```
 
 ### 4.8 `changed` — what did I change?
 
 No target. Output: the uncommitted files (git status against `HEAD`), the symbols whose ranges
 intersect the diff hunks (innermost symbol), their callers outside the work in progress, and the
-tests to rerun. Last line: `suite : impact <most-called changed symbol>`.
+tests to rerun. Last line: `next : impact <most-called changed symbol>`.
 
 ### 4.9 `grep`, `files`, `list`, `docs`, `docs_list`
 
@@ -230,7 +230,7 @@ compatibility and MAY be dropped in v1.0.
 
 | Label | Meaning |
 |---|---|
-| `suite :` | next call |
+| `next :` | next call |
 | `sig:` | signature |
 | `rôle:` / `rôle (fichier):` | role (of the symbol / of its file) |
 | `appelle <n> (+<k> ambigu)` | calls n resolved callees (+k ambiguous calls) |

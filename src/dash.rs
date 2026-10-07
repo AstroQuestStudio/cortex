@@ -119,7 +119,7 @@ pub fn run_dashboard(jobs: &[SiteJob], workers: usize, concurrency: usize, delay
         if quitting {
             // Message immédiat, puis on sort : pas d'attente bloquante à l'écran.
             let _ = stdout.queue(cursor::MoveTo(0, (states.len() + 7) as u16));
-            let _ = write!(stdout, "Arrêt en cours… (sauvegarde des pages déjà récupérées)");
+            let _ = write!(stdout, "Stopping… (saving the pages already fetched)");
             let _ = stdout.flush();
             break;
         }
@@ -165,7 +165,7 @@ fn render_lines(states: &[Arc<SiteState>], controls: &Controls, selected: usize,
     let auto = if controls.auto_refill.load(Ordering::Relaxed) { "AUTO✓" } else { "auto✗" };
     let mut lines = Vec::new();
     lines.push(format!(
-        "Cortex Batch · {} sites · {} en // (actifs {}) · délai {}ms · relance {} · {:02}:{:02}",
+        "Cortex Batch · {} sites · {} in parallel (active {}) · delay {}ms · resume {} · {:02}:{:02}",
         states.len(),
         workers,
         active,
@@ -189,9 +189,9 @@ fn render_lines(states: &[Arc<SiteState>], controls: &Controls, selected: usize,
             format!("✗ {}", trunc(e, 14))
         } else if s.done.load(Ordering::Relaxed) {
             if s.truncated.load(Ordering::Relaxed) {
-                "⚠ coupé (R=relance)".to_string()
+                "⚠ cut (R=resume)".to_string()
             } else {
-                "✓ terminé".to_string()
+                "✓ done".to_string()
             }
         } else if s.paused.load(Ordering::Relaxed) {
             "⏸ pause (r=reprise)".to_string()
@@ -212,8 +212,8 @@ fn render_lines(states: &[Arc<SiteState>], controls: &Controls, selected: usize,
     }
 
     lines.push("─".repeat(78));
-    lines.push(format!("Total : {} pages · {}/{} sites terminés", total_pages, done_count, states.len()));
-    lines.push("↑↓ select · ←→ vitesse · +/- budget · p/r pause · R relance · a AUTO-relance · [ ] délai · q quit".to_string());
+    lines.push(format!("Total: {} pages · {}/{} sites done", total_pages, done_count, states.len()));
+    lines.push("↑↓ select · ←→ speed · +/- budget · p/r pause · R resume · a AUTO-resume · [ ] delay · q quit".to_string());
     lines
 }
 
@@ -258,13 +258,13 @@ fn draw_diff(stdout: &mut Stdout, lines: &[String], prev: &mut Vec<String>, head
 fn print_recap(states: &[Arc<SiteState>], started: Instant) {
     let total: usize = states.iter().map(|s| s.pages.load(Ordering::Relaxed)).sum();
     let ok = states.iter().filter(|s| s.done.load(Ordering::Relaxed) && s.error.lock().unwrap().is_none()).count();
-    println!("\n── Récap batch ── ({:.0}s)", started.elapsed().as_secs_f64());
+    println!("\n── Batch recap ── ({:.0}s)", started.elapsed().as_secs_f64());
     for s in states {
         let pages = s.pages.load(Ordering::Relaxed);
         if let Some(e) = s.error.lock().unwrap().as_ref() {
             println!("  ✗ {:<16} {}", s.name, e);
         } else if s.truncated.load(Ordering::Relaxed) {
-            println!("  ⚠ {:<16} {} pages ({} non récupérées)", s.name, pages, s.queued.load(Ordering::Relaxed));
+            println!("  ⚠ {:<16} {} pages ({} not fetched)", s.name, pages, s.queued.load(Ordering::Relaxed));
         } else {
             println!("  ✓ {:<16} {} pages", s.name, pages);
         }

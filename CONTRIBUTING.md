@@ -1,10 +1,7 @@
 # Contributing to Cortex
 
-Thanks for helping! Cortex is maintained by [AstroQuest](https://astroquest.fr) and is
-source-available under the [PolyForm Shield 1.0.0](LICENSE) license (free to use, not open source).
-Contributions are welcome as pull requests. By contributing, you grant AstroQuest a perpetual,
-irrevocable, worldwide, royalty-free license to use, modify and redistribute your contribution,
-including under other licenses, and you certify that you have the right to do so.
+Thanks for helping! Cortex is maintained by [AstroQuest](https://astroquest.fr) and released
+under the MIT license; by contributing you agree that your contribution is licensed under it too.
 Please read the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Build and test
@@ -55,10 +52,10 @@ Misses on open-source repositories become benchmark questions.
 - Output formats of the agent tools are specified in [docs/SPEC.md](docs/SPEC.md): a change there
   needs a spec update in the same PR.
 - New languages are welcome: tree-sitter grammar in `Cargo.toml`, extension in `src/lang.rs`,
-  queries in `src/extract.rs`, tests with a small fixture.
+  queries in `src/extract.rs` (or a dedicated walker like `src/cpp.rs` when a language needs a
+  preprocessing step), tests with a small fixture.
 - Dependencies must be permissively licensed (MIT, Apache-2.0, BSD, ISC, Zlib, Unicode,
-  Unlicense, MPL-2.0 at most). No GPL, LGPL or AGPL: copyleft terms would restrict how the
-  binaries can be redistributed under PolyForm Shield.
+  Unlicense, MPL-2.0 at most). No GPL, LGPL or AGPL.
 
 ## Commit messages
 

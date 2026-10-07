@@ -1,6 +1,6 @@
 [package]
 name = "astroquest-cortex"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["AstroQuest"]
 description = "Cortex by AstroQuest: the code-context engine for AI agents. Find, card, read, impact: understand a codebase in a few calls and ~10x fewer tokens than grep + read. CLI and MCP server."
@@ -28,6 +28,14 @@ include = [
 name = "cortex"
 path = "src/main.rs"
 
+# Détection d'interface (`cortex ui`) : binaire compagnon, hors du binaire principal
+# (le module dans `cortex` ralentissait la recherche de ~30 %). Construction :
+#   cargo build --release --features ui --bin cortex-ui
+[[bin]]
+name = "cortex-ui"
+path = "src/main.rs"
+required-features = ["ui"]
+
 [dependencies]
 # Walk gitignore-aware (le crate de ripgrep) — n'indexe jamais node_modules/.git
 ignore = "0.4"
@@ -52,6 +60,8 @@ tree-sitter-javascript = "0.21"
 tree-sitter-python = "0.21"
 tree-sitter-rust = "0.21"
 tree-sitter-c-sharp = "0.21"
+# C/C++ : 0.22.x est la dernière série qui accepte tree-sitter 0.22 (>=0.21) sans migrer le reste.
+tree-sitter-cpp = "0.22"
 tree-sitter-md = "0.2"
 
 # Scraper documentaire offline (Module B)
@@ -87,6 +97,7 @@ model2vec-rs = { version = "0.3", default-features = false, features = ["fancy-r
 [features]
 default = []
 bench = ["dep:model2vec-rs"]
+ui = []
 
 [profile.release]
 opt-level = 3

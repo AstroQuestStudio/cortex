@@ -130,11 +130,20 @@ pub fn ensure_and_open(project: &str) -> std::io::Result<Handle> {
             let Some(root) = project_root(project) else { return Err(e) };
             let root_path = PathBuf::from(&root);
             if !root_path.exists() {
-                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, format!("source absente: {}", root)));
+                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, format!("source missing: {}", root)));
             }
-            eprintln!("[cortex] atlas '{}' à reconstruire ({}) — réindexation complète de {}…", project, e, root);
+            eprintln!("[cortex] atlas '{}' needs rebuilding ({}); full reindex of {}…", project, e, root);
             let (idx, tracked) = crate::index::build_index(project, &root_path)?;
-            rebuild_full(project, &idx, tracked)?;
+            rebuild_full(project, &idx, tracked).map_err(|we| {
+                if matches!(we.kind(), std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::ReadOnlyFilesystem) {
+                    std::io::Error::new(
+                        we.kind(),
+                        format!("index of '{}' must be rebuilt ({}) but the cortex home is read-only: run cortex outside the sandbox once", project, e),
+                    )
+                } else {
+                    we
+                }
+            })?;
             Handle::open(project)
         }
     }
@@ -227,7 +236,7 @@ pub(crate) fn compact_locked(project: &str) -> std::io::Result<()> {
     let h = Handle::open(project)?;
     let idx = h.materialize();
     if dbg {
-        eprintln!("[timing] ouverture + matérialisation: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing] open + materialization: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
     }
     let tracked = manifest::Tracked { skipped: h.manifest.skipped.clone(), walk: h.manifest.walk.clone() };
     drop(h);
@@ -240,7 +249,7 @@ pub(crate) fn compact_locked(project: &str) -> std::io::Result<()> {
     }
     if dbg {
         eprintln!(
-            "[timing] libération: {:.2}ms (compaction {:.2}ms)",
+            "[timing] release: {:.2}ms (compaction {:.2}ms)",
             t1.elapsed().as_secs_f64() * 1000.0,
             t0.elapsed().as_secs_f64() * 1000.0
         );

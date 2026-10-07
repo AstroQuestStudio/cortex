@@ -25,7 +25,7 @@ const SCENES = [
       "S:src/utils/body.ts#ParseBody interface L90-94 — Parses the body of a request based on the provided…",
       "S:src/middleware/body-limit/index.ts#bodyLimit fn L50-111 — Body Limit Middleware for Hono.",
       "…",
-      "suite : card S:src/utils/body.ts#parseFormData",
+      "next : card S:src/utils/body.ts#parseFormData",
     ],
   },
   {
@@ -39,7 +39,7 @@ const SCENES = [
       "fichier importé par 4 fichier(s)",
       "tests: F:src/utils/body.test.ts",
       "autres exports du fichier 3: S:src/utils/body.ts#BodyData, S:src/utils/body.ts#ParseBodyOptions, …",
-      "suite : read S:src/utils/body.ts#parseFormData",
+      "next : read S:src/utils/body.ts#parseFormData",
     ],
   },
   {
@@ -61,7 +61,7 @@ const SCENES = [
       "138│  const formDataPromise = bufferToFormData(arrayBuffer, headers.get('Content-Type') || '')",
       "   …",
       "150│}",
-      "suite : impact S:src/utils/body.ts#parseFormData",
+      "next : impact S:src/utils/body.ts#parseFormData",
     ],
   },
   {
@@ -81,7 +81,7 @@ const SCENES = [
       "  F:src/middleware/cache/index.ts",
       "  F:src/utils/body.ts",
       "  …",
-      "suite : read S:src/utils/body.ts#parseBody",
+      "next : read S:src/utils/body.ts#parseBody",
     ],
   },
   {
@@ -116,13 +116,13 @@ for (const s of SCENES) for (const l of [s.cmd, ...s.out]) {
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// Split a line into [text, class] runs: identifiers, labels, line numbers, the "suite :" hint.
+// Split a line into [text, class] runs: identifiers, labels, line numbers, the "next :" hint.
 function runs(line, cmd = false) {
   if (line.startsWith("#")) {
     return line.split(/(~[\d,]+ tokens)/).filter(Boolean).map((t) => [t, /^~[\d,]+ tokens$/.test(t) ? "nx" : "dm"]);
   }
   if (cmd) return line.split(/([SFD]:[^\s,]+)/).filter(Boolean).map((t) => [t, /^[SFD]:/.test(t) ? "id" : ""]);
-  if (line.startsWith("suite : ")) return [["suite : ", "dm"], [line.slice(8), "nx"]];
+  if (line.startsWith("next : ")) return [["next : ", "dm"], [line.slice(7), "nx"]];
   const m = line.match(/^(\s*\d+)│(.*)$/);
   if (m) return [[m[1] + "│", "dm"], [m[2], ""]];
   const lab = line.match(/^([a-zà-ÿ][^:]*?:)(\s.*)$/);
@@ -244,7 +244,7 @@ function social() {
   const lines = [
     ["$ ", "cortex find ", '"where is the request body parsed as form data"'],
     ["", "S:src/utils/body.ts#parseFormData", " fn L126-150"],
-    ["", "suite : ", "card S:src/utils/body.ts#parseFormData"],
+    ["", "next : ", "card S:src/utils/body.ts#parseFormData"],
   ];
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs>
@@ -266,7 +266,7 @@ function social() {
   <text x="100" y="352" font-size="28" fill="#a0a6bd">Find, card, read, impact: understand a codebase in a few</text>
   <text x="100" y="390" font-size="28" fill="#a0a6bd">calls and ~10× fewer tokens than grep + read.</text>
   <text x="100" y="572" font-size="26" fill="#a0a6bd">by <tspan fill="#f5f7ff" font-weight="700">AstroQuest</tspan></text>
-  <text x="1180" y="572" font-size="22" fill="#7d84a0" text-anchor="end">Source-available · Free to use · Rust · MCP server · local</text>
+  <text x="1180" y="572" font-size="22" fill="#7d84a0" text-anchor="end">Open source (MIT) · Rust · MCP server · local</text>
 </g>
 <g transform="translate(100 432)">
   <rect width="1080" height="96" rx="12" fill="#12151f" stroke="#262b3d"/>

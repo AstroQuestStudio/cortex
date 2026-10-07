@@ -181,9 +181,28 @@ impl Handle {
 
     /// Trouve un symbole par nom (exact insensible à la casse, sinon premier
     /// qui le contient) — le PREMIER dans l'ordre canonique (chemin, rang).
+    // Hors ligne : sinon le compilateur change le code de `search` (+35 % de latence, mesuré).
+    #[inline(never)]
     pub(crate) fn find_symbol(&self, name: &str) -> Option<u32> {
         let n = name.to_ascii_lowercase();
-        let exact = self.defs(&n);
+        let mut exact = self.defs(&crate::graph::call_key(&n));
+        if n.contains("::") {
+            // Nom qualifié (`AFoo::Bar`) : parmi les `Bar`, ceux qui portent ce qualificatif.
+            let suffix = format!("::{}", n);
+            let narrowed: Vec<u32> = exact
+                .iter()
+                .copied()
+                .filter(|&g| {
+                    self.node(g).is_some_and(|r| {
+                        let m = r.name().to_ascii_lowercase();
+                        m == n || m.ends_with(&suffix)
+                    })
+                })
+                .collect();
+            if !narrowed.is_empty() {
+                exact = narrowed;
+            }
+        }
         if !exact.is_empty() {
             return exact.into_iter().min_by(|&a, &b| self.sort_key(a).cmp(&self.sort_key(b)));
         }

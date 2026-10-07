@@ -21,4 +21,4 @@ MCP client configuration without a global install:
 Prebuilt binaries: Linux x86_64, macOS arm64 and x86_64, Windows x86_64. Elsewhere:
 `cargo install astroquest-cortex`. `CORTEX_BINARY=/path/to/cortex` uses an existing binary.
 
-PolyForm Shield 1.0.0 license (source-available, free to use; versions up to 0.3.0 were MIT). See LICENSE.
+MIT license.

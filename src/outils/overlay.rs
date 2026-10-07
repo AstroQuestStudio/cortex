@@ -35,9 +35,9 @@ pub enum Etat {
 impl Etat {
     fn libelle(self) -> &'static str {
         match self {
-            Etat::Modifie => "modifié",
-            Etat::Nouveau => "nouveau",
-            Etat::Supprime => "supprimé",
+            Etat::Modifie => "modified",
+            Etat::Nouveau => "new",
+            Etat::Supprime => "deleted",
         }
     }
 }
@@ -321,7 +321,7 @@ pub fn changed(handles: &[Handle], budget: usize) -> String {
         appelants_ext.dedup();
         let n_fichiers_ext: HashSet<u32> = appelants_ext.iter().map(|&c| fichier_de(h, c)).collect();
         out.ligne(&format!(
-            "✎ non commité : {} fichier(s) dont {} de code touché(s), {} symbole(s) touché(s) ; {} appelant(s) hors du travail en cours ({} fichiers) ; {} test(s) à relancer",
+            "✎ uncommitted: {} file(s), {} code file(s) touched, {} symbol(s) touched; {} caller(s) outside the work in progress ({} files); {} test(s) to re-run",
             suivis.len(),
             detailles.len() + nouveaux.len(),
             touches_total.len(),
@@ -337,22 +337,22 @@ pub fn changed(handles: &[Handle], budget: usize) -> String {
         let poids = |t: &[u32]| t.iter().map(|s| n_app.get(s).map_or(0, |v| v.len())).sum::<usize>();
         detailles.sort_by(|a, b| poids(&b.2).cmp(&poids(&a.2)).then_with(|| a.0.cmp(b.0)));
         for (p, e, touches) in &detailles {
-            out.ligne(&format!("{} ✎ {} · {} symbole(s) touché(s)", ids::file_id(p), e.libelle(), touches.len()));
+            out.ligne(&format!("{} ✎ {} · {} symbol(s) touched", ids::file_id(p), e.libelle(), touches.len()));
             for &s in touches {
                 let n = n_app.get(&s).cloned().unwrap_or_default();
                 let ex =
-                    n.first().map(|&(c, site)| format!(" — ex. {}{}", h.node_id(c), site.map(|l| format!(" L{}", l)).unwrap_or_default()));
-                out.ligne(&format!("  {} · {} appelant(s){}", entete(h, s), n.len(), ex.unwrap_or_default()));
+                    n.first().map(|&(c, site)| format!(" — e.g. {}{}", h.node_id(c), site.map(|l| format!(" L{}", l)).unwrap_or_default()));
+                out.ligne(&format!("  {} · {} caller(s){}", entete(h, s), n.len(), ex.unwrap_or_default()));
             }
         }
         for (p, n) in &nouveaux {
-            out.ligne(&format!("{} ✎ nouveau · {} symbole(s)", ids::file_id(p), n));
+            out.ligne(&format!("{} ✎ new · {} symbol(s)", ids::file_id(p), n));
         }
         if !supprimes.is_empty() {
-            out.ligne(&format!("supprimés {}: {}", supprimes.len(), liste(&supprimes, 10)));
+            out.ligne(&format!("deleted {}: {}", supprimes.len(), liste(&supprimes, 10)));
         }
         if !autres.is_empty() {
-            out.ligne(&format!("autres (sans symbole de code touché) {}: {}", autres.len(), liste(&autres, 10)));
+            out.ligne(&format!("others (no code symbol touched) {}: {}", autres.len(), liste(&autres, 10)));
         }
         if suite.is_none() {
             suite = meilleur
@@ -361,7 +361,7 @@ pub fn changed(handles: &[Handle], budget: usize) -> String {
         }
     }
     if rien {
-        return "(cortex) aucun travail non commité dans les projets indexés (ou pas de dépôt git)\n".into();
+        return "(cortex) no uncommitted work in the indexed projects (or no git repository)\n".into();
     }
     out.fin(suite)
 }

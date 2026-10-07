@@ -1,6 +1,6 @@
 # Cortex architecture
 
-Cortex is a source-available Rust engine that lets an AI coding agent **understand** a codebase in
+Cortex is an open-source Rust engine that lets an AI coding agent **understand** a codebase in
 a few calls, without `find`, `grep`, or reading whole files. It aims to do better than Obsidian
 (hand-placed links, notes only) and better than graphify (a static code graph with no history).
 The numbers in this document come from two sources: AstroQuest's private monorepo — a
@@ -202,14 +202,14 @@ A single implementation (`src/outils/`) serves the CLI (`cortex find …`), the 
   `upload.ts`), `path:line` (enclosing symbol) or `path:start-end` (range, for `read`), and an
   identifier pasted back with its provenance or punctuation (`S:…#f L12-40`, identifier wrapped
   in backticks, trailing comma); several files matching a suffix: their list, and
-  `suite : outline <the first one>`.
+  `next : outline <the first one>`.
 - **Provenance**: the path is in the identifier, lines as `L<start>-<end>`; in `card` and
   `impact`, each caller carries the line of the CALL (`S:…#Auth L123`).
 - **Token budget** (`-b`, ≈ characters / 4); extra lines are counted
   (`… 12 ligne(s) coupée(s)`), never cut mid-line. `find` returns one result per 40-token slice
   (25 by default), with a one-sentence role for the first 5.
 - **✎** marks what comes from an uncommitted file (overlay, §9 I4).
-- **Last line `suite : <call>`**: the next call most likely to be useful, ready to replay
+- **Last line `next : <call>`**: the next call most likely to be useful, ready to replay
   (`find` → `card` of the first result, `card` → `read`, `read` → `impact`, `impact` → `read` of
   the first dependent, `overview` → `outline` of the first entry point, `changed` → `impact` of
   the most-called touched symbol; a range cut by the budget → `read path:start-end` for what
@@ -217,8 +217,8 @@ A single implementation (`src/outils/`) serves the CLI (`cortex find …`), the 
 - No title or decoration: the first line already carries information.
 
 The tool output labels shown below are currently in French ("appelle", "appelé par", "tests:",
-"suite :", "profondeur", "dépendant(s)") — this is a known limitation, not part of the contract.
-Agents should rely on the identifiers, the line ranges, and the final `suite :` line, which
+"next :", "profondeur", "dépendant(s)") — this is a known limitation, not part of the contract.
+Agents should rely on the identifiers, the line ranges, and the final `next :` line, which
 `docs/SPEC.md` documents precisely, rather than parsing the labels themselves.
 
 Synthetic examples (same format as real output, using invented generic names):
@@ -232,7 +232,7 @@ appelle 1 (+1 ambigu): S:src/http/redirect.ts#hasControlChars
 appelé par 7 (6 fichiers, L = ligne de l'appel): S:src/components/notifications/NotificationPanel.tsx#NotificationPanel L124, S:src/pages/Login.tsx#Login L123, …
 fichier importé par 7 fichier(s)
 tests: F:src/http/__tests__/redirect.test.ts
-suite : read S:src/http/redirect.ts#sanitizeRedirect
+next : read S:src/http/redirect.ts#sanitizeRedirect
 
 $ cortex impact putObject
 impact S:src/storage/upload.ts#putObject fn L144-167
@@ -246,7 +246,7 @@ profondeur 2 — 2 (1 fichiers)
 profondeur 3 — 6 (6 fichiers)
   F:src/functions/media-generate/index.ts
   …
-suite : read S:src/storage/archiver.ts#archiveRemoteAsset
+next : read S:src/storage/archiver.ts#archiveRemoteAsset
 ```
 
 **What each tool reads.** Everything comes from the mmap'd atlas, except `read` (the lines, from

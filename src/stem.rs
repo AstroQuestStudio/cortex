@@ -46,6 +46,11 @@ const SUFFIXES: &[(&str, usize)] = &[
 /// et ce n'est pas requis : on ne racinise jamais un terme déjà raciné (l'atlas
 /// garde les tokens bruts et racinise à l'écriture des postings ; le corps est
 /// raciné une fois, à l'extraction).
+/// Radical, appelé seulement quand l'appelant a déjà testé le drapeau `s` (voir `semantic.rs`).
+pub fn stem_if_enabled(t: &str) -> String {
+    stem(t)
+}
+
 pub fn stem(t: &str) -> String {
     let b = t.as_bytes();
     if b.len() < 5 || !b.iter().all(|c| c.is_ascii_lowercase()) {

@@ -160,23 +160,23 @@ pub fn format_grep(hits: &[TextHit], budget: usize, multi_project: bool, truncat
     }
     if hits.is_empty() {
         out.push_str(
-            "(aucune occurrence)
+            "(no occurrence)
 ",
         );
     } else if coupe {
         out.push_str(
-            "… budget -b atteint ; affine la recherche
+            "… budget -b reached; refine the search
 ",
         );
     } else if truncated {
         out.push_str(
-            "… limite de résultats (--max) atteinte ; affine la recherche
+            "… result limit (--max) reached; refine the search
 ",
         );
     }
     if let Some(s) = hits.iter().find_map(|h| h.symbol.as_deref()) {
         out.push_str(&format!(
-            "suite : read {}
+            "next : read {}
 ",
             s
         ));

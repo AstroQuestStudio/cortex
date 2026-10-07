@@ -122,7 +122,7 @@ pub fn crawl_site(state: Arc<SiteState>, controls: Arc<Controls>) {
 
     let out_dir = scrape::docs_home().join(&state.name);
     if std::fs::create_dir_all(&out_dir).is_err() {
-        *state.error.lock().unwrap() = Some("création dossier impossible".into());
+        *state.error.lock().unwrap() = Some("cannot create folder".into());
         state.done.store(true, Ordering::Relaxed);
         return;
     }
@@ -267,7 +267,7 @@ pub fn crawl_site(state: Arc<SiteState>, controls: Arc<Controls>) {
     if state.pages.load(Ordering::Relaxed) == 0 && !controls.quit.load(Ordering::Relaxed) {
         let mut e = state.error.lock().unwrap();
         if e.is_none() {
-            *e = Some("0 page (départ injoignable/rate-limited ?) — R pour relancer".into());
+            *e = Some("0 pages (start unreachable/rate-limited?): R to resume".into());
         }
     }
     state.done.store(true, Ordering::Relaxed);

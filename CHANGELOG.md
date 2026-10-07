@@ -6,14 +6,30 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
-### Licence change
-- Licence change: versions after 0.3.0 are PolyForm Shield 1.0.0 (SPDX: `PolyForm-Shield-1.0.0`);
-  0.3.0 and earlier remain MIT for those who obtained them under it. Cortex stays free to use,
-  including commercially; the licence forbids using it to provide a competing product. Cortex is
-  source-available, not open source. Contributions now grant AstroQuest a perpetual license
-  (see CONTRIBUTING.md).
+## [0.4.0] — 2026-10-07
 
 ### Added
+### Added
+- `cortex ui` / MCP `cortex_ui` — WHERE IS THIS UI? From what is visible on screen (button text,
+  `data-testid`, `aria-label`, id, React component names) to the code that renders it. The visible text is
+  resolved through i18n files to its KEY, then to the places that use the key; comments, docs and tests are
+  ignored; design-system primitives (`components/ui/`) rank behind real screens. ~270 ms on a 7 500-file
+  project. Used by Spectra's `browser_source`.
+- **C and C++ support** (`.h .hpp .hh .hxx .inl .ipp .tpp .c .cc .cpp .cxx`, tree-sitter-cpp
+  0.22): classes, structs, unions, enums, namespaces, functions and methods with their
+  **qualified name** (`AFoxMissile::Launch`, `FoxUi::BuildMenu`), `typedef`/`using`, `#define`;
+  call graph (calls, `new`, `&Class::Method` delegate bindings, template type arguments, base
+  classes), `#include "…"` as imports (resolved from the file's folder and each parent folder,
+  `Foo.h` and `Foo.cpp` share a stem), `//`, `///`, `/** */` doc-comments and trailing `//`
+  comments. **Unreal Engine** code parses cleanly: `UCLASS(...)`, `USTRUCT`, `UENUM`,
+  `UINTERFACE`, `UFUNCTION(...)`, `UPROPERTY(...)`, `UMETA`, `GENERATED_BODY()`, `*_API`
+  and `FORCEINLINE` are blanked out before parsing (same byte offsets and line numbers), and
+  `DECLARE_*DELEGATE*` / `DECLARE_LOG_CATEGORY*` names become symbols.
+- New symbol kind `decl` (a prototype without a body, usually in a header). The call graph
+  prefers the definition to its prototype; `card` and `impact` show `defined in:` /
+  `declared in:`, `card` borrows the header's comment as the role of the definition, `find`
+  shows the definition (with the header's role) instead of listing both, and `read` of a
+  prototype points to the definition.
 - One-line installers: `install.sh` (Linux, macOS, Git Bash) and `install.ps1` (Windows). They
   download the release archive, refuse it unless its SHA-256 matches `SHA256SUMS.txt`, and
   install without administrator rights (`~/.local/bin`, `%LOCALAPPDATA%\cortex\bin`).
@@ -21,9 +37,19 @@ All notable changes to Cortex are documented here. The format follows
   table near the top; social preview image in `.github/`.
 
 ### Changed
+- `cortex ui` runs in a companion binary, `cortex-ui`, built with `cargo build --release --features ui --bin cortex-ui`. `cortex ui` and the MCP tool `cortex_ui` call it; release archives and both installers ship it next to `cortex`. The main `cortex` binary no longer contains the UI locator.
+- Resolution key of a qualified name is its last segment (`graph::call_key`): `Launch()` finds
+  `AFoxMissile::Launch`. Names without `::` (every other language) are unchanged.
+- Synonym groups: `airbase`/`aerodrome`/`aerienne`, `replicate`/`replication`/`repliquer`,
+  `network`/`net`/`reseau`, `multiplayer`/`multijoueur`.
+- **Existing indexes stay valid** (no format change). Projects that contain C/C++ files get
+  them indexed on the next call (the freshness check sees the new files); run
+  `cortex update-all` to do it for every project at once, then `/mcp` → reconnect in running
+  agent sessions (an already running server keeps the old binary in memory).
 - Release archives (from the next release): `.tar.gz` members no longer start with `./`.
 
 ### Fixed
+- Search latency regression on the Windows build (the new UI locator code changed the compiled search path): the 40-question AstroQuest benchmark is back to 0.19 s, same as 0.3.0, with identical precision (top-1 57.5%, MRR 0.651).
 - README: the manual `tar -xz … cortex` one-liners did not work with the 0.3.0 archives, whose
   members are named `./cortex`; they are replaced by the installers.
 
@@ -72,5 +98,6 @@ First public release of **Cortex by AstroQuest**.
   `<P>_SSH_PORT`, `<P>_LOGIN`, `<P>_SSH_KEY_PATH`, `<P>_LABEL`) and never copies other keys.
 - `CORTEX_HOME` overrides the data directory (`~/.cortex`).
 
-[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.3.0

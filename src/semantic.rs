@@ -64,17 +64,69 @@ const SYNONYM_GROUPS: &[&[&str]] = &[
     &["tab", "onglet"],
     &["title", "titre"],
     &["guest", "anonymous", "anonyme", "invite"],
+    // « base aérienne » : le mot composé `Airbase` ne contient pas le mot « base »
+    &["airbase", "airfield", "aerodrome", "aerienne", "aeriennes"],
+    // Réseau / multijoueur (réplication Unreal, sessions) : questions FR, identifiants EN
+    &["replicate", "replicated", "replication", "replique", "repliquee", "repliquees", "repliquer"],
+    &["network", "net", "reseau"],
+    &["multiplayer", "multijoueur", "online"],
 ];
 
 /// Étend une liste de termes avec leurs synonymes connus.
 /// Garde l'ordre, évite les doublons. Les synonymes ajoutés porteront un poids
 /// réduit côté scoring (l'appelant les distingue via `is_synonym`).
+/// EXPÉRIENCE 2b (temporaire) : groupes supplémentaires activés par CORTEX_GLOSS.
+const EXTRA_P: &[&[&str]] = &[
+    &["chart", "charts", "graphique", "diagramme", "courbe"],
+    &["shortcut", "hotkey", "raccourci", "keyboard", "clavier", "keybinding"],
+    &["dictionary", "dictionnaire", "dict"],
+    &["draw", "drawing", "dessiner", "dessin"],
+    &["pen", "stylus", "stylet", "stylo"],
+    &["palm", "paume"],
+    &["sticky", "adhesive", "postit"],
+    &["snapshot", "instantane"],
+];
+const EXTRA_H: &[&[&str]] = &[
+    &["window", "fenetre"],
+    &["desktop", "bureau"],
+    &["word", "mot"],
+    &["employee", "salarie", "employe", "staff"],
+    &["hr", "hrm", "rh"],
+    &["data", "donnee", "donnees"],
+    &["gdpr", "rgpd", "privacy"],
+    &["url", "adresse", "link", "lien"],
+    &["password", "passe", "mdp"],
+    &["reminder", "relance", "rappel", "dunning"],
+    &["salary", "salaire", "payroll", "paie"],
+    &["bank", "banque", "bancaire"],
+    &["weekly", "hebdomadaire"],
+    &["scroll", "defilement"],
+    &["tab", "onglet"],
+    &["title", "titre"],
+    &["guest", "anonymous", "anonyme", "invite"],
+];
+
+fn gloss_flags() -> &'static str {
+    static G: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    G.get_or_init(|| std::env::var("CORTEX_GLOSS").unwrap_or_default())
+}
+
 pub fn expand_synonyms(terms: &[String]) -> Vec<String> {
     let mut out: Vec<String> = terms.to_vec();
+    let f = gloss_flags();
+    let mut groups: Vec<&[&str]> = SYNONYM_GROUPS.to_vec();
+    if f.contains('p') {
+        groups.extend_from_slice(EXTRA_P);
+    }
+    if f.contains('h') {
+        groups.extend_from_slice(EXTRA_H);
+    }
+    let by_stem = f.contains('s');
     for t in terms {
         let lt = t.to_ascii_lowercase();
-        for group in SYNONYM_GROUPS {
-            if group.contains(&lt.as_str()) {
+        let st = if by_stem { crate::stem::stem_if_enabled(&lt) } else { String::new() };
+        for group in groups.iter() {
+            if group.contains(&lt.as_str()) || (by_stem && group.iter().any(|g| crate::stem::stem_if_enabled(g) == st)) {
                 for &syn in *group {
                     if !out.iter().any(|x| x.eq_ignore_ascii_case(syn)) {
                         out.push(syn.to_string());

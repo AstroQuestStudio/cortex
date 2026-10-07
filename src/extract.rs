@@ -27,6 +27,7 @@ enum Grammar {
     Py,
     Rust,
     CSharp,
+    Cpp,
 }
 
 impl Grammar {
@@ -38,6 +39,7 @@ impl Grammar {
             Lang::Python => Some(Grammar::Py),
             Lang::Rust => Some(Grammar::Rust),
             Lang::CSharp => Some(Grammar::CSharp),
+            Lang::Cpp => Some(Grammar::Cpp),
             _ => None,
         }
     }
@@ -50,6 +52,7 @@ impl Grammar {
             Grammar::Py => tree_sitter_python::language(),
             Grammar::Rust => tree_sitter_rust::language(),
             Grammar::CSharp => tree_sitter_c_sharp::language(),
+            Grammar::Cpp => tree_sitter_cpp::language(),
         }
     }
 
@@ -59,11 +62,12 @@ impl Grammar {
             Grammar::Py => PY_QUERY,
             Grammar::Rust => RUST_QUERY,
             Grammar::CSharp => CS_QUERY,
+            Grammar::Cpp => "", // C/C++ : parcours dédié, voir cpp.rs
         }
     }
 }
 
-const N_GRAMMARS: usize = 6;
+const N_GRAMMARS: usize = 7;
 const QUERY_SLOT: OnceLock<Option<Query>> = OnceLock::new();
 /// Requêtes de symboles, une par grammaire.
 static SYMBOL_QUERIES: [OnceLock<Option<Query>>; N_GRAMMARS] = [QUERY_SLOT; N_GRAMMARS];
@@ -106,6 +110,11 @@ pub fn extract_symbols_and_refs(lang: Lang, source: &str) -> (Vec<Symbol>, FileR
         return (extract_markdown(source), extract_refs_with(lang, source, None));
     }
     let Some(g) = Grammar::of(lang) else { return (Vec::new(), extract_refs_with(lang, source, None)) };
+    if g == Grammar::Cpp {
+        // Les macros Unreal sont effacées (même longueur) avant l'analyse.
+        let tree = parse(g, &crate::cpp::blank_macros(source));
+        return crate::cpp::extract(source, tree.as_ref());
+    }
     let tree = parse(g, source.as_bytes());
     let symbols = match (&tree, symbol_query(g)) {
         (Some(t), Some(q)) => run(source.as_bytes(), t, q),
@@ -602,15 +611,21 @@ pub fn extract_comments(lang: Lang, source: &str, symbols: &mut [Symbol]) -> (Ve
     }
     let lines: Vec<&str> = source.lines().collect();
     let hash_comments = matches!(lang, Lang::Python);
+    // C/C++ : lignes de macros Unreal (UFUNCTION(...)) à enjamber au-dessus d'un symbole.
+    let macro_lines: Vec<bool> = if lang == Lang::Cpp { crate::cpp::macro_only_lines(source) } else { Vec::new() };
 
     for s in symbols.iter_mut() {
         if matches!(s.kind, SymbolKind::Import) || s.line < 1 {
             continue;
         }
         let idx = s.line as usize - 1;
-        let mut text = doc_above(&lines, idx, hash_comments);
+        let mut text = doc_above(&lines, idx, hash_comments, &macro_lines);
         if matches!(lang, Lang::Python) {
             text.push_str(&python_docstring(&lines, idx));
+        }
+        // C/C++ : commentaire de fin de ligne (`float Mass = 1.f; // kg`).
+        if lang == Lang::Cpp && text.is_empty() {
+            text = crate::cpp::trailing_comment(lines.get(idx).copied().unwrap_or(""));
         }
         if !text.is_empty() {
             s.doc = crate::symbol::text_tokens(&text);
@@ -647,7 +662,7 @@ fn strip_comment(t: &str) -> &str {
 
 /// Commentaire contigu juste au-dessus de la ligne `idx` (en sautant les
 /// attributs/décorateurs et la ligne `export`/signature multi-ligne éventuelle).
-fn doc_above(lines: &[&str], idx: usize, hash_comments: bool) -> String {
+fn doc_above(lines: &[&str], idx: usize, hash_comments: bool, macro_lines: &[bool]) -> String {
     if idx == 0 || idx > lines.len() {
         return String::new();
     }
@@ -655,7 +670,7 @@ fn doc_above(lines: &[&str], idx: usize, hash_comments: bool) -> String {
                      // Saute attributs Rust (#[..]) et décorateurs (@x) collés au symbole.
     while i > 0 {
         let t = lines[i - 1].trim();
-        if t.starts_with("#[") || (t.starts_with('@') && !t.starts_with("@/")) {
+        if t.starts_with("#[") || (t.starts_with('@') && !t.starts_with("@/")) || macro_lines.get(i - 1).copied().unwrap_or(false) {
             i -= 1;
         } else {
             break;
@@ -731,7 +746,13 @@ fn header_text(lines: &[&str], lang: Lang) -> String {
             }
             continue;
         }
-        if t.is_empty() || t.starts_with("/// <reference") || t.starts_with("#!") || t.starts_with("'use ") || t.starts_with("\"use ") {
+        if t.is_empty()
+            || (lang == Lang::Cpp && t.starts_with('#'))
+            || t.starts_with("/// <reference")
+            || t.starts_with("#!")
+            || t.starts_with("'use ")
+            || t.starts_with("\"use ")
+        {
             continue;
         }
         if t.starts_with("/*") {

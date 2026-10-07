@@ -13,7 +13,7 @@
 #   CORTEX_VERSION          release to install, e.g. 0.3.0 (default: latest)
 #   CORTEX_NO_MODIFY_PATH=1 do not touch the user PATH
 #
-# Source: https://github.com/AstroQuestStudio/cortex (PolyForm Shield 1.0.0). Made by AstroQuest.
+# Source: https://github.com/AstroQuestStudio/cortex (MIT). Made by AstroQuest.
 
 & {
     Set-StrictMode -Version 2.0
@@ -89,6 +89,8 @@
             if ($oldEncoding) { try { [Console]::OutputEncoding = $oldEncoding } catch { } }
         }
         if ($LASTEXITCODE -ne 0) { Fail 'the downloaded cortex.exe does not run on this system' }
+        # Companion for `cortex ui` (the UI locator). Optional: older archives do not have it.
+        $uiExe = Join-Path $extract 'cortex-ui.exe'
 
         # --- install --------------------------------------------------------------
         New-Item -ItemType Directory -Path $installDir -Force | Out-Null
@@ -103,6 +105,11 @@
             Remove-Item -LiteralPath $old -Force -ErrorAction SilentlyContinue
         } else {
             Copy-Item -LiteralPath $exe -Destination $target
+        }
+        if (Test-Path -LiteralPath $uiExe) {
+            $uiTarget = Join-Path $installDir 'cortex-ui.exe'
+            Copy-Item -LiteralPath $uiExe -Destination $uiTarget -Force
+            Write-Host "  installed cortex-ui -> $uiTarget"
         }
         Write-Host "  installed $installed -> $target"
         Write-Host ''

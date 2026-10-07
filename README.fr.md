@@ -4,12 +4,12 @@
 
 **Le moteur de contexte code pour agents IA.**<br>
 find, card, read, impact : un agent comprend une base de code en quelques appels et avec ~10 fois
-moins de tokens que grep + lecture de fichiers. Local, instantané, source disponible, gratuit.
+moins de tokens que grep + lecture de fichiers. Local, instantané, open source.
 
 [![CI](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml/badge.svg)](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AstroQuestStudio/cortex?sort=semver)](https://github.com/AstroQuestStudio/cortex/releases/latest)
 [![Téléchargements](https://img.shields.io/github/downloads/AstroQuestStudio/cortex/total?label=t%C3%A9l%C3%A9chargements)](https://github.com/AstroQuestStudio/cortex/releases)
-[![Licence : PolyForm Shield 1.0.0](https://img.shields.io/badge/licence-PolyForm%20Shield%201.0.0-blue.svg)](LICENSE)
+[![Licence : MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![Serveur MCP](https://img.shields.io/badge/MCP-serveur-8A2BE2)](#brancher-son-agent)
 
 **par [AstroQuest](https://astroquest.fr)** · [astroquest.fr/cortex](https://astroquest.fr/cortex) · [English](README.md) · [Spécification](docs/SPEC.md) · [Bancs](docs/BENCHMARKS.md) · [Architecture](docs/ARCHITECTURE.md)
@@ -127,7 +127,7 @@ $ cortex find "where is the request body parsed as form data"
 S:src/utils/body.ts#parseFormData fn L126-150 — Parses form data from a request.
 S:src/request.ts#formData method L334-336 — Parses the request body as `FormData`.
 …
-suite : card S:src/utils/body.ts#parseFormData
+next : card S:src/utils/body.ts#parseFormData
 
 $ cortex card S:src/utils/body.ts#parseFormData
 S:src/utils/body.ts#parseFormData fn L126-150
@@ -136,7 +136,7 @@ rôle: Parses form data from a request.
 appelle 3 (+1 ambigu): S:src/utils/body.ts#isRawRequest, S:src/utils/body.ts#convertFormDataToBodyData, S:src/utils/buffer.ts#bufferToFormData
 appelé par 1 (1 fichiers, L = ligne de l'appel): S:src/utils/body.ts#parseBody L112
 tests: F:src/utils/body.test.ts
-suite : read S:src/utils/body.ts#parseFormData
+next : read S:src/utils/body.ts#parseFormData
 
 $ cortex read S:src/utils/body.ts#parseFormData      # les lignes 126 à 150, numérotées
 $ cortex impact S:src/utils/body.ts#parseFormData
@@ -151,7 +151,7 @@ coûte **~9 000 tokens**, sans les dépendants transitifs ni les tests à relanc
 
 Chaque résultat porte un **identifiant stable** (`S:chemin#symbole`, `F:chemin`,
 `D:doc#section`) que l'agent recopie dans l'appel suivant, une plage de lignes, et une dernière
-ligne `suite :` qui propose l'appel le plus utile ensuite. Format spécifié dans
+ligne `next :` qui propose l'appel le plus utile ensuite. Format spécifié dans
 [docs/SPEC.md](docs/SPEC.md).
 
 ## Brancher son agent
@@ -185,7 +185,7 @@ Cortex est un serveur [MCP](https://modelcontextprotocol.io) en stdio : `cortex 
 ## Feuille de route
 
 Ingesteurs git (`why`), SQL (`schema`) et docs ; I1 `ask` sous budget ; I2 contexte
-différentiel ; I5 impact prédictif ; I8 faits vérifiables ; langages Go, Java, C, C++, PHP,
+différentiel ; I5 impact prédictif ; I8 faits vérifiables ; langages Go, Java, PHP,
 Ruby, Kotlin, Swift ; libellés de sortie en anglais et spécification v1.0. Détail dans le
 [README anglais](README.md#roadmap).
 
@@ -194,11 +194,5 @@ Ruby, Kotlin, Swift ; libellés de sortie en anglais et spécification v1.0. Dé
 Si Cortex fait économiser des tokens à votre agent, **mettez une étoile au dépôt** : c'est ainsi
 que d'autres développeurs le trouvent. Voir [CONTRIBUTING.md](CONTRIBUTING.md) : des chiffres
 avant et après chaque changement.
-Licence [PolyForm Shield 1.0.0](LICENSE) © 2026 [AstroQuest](https://astroquest.fr). Gratuit,
-y compris en usage commercial. Vous ne pouvez pas l'utiliser pour construire un produit ou un
-service concurrent. Contributions bienvenues. Code source disponible (« source-available »), pas
-open source.
-
-AstroQuest s'en sert chaque jour sur son propre monorepo de 8 000 fichiers. Les versions jusqu'à
-la 0.3.0 ont été publiées sous licence MIT et le restent ; les suivantes sont sous PolyForm Shield
-1.0.0 (voir le [changelog](CHANGELOG.md)).
+Licence [MIT](LICENSE) © 2026 [AstroQuest](https://astroquest.fr), qui s'en sert chaque jour sur
+son propre monorepo de 8 000 fichiers.

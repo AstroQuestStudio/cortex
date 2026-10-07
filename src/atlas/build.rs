@@ -128,7 +128,7 @@ impl SymPre {
         SymPre {
             token_stems: s.tokens.iter().map(|t| crate::stem::stem(t)).collect(),
             doc_stems: s.doc.iter().map(|t| crate::stem::stem(t)).collect(),
-            name_lower: s.name.to_ascii_lowercase(),
+            name_lower: graph::call_key(s.name),
         }
     }
 }
@@ -676,7 +676,7 @@ pub fn build_full(idx: &ProjectIndex) -> AtlasSegment {
     let t0 = std::time::Instant::now();
     let u = IndexUniverse::new(idx);
     if dbg {
-        eprintln!("[timing] univers de résolution: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing] resolution universe: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
     }
 
     let n_files = idx.files.len();
@@ -747,7 +747,7 @@ pub fn build_full(idx: &ProjectIndex) -> AtlasSegment {
         })
         .collect();
     if dbg {
-        eprintln!("[timing] résolution + cartes + découpes (parallèle): {:.2}ms", t1.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing] resolution + cards + splits (parallel): {:.2}ms", t1.elapsed().as_secs_f64() * 1000.0);
     }
     let mut sym_items: Vec<(u32, SymItem)> = Vec::with_capacity(cursor as usize - n_files);
     let mut files: Vec<(FileData, FilePre, Vec<u32>)> = Vec::with_capacity(n_files);
@@ -766,21 +766,21 @@ pub fn build_full(idx: &ProjectIndex) -> AtlasSegment {
         b.add_file_pre(fi as u32, true, &fd, &pre, contains, imported);
     }
     if dbg {
-        eprintln!("[timing] nœuds fichiers + postings corps: {:.2}ms", t1.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing] file nodes + body postings: {:.2}ms", t1.elapsed().as_secs_f64() * 1000.0);
     }
     let t2 = std::time::Instant::now();
     for (gid, (sd, pre, calls)) in sym_items {
         b.add_symbol_pre(gid, true, &sd, &pre, calls);
     }
     if dbg {
-        eprintln!("[timing] nœuds symboles + postings: {:.2}ms", t2.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing] symbol nodes + postings: {:.2}ms", t2.elapsed().as_secs_f64() * 1000.0);
     }
     let t3 = std::time::Instant::now();
     let seg = b.finish();
     if dbg {
         eprintln!("[timing] finish (tables, CSR): {:.2}ms", t3.elapsed().as_secs_f64() * 1000.0);
         eprintln!(
-            "[taille] chaînes {} · vocabulaire noms {} · postings noms {} · postings commentaires {} · vocabulaire corps {} · postings corps {}",
+            "[size] strings {} · name vocabulary {} · name postings {} · comment postings {} · body vocabulary {} · body postings {}",
             seg.strings.len(),
             seg.inverted.vocab.len(),
             seg.inverted.name_postings.len(),

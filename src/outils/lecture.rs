@@ -51,16 +51,31 @@ pub fn find(handles: &[Handle], question: &str, budget: usize) -> String {
     hits.truncate(n_hits);
     if hits.is_empty() {
         let mot = crate::search::query_terms(question).into_iter().next().unwrap_or_default();
-        return format!("(cortex) aucun symbole pour « {} »\nsuite : grep {}\n", question, mot);
+        return format!("(cortex) no symbol for '{}'\nnext : grep {}\n", question, mot);
     }
     let multi = handles.len() > 1;
     let ovs: Vec<Overlay> = handles.iter().map(overlay::charger).collect();
     let mut out = Out::new(budget);
     let mut suite = None;
+    let mut vus: std::collections::HashSet<(usize, u32)> = std::collections::HashSet::new();
     for (rang, (hi, hit)) in hits.iter().enumerate() {
         let h = &handles[*hi];
-        let Some(r) = h.node(hit.g) else { continue };
-        let id = h.node_id(hit.g);
+        // C/C++ : un prototype d'en-tête est montré par sa définition (.cpp) — c'est
+        // elle qu'on lit — avec le rôle (commentaire) du prototype ; les deux ne
+        // comptent qu'une fois.
+        let mut g = hit.g;
+        let mut role_decl = "";
+        if h.node(g).is_some_and(|r| r.kind() == SymbolKind::Decl) {
+            if let Some(&d) = contreparties(h, g).first() {
+                role_decl = h.node(g).map(|r| r.str(r.n.summary)).unwrap_or("");
+                g = d;
+            }
+        }
+        if !vus.insert((*hi, g)) {
+            continue;
+        }
+        let Some(r) = h.node(g) else { continue };
+        let id = h.node_id(g);
         if suite.is_none() {
             suite = Some(format!("card {}", id));
         }
@@ -75,6 +90,9 @@ pub fn find(handles: &[Handle], question: &str, budget: usize) -> String {
         );
         if rang < FIND_ROLES {
             let mut role_s = r.str(r.n.summary);
+            if role_s.is_empty() {
+                role_s = role_decl;
+            }
             if role_s.is_empty() {
                 role_s = role(h, r.n.owner_file);
             }
@@ -128,6 +146,43 @@ fn tests_du_symbole(h: &Handle, g: u32, appelants: &[u32]) -> Vec<u32> {
     t
 }
 
+/// Les cartes stockées par un atlas antérieur sont en français (`rôle:`,
+/// `appelle N`, `ambigu(s)`) : on les rend en anglais à la lecture, sans
+/// changer le format de l'atlas.
+fn carte_anglaise(carte: &str) -> String {
+    carte
+        .lines()
+        .map(|l| {
+            if let Some(r) = l.strip_prefix("rôle:") {
+                format!("role:{}", r)
+            } else if let Some(r) = l.strip_prefix("appelle ") {
+                format!("calls {}", r.replace(" ambigus)", " ambiguous)").replace(" ambigu)", " ambiguous)"))
+            } else {
+                l.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(
+            "
+",
+        )
+}
+
+/// C/C++ : la définition (.cpp) d'un prototype d'en-tête, ou les prototypes
+/// d'une définition — mêmes noms qualifiés, genre `Decl` d'un côté seulement.
+pub(super) fn contreparties(h: &Handle, g: u32) -> Vec<u32> {
+    let Some(r) = h.node(g) else { return Vec::new() };
+    let est_decl = r.kind() == SymbolKind::Decl;
+    let mut v: Vec<u32> = h
+        .defs(&crate::graph::call_key(r.name()))
+        .into_iter()
+        .filter(|&x| x != g)
+        .filter(|&x| h.node(x).is_some_and(|y| (y.kind() == SymbolKind::Decl) != est_decl && y.name().eq_ignore_ascii_case(r.name())))
+        .collect();
+    v.sort_by(|&a, &b| h.sort_key(a).cmp(&h.sort_key(b)));
+    v
+}
+
 /// `card <id|nom>` : la carte précompilée (I7) + appelants, importeurs, tests.
 /// `avec_docs` : alias `context` (ajoute les docs qui citent le symbole).
 pub fn card(handles: &[Handle], entree: &str, budget: usize, avec_docs: bool) -> String {
@@ -145,22 +200,36 @@ pub fn card(handles: &[Handle], entree: &str, budget: usize, avec_docs: bool) ->
     let path = h.path_of(f);
     let id = h.node_id(g);
     let mut out = Out::new(budget);
-    let carte = r.str(r.n.card);
-    let a_role = carte.lines().any(|l| l.starts_with("rôle:"));
-    let rf = if a_role { "" } else { role(h, f) };
+    let carte = &carte_anglaise(r.str(r.n.card));
+    let a_role = carte.lines().any(|l| l.starts_with("role:"));
+    let cp = contreparties(h, g);
+    // Sans rôle propre : celui du prototype d'en-tête (C/C++), sinon celui du fichier.
+    let role_decl = if a_role { "" } else { cp.iter().map(|&x| role(h, x)).find(|s| !s.is_empty()).unwrap_or("") };
+    let (rf, rf_etiquette) = if a_role {
+        ("", "")
+    } else if !role_decl.is_empty() {
+        (role_decl, "role (decl)")
+    } else {
+        (role(h, f), "role (file)")
+    };
     for (i, l) in carte.lines().enumerate() {
         if i == 0 {
             out.ligne(&format!("{}{}", l, marque(&ov, path)));
             continue;
         }
         // Sans rôle propre, celui du fichier, avant les relations.
-        if !rf.is_empty() && l.starts_with("appelle") {
-            out.ligne(&format!("rôle (fichier): {}", rf));
+        if !rf.is_empty() && l.starts_with("calls") {
+            out.ligne(&format!("{}: {}", rf_etiquette, rf));
         }
         out.ligne(l);
     }
-    if !rf.is_empty() && !carte.lines().any(|l| l.starts_with("appelle")) {
-        out.ligne(&format!("rôle (fichier): {}", rf));
+    if !rf.is_empty() && !carte.lines().any(|l| l.starts_with("calls")) {
+        out.ligne(&format!("{}: {}", rf_etiquette, rf));
+    }
+    if !cp.is_empty() {
+        let ids_: Vec<String> = cp.iter().map(|&x| h.node_id(x)).collect();
+        let etiquette = if r.kind() == SymbolKind::Decl { "defined in" } else { "declared in" };
+        out.ligne(&format!("{}: {}", etiquette, liste(&ids_, 3)));
     }
     let mut appelants = super::appelants(h, g);
     // Code d'abord, tests ensuite (ordre canonique dans chaque groupe).
@@ -175,13 +244,13 @@ pub fn card(handles: &[Handle], entree: &str, budget: usize, avec_docs: bool) ->
                 None => h.node_id(c),
             })
             .collect();
-        out.ligne(&format!("appelé par {} ({} fichiers, L = ligne de l'appel): {}", appelants.len(), fichiers.len(), liste(&ids_, 8)));
+        out.ligne(&format!("called by {} ({} files, L = call line): {}", appelants.len(), fichiers.len(), liste(&ids_, 8)));
     } else if r.kind() != SymbolKind::Heading {
-        out.ligne("appelé par 0 (aucun appel résolu ; imports : voir impact)");
+        out.ligne("called by 0 (no resolved call; imports: see impact)");
     }
     let importeurs = h.importers(f);
     if !importeurs.is_empty() {
-        out.ligne(&format!("fichier importé par {} fichier(s)", importeurs.len()));
+        out.ligne(&format!("file imported by {} file(s)", importeurs.len()));
     }
     let tests = tests_du_symbole(h, g, &appelants_g);
     if !tests.is_empty() {
@@ -200,7 +269,7 @@ pub fn card(handles: &[Handle], entree: &str, budget: usize, avec_docs: bool) ->
             .map(|x| h.node_id(x.g))
             .collect();
         if !membres.is_empty() {
-            out.ligne(&format!("membres {}: {}", membres.len(), liste(&membres, 6)));
+            out.ligne(&format!("members {}: {}", membres.len(), liste(&membres, 6)));
         }
     }
     let voisins: Vec<String> = freres
@@ -209,11 +278,11 @@ pub fn card(handles: &[Handle], entree: &str, budget: usize, avec_docs: bool) ->
         .map(|x| h.node_id(x.g))
         .collect();
     if !voisins.is_empty() {
-        out.ligne(&format!("autres exports du fichier {}: {}", voisins.len(), liste(&voisins, 5)));
+        out.ligne(&format!("other exports of the file {}: {}", voisins.len(), liste(&voisins, 5)));
     }
     if !homonymes.is_empty() {
         let hs: Vec<String> = homonymes.iter().map(|&x| h.node_id(x)).collect();
-        out.ligne(&format!("homonymes: {}", liste(&hs, 5)));
+        out.ligne(&format!("homonyms: {}", liste(&hs, 5)));
     }
     if avec_docs {
         let docs = docs_citant(h, r.name(), path);
@@ -257,14 +326,14 @@ pub(crate) fn outline_de(h: &Handle, f: u32, budget: usize) -> String {
     let ov = overlay::charger(h);
     let mut out = Out::new(budget);
     out.ligne(
-        format!("{} {} {} l.{}", ids::file_id(path), Lang::from_u8(r.n.lang).as_str(), r.n.lines, marque(&ov, path))
+        format!("{} {} {} lines{}", ids::file_id(path), Lang::from_u8(r.n.lang).as_str(), r.n.lines, marque(&ov, path))
             .trim_end()
             .to_string()
             .as_str(),
     );
     let rl = role(h, f);
     if !rl.is_empty() {
-        out.ligne(&format!("rôle: {}", rl));
+        out.ligne(&format!("role: {}", rl));
     }
     let importe: Vec<String> = {
         let mut v: Vec<u32> = h.imports_raw(f).iter().copied().filter(|&t| h.alive(t)).collect();
@@ -272,11 +341,11 @@ pub(crate) fn outline_de(h: &Handle, f: u32, budget: usize) -> String {
         v.iter().map(|&t| ids::file_id(h.path_of(t))).collect()
     };
     if !importe.is_empty() {
-        out.ligne(&format!("importe {}: {}", importe.len(), liste(&importe, 6)));
+        out.ligne(&format!("imports {}: {}", importe.len(), liste(&importe, 6)));
     }
     let importeurs: Vec<String> = h.importers(f).iter().map(|&t| ids::file_id(h.path_of(t))).collect();
     if !importeurs.is_empty() {
-        out.ligne(&format!("importé par {}: {}", importeurs.len(), liste(&importeurs, 4)));
+        out.ligne(&format!("imported by {}: {}", importeurs.len(), liste(&importeurs, 4)));
     }
     let syms: Vec<_> = h.symbols_of(f).into_iter().filter(|s| s.kind() != SymbolKind::Import).collect();
     let rangs = ids::ranks(h.symbols_of(f).iter().map(|s| (s.name(), s.kind())));
@@ -287,9 +356,9 @@ pub(crate) fn outline_de(h: &Handle, f: u32, budget: usize) -> String {
         return out.fin(Some(format!("read {}", ids::file_id(path))));
     }
     if n_exports > 0 {
-        out.ligne(&format!("symboles {} ({} exportés):", syms.len(), n_exports));
+        out.ligne(&format!("symbols {} ({} exported):", syms.len(), n_exports));
     } else {
-        out.ligne(&format!("symboles {}:", syms.len()));
+        out.ligne(&format!("symbols {}:", syms.len()));
     }
     // Imbrication par inclusion des plages (ordre des lignes).
     let mut ordre: Vec<&crate::atlas::view::NodeRef> = syms.iter().collect();
@@ -381,7 +450,7 @@ pub fn read(handles: &[Handle], entree: &str, contexte: u32, budget: usize) -> S
     let path = h.path_of(f).to_string();
     let Some(src) = lignes_fichier(h, &path) else {
         return format!(
-            "(cortex) {} illisible sur disque (déplacé ou supprimé ?)\nsuite : find {}\n",
+            "(cortex) {} unreadable on disk (moved or deleted?)\nnext : find {}\n",
             ids::file_id(&path),
             path.rsplit('/').next().unwrap_or(&path)
         );
@@ -398,7 +467,7 @@ pub fn read(handles: &[Handle], entree: &str, contexte: u32, budget: usize) -> S
     // Provenance : l'identifiant porte le chemin, chaque ligne son numéro.
     let tete = match g.and_then(|g| h.node(g).map(|r| (g, r.n.line, r.n.end_line.max(r.n.line)))) {
         Some((g, l0, l1)) if (a, b) == (l0, l1) => format!("{}{}", entete(h, g), marque(&ov, &path)),
-        Some((g, _, _)) => format!("{} (lignes {}-{}){}", entete(h, g), a, b, marque(&ov, &path)),
+        Some((g, _, _)) => format!("{} (lines {}-{}){}", entete(h, g), a, b, marque(&ov, &path)),
         None => format!("{} L{}-{}{}", ids::file_id(&path), a, b, marque(&ov, &path)),
     };
     out.ligne(&tete);
@@ -409,8 +478,11 @@ pub fn read(handles: &[Handle], entree: &str, contexte: u32, budget: usize) -> S
             premiere_coupee = Some(i);
         }
     }
+    let definition =
+        g.filter(|&g| h.node(g).is_some_and(|r| r.kind() == SymbolKind::Decl)).and_then(|g| contreparties(h, g).first().copied());
     let suite = match (premiere_coupee, g) {
         (Some(c), _) => format!("read {}:{}-{}", path, c, b),
+        (None, Some(_)) if definition.is_some() => format!("read {}", h.node_id(definition.unwrap())),
         (None, Some(g)) if !h.callers(g).is_empty() => format!("impact {}", h.node_id(g)),
         (None, Some(g)) => format!("card {}", h.node_id(g)),
         (None, None) => format!("outline {}", ids::file_id(&path)),

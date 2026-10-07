@@ -49,6 +49,8 @@ pub struct RefreshStats {
     pub check_ms: f64,
     /// Durée de la mise à jour (lecture, extraction, delta).
     pub update_ms: f64,
+    /// Vrai si l'atlas n'est pas inscriptible : index servi tel quel, sans contrôle.
+    pub read_only: bool,
 }
 
 /// Résultat d'une détection : quoi relire, quoi retirer, et le nouvel état
@@ -114,7 +116,7 @@ fn detect(h: &Handle, root: &Path) -> Detection {
     let ignored_set: FxHashSet<&str> = state.ignored.iter().map(|s| s.as_str()).collect();
     let dirs: Vec<&str> = visited.iter().map(|s| s.as_str()).collect();
     if dbg {
-        eprintln!("[timing:fraîcheur] préparation ({} dossiers): {:.2}ms", dirs.len(), t0.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing:freshness] preparation ({} folders): {:.2}ms", dirs.len(), t0.elapsed().as_secs_f64() * 1000.0);
     }
     // Règles hors du projet contrôlées PENDANT la lecture des dossiers (un
     // changement, rare, fait jeter cette lecture au profit d'un parcours complet).
@@ -189,7 +191,7 @@ fn detect(h: &Handle, root: &Path) -> Detection {
         return detect_full(h, root);
     }
     if dbg {
-        eprintln!("[timing:fraîcheur] lecture des dossiers: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing:freshness] folder read: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
     }
     let mut det = Detection {
         stale: Vec::new(),
@@ -244,7 +246,7 @@ fn detect(h: &Handle, root: &Path) -> Detection {
     }
     finish(&mut det);
     if dbg {
-        eprintln!("[timing:fraîcheur] total: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
+        eprintln!("[timing:freshness] total: {:.2}ms", t0.elapsed().as_secs_f64() * 1000.0);
     }
     det
 }
@@ -388,17 +390,72 @@ fn refresh_outcome(h: &mut Handle) -> std::io::Result<(Outcome, RefreshStats)> {
     Ok((out, stats))
 }
 
+/// Vrai si on peut écrire dans le dossier de l'atlas de `project` (sonde : un
+/// fichier créé puis supprimé). Résultat mémorisé par processus et par projet :
+/// un bac à sable en lecture seule (Codex `workspace-write`, disque monté en
+/// lecture seule, `CORTEX_READONLY=1`) ne le devient pas en cours de route.
+fn atlas_writable(project: &str) -> bool {
+    use std::sync::{Mutex, OnceLock};
+    static CACHE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
+    if std::env::var_os("CORTEX_READONLY").is_some_and(|v| !v.is_empty() && v != "0") {
+        return false;
+    }
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Some(&ok) = cache.lock().unwrap().get(project) {
+        return ok;
+    }
+    let ok = dir_writable(&super::manifest::atlas_dir(project));
+    cache.lock().unwrap().insert(project.to_string(), ok);
+    ok
+}
+
+/// Sonde d'écriture : crée puis supprime un fichier dans `dir`.
+fn dir_writable(dir: &Path) -> bool {
+    let probe = dir.join(format!(".write-probe-{}", std::process::id()));
+    let ok = std::fs::OpenOptions::new().write(true).create(true).truncate(true).open(&probe).is_ok();
+    let _ = std::fs::remove_file(&probe);
+    ok
+}
+
+/// Avertit UNE seule fois par processus que l'index est servi sans mise à jour.
+fn warn_read_only_once(project: &str, detail: &str) {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        eprintln!(
+            "[cortex] warning: the index of '{}' is read-only ({}): serving it as-is, without freshness updates (recent changes may be missing). Set a writable CORTEX_HOME or run cortex outside the sandbox to refresh.",
+            project, detail
+        );
+    });
+}
+
 /// Contrôle de fraîcheur + mise à jour si besoin ; `h` est rouvert après écriture.
+/// Si l'atlas n'est pas inscriptible, LIT l'index tel quel (pas de delta) et le
+/// dit une fois : c'est le cas d'un agent en bac à sable (`~/.cortex` en lecture
+/// seule).
 pub fn refresh(h: &mut Handle) -> RefreshStats {
+    let writable = atlas_writable(&h.project);
+    refresh_if(h, writable)
+}
+
+/// `refresh` avec l'inscriptibilité de l'atlas donnée (testable sans bac à sable).
+fn refresh_if(h: &mut Handle, writable: bool) -> RefreshStats {
     // Source inaccessible (disque débranché, dossier déplacé) : ne surtout pas
     // conclure que tous les fichiers ont disparu.
     if !Path::new(h.root()).is_dir() {
         return RefreshStats::default();
     }
+    if !writable {
+        warn_read_only_once(&h.project, "no write access");
+        return RefreshStats { read_only: true, ..Default::default() };
+    }
     match refresh_outcome(h) {
         Ok((_, s)) => s,
         Err(e) => {
-            eprintln!("[cortex] atlas '{}': mise à jour en échec ({})", h.project, e);
+            if matches!(e.kind(), std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::ReadOnlyFilesystem) {
+                warn_read_only_once(&h.project, &e.to_string());
+                return RefreshStats { read_only: true, ..Default::default() };
+            }
+            eprintln!("[cortex] atlas '{}': update failed ({})", h.project, e);
             RefreshStats::default()
         }
     }
@@ -531,6 +588,41 @@ mod tests {
         let s3 = refresh(&mut h);
         assert!(s3.refreshed);
         assert!(h.search("nouvelle fonction", 5).is_empty());
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
+    }
+
+    /// Atlas non inscriptible : l'index est lu tel quel (les anciens symboles
+    /// restent trouvables), aucun delta n'est écrit, pas de panique.
+    #[test]
+    fn refresh_lecture_seule_sert_l_index_tel_quel() {
+        let (name, dir) = project("ro");
+        std::fs::write(dir.join("a.ts"), "export function alpha() {}
+").unwrap();
+        let mut h = index_it(&name, &dir);
+        std::fs::write(dir.join("a.ts"), "export function alpha() {}
+export function beta() {}
+").unwrap();
+        let s = refresh_if(&mut h, false);
+        assert!(s.read_only && !s.refreshed && s.examined == 0);
+        assert_eq!(h.segment_count(), 1, "aucun delta écrit");
+        assert!(h.search("alpha", 5).iter().any(|x| x.name == "alpha"));
+        assert!(h.search("beta", 5).is_empty(), "les changements récents ne sont pas vus, sans erreur");
+        // Le même appel, une fois inscriptible, rattrape le retard.
+        assert!(refresh(&mut h).refreshed);
+        assert!(h.search("beta", 5).iter().any(|x| x.name == "beta"));
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
+    }
+
+    /// La sonde d'écriture rend faux pour un dossier impossible à créer.
+    #[test]
+    fn sonde_d_ecriture() {
+        let (name, dir) = project("probe");
+        assert!(dir_writable(&dir));
+        let fichier = dir.join("f.txt");
+        std::fs::write(&fichier, "x").unwrap();
+        assert!(!dir_writable(&fichier.join("sous-dossier")), "un chemin sous un fichier n'est pas inscriptible");
         std::fs::remove_dir_all(&dir).ok();
         clean(&name);
     }

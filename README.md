@@ -4,12 +4,12 @@
 
 **The code-context engine for AI agents.**<br>
 Find, card, read, impact: an agent understands a codebase in a few calls and ~10× fewer tokens
-than grep + read. Local, instant, source-available, free to use.
+than grep + read. Local, instant, open source.
 
 [![CI](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml/badge.svg)](https://github.com/AstroQuestStudio/cortex/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AstroQuestStudio/cortex?sort=semver)](https://github.com/AstroQuestStudio/cortex/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AstroQuestStudio/cortex/total?label=downloads)](https://github.com/AstroQuestStudio/cortex/releases)
-[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MCP server](https://img.shields.io/badge/MCP-server-8A2BE2)](#connect-your-agent)
 
 **by [AstroQuest](https://astroquest.fr)** · [astroquest.fr/cortex](https://astroquest.fr/cortex) · [Français](README.fr.md) · [Spec](docs/SPEC.md) · [Benchmarks](docs/BENCHMARKS.md) · [Architecture](docs/ARCHITECTURE.md)
@@ -125,7 +125,7 @@ S:src/request.ts#formData method L334-336 — Parses the request body as `FormDa
 S:src/utils/body.ts#convertFormDataToBodyData fn L160-189 — Converts form data to body data based on the provided options.
 S:src/utils/body.ts#ParseBody interface L90-94 — Parses the body of a request based on the provided options.
 …
-suite : card S:src/utils/body.ts#parseFormData
+next : card S:src/utils/body.ts#parseFormData
 
 $ cortex card S:src/utils/body.ts#parseFormData
 S:src/utils/body.ts#parseFormData fn L126-150
@@ -135,7 +135,7 @@ appelle 3 (+1 ambigu): S:src/utils/body.ts#isRawRequest, S:src/utils/body.ts#con
 appelé par 1 (1 fichiers, L = ligne de l'appel): S:src/utils/body.ts#parseBody L112
 fichier importé par 4 fichier(s)
 tests: F:src/utils/body.test.ts
-suite : read S:src/utils/body.ts#parseFormData
+next : read S:src/utils/body.ts#parseFormData
 
 $ cortex read S:src/utils/body.ts#parseFormData
 S:src/utils/body.ts#parseFormData fn L126-150
@@ -143,7 +143,7 @@ S:src/utils/body.ts#parseFormData fn L126-150
 127│  request: HonoRequest | Request,
 …
 150│}
-suite : impact S:src/utils/body.ts#parseFormData
+next : impact S:src/utils/body.ts#parseFormData
 
 $ cortex impact S:src/utils/body.ts#parseFormData
 impact S:src/utils/body.ts#parseFormData fn L126-150
@@ -155,14 +155,14 @@ profondeur 2 — 3 (3 fichiers)
   F:src/middleware/method-override/index.ts
   F:src/request.ts
   …
-suite : read S:src/utils/body.ts#parseBody
+next : read S:src/utils/body.ts#parseBody
 ```
 
 The grep-and-read route to the same point (grep "form data", read `body.ts`, grep its callers)
 costs **~9,000 tokens** and still does not give the transitive dependents or the tests to rerun.
 
 Every result carries a **stable identifier** (`S:path#symbol`, `F:path`, `D:doc#section`) that the
-agent copies into the next call, a line range, and a final `suite :` ("next") line with the most
+agent copies into the next call, a line range, and a final `next :` (formerly `suite`) line with the most
 useful next call. Output labels are French in v0.3 (`appelé par` = called by, `appelle` = calls);
 the format is specified in [docs/SPEC.md](docs/SPEC.md).
 
@@ -235,7 +235,8 @@ instruction block you can paste into `AGENTS.md`, `CLAUDE.md` or your rules file
   needed) and re-indexes only what changed, as a small delta segment. No daemon, no watcher to
   configure, no external service: everything stays on your machine.
 
-Languages: TypeScript/TSX, JavaScript, Python, Rust, C#, Markdown (tree-sitter).
+Languages: TypeScript/TSX, JavaScript, Python, Rust, C#, C and C++ (`.h .hpp .hh .hxx .inl .c .cc .cpp .cxx`,
+Unreal Engine macros included), Markdown (tree-sitter).
 
 ## More
 
@@ -261,7 +262,7 @@ Public, in the order we expect to build it. Every item ships with a benchmark th
 - **I5 — predictive impact**: call graph × co-change history, ranked by risk.
 - **I8 — verifiable facts**: each fact carries a content hash so an agent can check it is still
   true without re-reading the file.
-- **Languages**: Go, Java, C, C++, PHP, Ruby, Kotlin, Swift.
+- **Languages**: Go, Java, PHP, Ruby, Kotlin, Swift.
 - **English output labels** and a stable v1.0 of the [specification](docs/SPEC.md).
 
 ## The specification
@@ -279,10 +280,5 @@ Open a **"Cortex missed"** issue — misses become benchmark questions.
 
 ## License
 
-[PolyForm Shield 1.0.0](LICENSE) © 2026 [AstroQuest](https://astroquest.fr). Free to use,
-including commercially. You may not use it to build a competing product or service.
-Contributions welcome. Source-available, not open source.
-
-Cortex is built and maintained by AstroQuest, which uses it every day on its own 8,000-file
-monorepo. Versions up to 0.3.0 were released under the MIT license and remain available under it;
-later versions are PolyForm Shield 1.0.0 (see the [changelog](CHANGELOG.md)).
+[MIT](LICENSE) © 2026 [AstroQuest](https://astroquest.fr). Cortex is built and maintained by
+AstroQuest, which uses it every day on its own 8,000-file monorepo.

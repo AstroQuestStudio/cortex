@@ -106,7 +106,7 @@ pub fn snapshot(project: &str, env_path: &Path) -> std::io::Result<usize> {
     let env = parse_env(env_path);
     let targets = targets_from_env(&env, project);
     if targets.is_empty() {
-        eprintln!("cortex infra: aucun serveur (<P>_IPV4 ou <P>_HOST) dans {}", env_path.display());
+        eprintln!("cortex infra: no server (<P>_IPV4 or <P>_HOST) in {}", env_path.display());
         return Ok(0);
     }
     std::fs::create_dir_all(infra_home())?;
@@ -116,7 +116,7 @@ pub fn snapshot(project: &str, env_path: &Path) -> std::io::Result<usize> {
         let md = snapshot_one(t, env_path);
         let path = infra_home().join(format!("{}.md", t.name));
         std::fs::write(&path, md)?;
-        eprintln!("    écrit → {}", path.display());
+        eprintln!("    written → {}", path.display());
         done += 1;
     }
     Ok(done)

@@ -8,6 +8,7 @@
 //!   - cortex_find / card / outline / read / overview / impact / path / changed
 //!   - cortex_query, cortex_explain, cortex_context : alias compatibles
 //!   - cortex_grep      : plein-texte dans les fichiers indexés
+//!   - cortex_ui        : de ce qu'on voit à l'écran (texte, data-testid, composant) au code qui l'affiche
 //!   - cortex_files     : fichiers par nom/fragment/glob
 //!   - cortex_docs(_list): documentations externes scrapées offline
 //!   - cortex_list      : projets indexés
@@ -60,7 +61,13 @@ fn should_refresh(name: &str) -> bool {
 /// delta), borné par `MCP_REFRESH_MIN_INTERVAL` pour ne pas payer son coût à
 /// chaque appel.
 fn open_atlas(name: &str) -> Option<crate::atlas::Handle> {
-    let mut h = crate::atlas::ensure_and_open(name).ok()?;
+    let mut h = match crate::atlas::ensure_and_open(name) {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!("[cortex] atlas '{}' unavailable ({})", name, e);
+            return None;
+        }
+    };
     if should_refresh(name) {
         crate::atlas::fresh::refresh(&mut h);
     }
@@ -136,7 +143,7 @@ fn handle(req: &Value) -> Option<String> {
         "tools/call" => tools_call(req.get("params")),
         "ping" => Ok(json!({})),
         _ if method.starts_with("notifications/") => return None,
-        _ => Err((-32601, format!("method '{}' inconnue", method))),
+        _ => Err((-32601, format!("unknown method '{}'", method))),
     };
 
     if is_notification {
@@ -154,8 +161,8 @@ fn handle(req: &Value) -> Option<String> {
 fn schema(champ: &str, desc: &str, extra: Value) -> Value {
     let mut props = json!({
         champ: { "type": "string", "description": desc },
-        "project": { "type": "string", "description": "Limiter à un projet (optionnel ; défaut : tous les projets actifs)" },
-        "budget": { "type": "integer", "description": "Budget de sortie en tokens (≈ caractères/4 ; optionnel)" }
+        "project": { "type": "string", "description": "Limit to one project (optional; default: all active projects)" },
+        "budget": { "type": "integer", "description": "Output budget in tokens (about characters/4; optional)" }
     });
     if let (Some(p), Some(e)) = (props.as_object_mut(), extra.as_object()) {
         for (k, v) in e {
@@ -165,126 +172,142 @@ fn schema(champ: &str, desc: &str, extra: Value) -> Value {
     json!({ "type": "object", "properties": props, "required": [champ] })
 }
 
-const ID_DESC: &str = "Identifiant copié d'une sortie Cortex (S:chemin#symbole, D:chemin#ancre, F:chemin), ou nom de symbole, chemin, suffixe de chemin unique (useX.ts), chemin:ligne";
+const ID_DESC: &str = "Id copied from a Cortex output (S:path#symbol, D:path#anchor, F:path), or a symbol name, path, unique path suffix (useX.ts), path:line";
 
-const REGLE: &str = " Sorties : identifiants stables à recopier tels quels dans l'appel suivant, provenance (chemin + L<début>-<fin>), ✎ = non commité, dernière ligne « suite : » = l'appel le plus utile ensuite.";
+const REGLE: &str = " Output: stable ids to copy as-is into the next call, provenance (path + L<start>-<end>), ✎ = uncommitted, last line \"next : \" = the most useful call to make next.";
 
 fn tools_list() -> Value {
     json!({
         "tools": [
             {
                 "name": "cortex_find",
-                "description": format!("OÙ EST X ? Trouve les symboles (fonctions, composants, hooks, classes, types, titres de doc) pour une question en langage naturel FR/EN ou des mots-clés. Classement BM25F sur les noms (camelCase/snake découpés, fautes tolérées), les chemins, les en-têtes de fichier, les doc-comments et le corps des fichiers, racinisation FR/EN et synonymes FR↔EN. À utiliser AVANT grep/find/lecture de fichiers.{}", REGLE),
-                "inputSchema": schema("question", "Question ou mots-clés (FR ou EN)", json!({}))
+                "description": format!("WHERE IS X? Finds symbols (functions, components, hooks, classes, types, doc headings) for a natural-language question (FR/EN) or keywords. BM25F ranking over names (camelCase/snake split, typo tolerant), paths, file headers, doc-comments and file bodies, FR/EN stemming and FR<->EN synonyms. Use BEFORE grep/find/reading files.{}", REGLE),
+                "inputSchema": schema("question", "Question or keywords (FR or EN)", json!({}))
             },
             {
                 "name": "cortex_card",
-                "description": format!("C'EST QUOI ? Carte d'un symbole en un appel, sans lire son fichier : signature, rôle (doc-comment), ce qu'il appelle, qui l'appelle (avec la ligne de l'appel), combien de fichiers importent son fichier, tests liés, homonymes. Un fichier en entrée donne son outline.{}", REGLE),
+                "description": format!("WHAT IS IT? Card of a symbol in one call, without reading its file: signature, role (doc-comment), what it calls, who calls it (with the call line), how many files import its file, related tests, homonyms. A file as input gives its outline.{}", REGLE),
                 "inputSchema": schema("cible", ID_DESC, json!({}))
             },
             {
                 "name": "cortex_outline",
-                "description": format!("QUE CONTIENT CE FICHIER ? Rôle, fichiers importés et importeurs, symboles imbriqués avec plages de lignes, exports — au lieu de lire le fichier entier.{}", REGLE),
-                "inputSchema": schema("cible", "Fichier : F:chemin, chemin, suffixe unique (useX.ts), ou un symbole (son fichier)", json!({}))
+                "description": format!("WHAT DOES THIS FILE CONTAIN? Role, imported files and importers, nested symbols with line ranges, exports, instead of reading the whole file.{}", REGLE),
+                "inputSchema": schema("cible", "File: F:path, path, unique suffix (useX.ts), or a symbol (its file)", json!({}))
             },
             {
                 "name": "cortex_read",
-                "description": format!("MONTRE LE CODE : les lignes exactes d'un symbole (ou d'une section de doc, d'un fichier, d'une plage chemin:12-40), numérotées, lues sur disque — au lieu d'un Read à offset deviné.{}", REGLE),
-                "inputSchema": schema("cible", ID_DESC, json!({ "contexte": { "type": "integer", "description": "Lignes de contexte de part et d'autre (défaut 0)" } }))
+                "description": format!("SHOW THE CODE: the exact lines of a symbol (or a doc section, a file, a path:12-40 range), numbered, read from disk, instead of a Read at a guessed offset.{}", REGLE),
+                "inputSchema": schema("cible", ID_DESC, json!({ "contexte": { "type": "integer", "description": "Context lines on each side (default 0)" } }))
             },
             {
                 "name": "cortex_overview",
-                "description": format!("COMMENT MARCHE CE MODULE ? Pour un dossier : fichiers et rôles, points d'entrée (fichiers importés depuis l'extérieur), dépendances sortantes et entrantes par dossier, paquets externes.{}", REGLE),
-                "inputSchema": schema("dossier", "Dossier relatif à la racine du projet (ex. src/auth ; « . » = tout le projet)", json!({}))
+                "description": format!("HOW DOES THIS MODULE WORK? For a folder: files and roles, entry points (files imported from outside), outgoing and incoming dependencies per folder, external packages.{}", REGLE),
+                "inputSchema": schema("dossier", "Folder relative to the project root (e.g. src/auth; '.' = whole project)", json!({}))
             },
             {
                 "name": "cortex_impact",
-                "description": format!("QU'EST-CE QUI CASSE SI JE CHANGE ÇA ? Dépendants transitifs d'un symbole (appelants résolus par les imports, avec la ligne de l'appel, et fichiers qui importent le symbole sans l'appeler) ou d'un fichier (importeurs), par profondeur, et les tests à relancer. Les appels dynamiques (import(), chaînes) ne sont pas vus.{}", REGLE),
-                "inputSchema": schema("cible", ID_DESC, json!({ "profondeur": { "type": "integer", "description": "Profondeur 1 à 6 (défaut 3)" } }))
+                "description": format!("WHAT BREAKS IF I CHANGE THIS? Transitive dependents of a symbol (callers resolved through imports, with the call line, and files that import the symbol without calling it) or of a file (importers), by depth, and the tests to re-run. Dynamic calls (import(), strings) are not seen.{}", REGLE),
+                "inputSchema": schema("cible", ID_DESC, json!({ "profondeur": { "type": "integer", "description": "Depth 1 to 6 (default 3)" } }))
             },
             {
                 "name": "cortex_path",
-                "description": format!("COMMENT A ARRIVE-T-IL À B ? Plus court chemin d'appels entre deux symboles ou fichiers (sinon d'imports entre leurs fichiers ; sinon dans le sens inverse), avec la ligne de chaque appel.{}", REGLE),
+                "description": format!("HOW DOES A REACH B? Shortest call path between two symbols or files (else import path between their files; else in the reverse direction), with the line of each call.{}", REGLE),
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "de": { "type": "string", "description": ID_DESC },
                         "vers": { "type": "string", "description": ID_DESC },
-                        "project": { "type": "string", "description": "Limiter à un projet (optionnel)" },
-                        "budget": { "type": "integer", "description": "Budget de sortie en tokens (optionnel)" }
+                        "project": { "type": "string", "description": "Limit to one project (optional)" },
+                        "budget": { "type": "integer", "description": "Output budget in tokens (optional)" }
                     },
                     "required": ["de", "vers"]
                 }
             },
             {
                 "name": "cortex_changed",
-                "description": format!("QU'AI-JE MODIFIÉ ? Travail non commité (git status + git diff HEAD) : fichiers, fonctions touchées, leurs appelants hors du travail en cours et les tests à relancer.{}", REGLE),
-                "inputSchema": { "type": "object", "properties": { "project": { "type": "string", "description": "Limiter à un projet (optionnel)" }, "budget": { "type": "integer", "description": "Budget de sortie en tokens (optionnel)" } } }
+                "description": format!("WHAT DID I CHANGE? Uncommitted work (git status + git diff HEAD): files, touched functions, their callers outside the work in progress and the tests to re-run.{}", REGLE),
+                "inputSchema": { "type": "object", "properties": { "project": { "type": "string", "description": "Limit to one project (optional)" }, "budget": { "type": "integer", "description": "Output budget in tokens (optional)" } } }
             },
             {
                 "name": "cortex_query",
-                "description": "Alias de cortex_find (compatibilité) : même entrée « question », même sortie.",
-                "inputSchema": schema("question", "Question ou mots-clés (FR ou EN)", json!({}))
+                "description": "Alias of cortex_find (compatibility): same 'question' input, same output.",
+                "inputSchema": schema("question", "Question or keywords (FR or EN)", json!({}))
             },
             {
                 "name": "cortex_explain",
-                "description": "Alias de cortex_card (compatibilité) : entrée « symbol ». « depth » est accepté et ignoré ; pour les dépendants transitifs, utiliser cortex_impact.",
-                "inputSchema": schema("symbol", ID_DESC, json!({ "depth": { "type": "integer", "description": "Ignoré (compatibilité)" } }))
+                "description": "Alias of cortex_card (compatibility): 'symbol' input. 'depth' is accepted and ignored; for transitive dependents, use cortex_impact.",
+                "inputSchema": schema("symbol", ID_DESC, json!({ "depth": { "type": "integer", "description": "Ignored (compatibility)" } }))
             },
             {
                 "name": "cortex_context",
-                "description": "Alias de cortex_card (compatibilité) qui ajoute les docs (docs/**/*.md) citant le symbole ou son fichier. Entrée « symbol ».",
+                "description": "Alias of cortex_card (compatibility) that adds the docs (docs/**/*.md) citing the symbol or its file. 'symbol' input.",
                 "inputSchema": schema("symbol", ID_DESC, json!({}))
             },
             {
                 "name": "cortex_grep",
-                "description": "Texte EXACT (sous-chaîne littérale, insensible à la casse par défaut) dans le contenu des fichiers indexés : messages d'erreur, clés i18n, URLs, TODO, noms de table. Multithread, jamais node_modules ; résultats groupés par fichier avec le symbole englobant de chaque ligne (identifiant S:). Pour un symbole ou une question, préférer cortex_find.",
+                "description": "EXACT text (literal substring, case-insensitive by default) in the content of indexed files: error messages, i18n keys, URLs, TODO, table names. Multithreaded, never node_modules; results grouped by file with the enclosing symbol of each line (S: id). For a symbol or a question, prefer cortex_find.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "needle": { "type": "string", "description": "Chaîne littérale à chercher" },
-                        "project": { "type": "string", "description": "Limiter à un projet (optionnel)" },
-                        "case_sensitive": { "type": "boolean", "description": "Sensible à la casse (défaut false)" },
-                        "max": { "type": "integer", "description": "Max de lignes (défaut 60)" },
-                        "budget": { "type": "integer", "description": "Budget tokens approx (défaut 1500)" }
+                        "needle": { "type": "string", "description": "Literal string to look for" },
+                        "project": { "type": "string", "description": "Limit to one project (optional)" },
+                        "case_sensitive": { "type": "boolean", "description": "Case sensitive (default false)" },
+                        "max": { "type": "integer", "description": "Max lines (default 60)" },
+                        "budget": { "type": "integer", "description": "Approximate token budget (default 1500)" }
                     },
                     "required": ["needle"]
                 }
             },
             {
-                "name": "cortex_files",
-                "description": "Fichiers par fragment de chemin (insensible à la casse) ou glob ('**/*.test.ts'), lus dans l'atlas sans toucher le disque. Les chemins rendus sont acceptés tels quels par les autres outils.",
+                "name": "cortex_ui",
+                "description": "WHERE IS THIS UI? From what you SEE on screen (button text, data-testid, aria-label, id, React component names) to the code that renders it. Resolves i18n keys and their usages, ignores comments/docs/tests, ranks real screens above design-system primitives. One line per candidate: stable id, file:line, why.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "pattern": { "type": "string", "description": "Fragment de nom/chemin, ou glob si '*'/'?' présent" },
-                        "project": { "type": "string", "description": "Limiter à un projet (optionnel)" },
-                        "max": { "type": "integer", "description": "Max de résultats (défaut 80)" }
+                        "text": { "type": "string", "description": "Visible text (button label, heading…)" },
+                        "testid": { "type": "string", "description": "data-testid / data-test / data-cy value" },
+                        "aria": { "type": "string", "description": "aria-label / title / placeholder value" },
+                        "id": { "type": "string", "description": "DOM id" },
+                        "component": { "type": "string", "description": "React component names, nearest first, comma-separated" },
+                        "project": { "type": "string", "description": "Limit to one project (optional)" },
+                        "max": { "type": "integer", "description": "Max candidates (default 6)" }
+                    }
+                }
+            },
+            {
+                "name": "cortex_files",
+                "description": "Files by path fragment (case-insensitive) or glob ('**/*.test.ts'), read from the atlas without touching the disk. The paths returned are accepted as-is by the other tools.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": { "type": "string", "description": "Name/path fragment, or glob if '*'/'?' is present" },
+                        "project": { "type": "string", "description": "Limit to one project (optional)" },
+                        "max": { "type": "integer", "description": "Max results (default 80)" }
                     },
                     "required": ["pattern"]
                 }
             },
             {
                 "name": "cortex_docs",
-                "description": "Recherche dans les documentations externes aspirées en local (React, Rust, PostgreSQL… : `cortex docs add`) : réponses hors ligne. À utiliser avant WebFetch/WebSearch pour une bibliothèque déjà aspirée (liste : cortex_docs_list).",
+                "description": "Searches the external documentation scraped locally (React, Rust, PostgreSQL…: `cortex docs add`): offline answers. Use before WebFetch/WebSearch for an already scraped library (list: cortex_docs_list).",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "question": { "type": "string", "description": "Question / mots-clés" },
-                        "source": { "type": "string", "description": "Limiter à une doc (ex: Tauri, React). Optionnel." },
-                        "budget": { "type": "integer", "description": "Budget tokens approx (défaut 800)" }
+                        "question": { "type": "string", "description": "Question / keywords" },
+                        "source": { "type": "string", "description": "Limit to one doc (e.g. Tauri, React). Optional." },
+                        "budget": { "type": "integer", "description": "Approximate token budget (default 800)" }
                     },
                     "required": ["question"]
                 }
             },
             {
                 "name": "cortex_docs_list",
-                "description": "Liste les documentations externes aspirées en local et leur nombre de pages.",
+                "description": "Lists the external documentation scraped locally and its page count.",
                 "inputSchema": { "type": "object", "properties": {} }
             },
             {
                 "name": "cortex_list",
-                "description": "Liste les projets indexés par Cortex (fichiers, symboles).",
+                "description": "Lists the projects indexed by Cortex (files, symbols).",
                 "inputSchema": { "type": "object", "properties": {} }
             }
         ]
@@ -305,7 +328,7 @@ fn run_outil(args: &Value, appel: crate::outils::Appel) -> String {
 
 fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
     use crate::outils::Appel;
-    let params = params.ok_or((-32602, "params manquants".into()))?;
+    let params = params.ok_or((-32602, "missing params".into()))?;
     let name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(json!({}));
 
@@ -334,6 +357,48 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
             let budget = args.get("budget").and_then(|v| v.as_u64()).unwrap_or(1500) as usize;
             run_grep(needle, project, cs, max, budget)
         }
+        #[cfg(not(feature = "ui"))]
+        "cortex_ui" => {
+            let get = |k: &str| args.get(k).and_then(|v| v.as_str()).map(String::from);
+            let mut cli = vec!["ui".to_string(), get("text").unwrap_or_default()];
+            for k in ["testid", "aria", "id"] {
+                for v in args.get(k).and_then(|v| v.as_array()).into_iter().flatten().filter_map(|v| v.as_str()) {
+                    cli.push(format!("--{k}"));
+                    cli.push(v.to_string());
+                }
+            }
+            if let Some(c) = get("component") {
+                cli.push("--component".into());
+                cli.push(c);
+            }
+            if let Some(p) = get("project") {
+                cli.push("--project".into());
+                cli.push(p);
+            }
+            cli.push("--max".into());
+            cli.push(args.get("max").and_then(|v| v.as_u64()).unwrap_or(6).to_string());
+            cli.push("--no-refresh".into());
+            crate::sortie_cortex_ui(&cli)
+        }
+        #[cfg(feature = "ui")]
+        "cortex_ui" => {
+            let get = |k: &str| args.get(k).and_then(|v| v.as_str()).map(String::from);
+            let one = |k: &str| get(k).into_iter().collect::<Vec<_>>();
+            let q = crate::ui_locate::UiQuery {
+                text: get("text").unwrap_or_default(),
+                testid: one("testid"),
+                aria: one("aria"),
+                id: one("id"),
+                component: get("component").map(|c| c.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect()).unwrap_or_default(),
+            };
+            let max = args.get("max").and_then(|v| v.as_u64()).unwrap_or(6) as usize;
+            let handles = open_atlas_handles(&get("project"));
+            if handles.is_empty() {
+                "(cortex) no index.".to_string()
+            } else {
+                crate::ui_locate::run_ui_on(&handles, &q, max)
+            }
+        }
         "cortex_files" => {
             let pattern = args.get("pattern").and_then(|v| v.as_str()).unwrap_or("");
             let project = args.get("project").and_then(|v| v.as_str()).map(String::from);
@@ -349,17 +414,17 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "cortex_docs_list" => {
             let docs = crate::scrape::list_docs();
             if docs.is_empty() {
-                "(aucune doc scrapée — cortex docs add <url> --name <nom>)".to_string()
+                "(no scraped doc: cortex docs add <url> --name <name>)".to_string()
             } else {
-                let mut s = String::from("Docs offline disponibles :\n");
+                let mut s = String::from("Offline docs available:\n");
                 for (name, pages) in docs {
-                    s.push_str(&format!("- {} : {} pages\n", name, pages));
+                    s.push_str(&format!("- {}: {} pages\n", name, pages));
                 }
                 s
             }
         }
         "cortex_list" => run_list(),
-        _ => return Err((-32602, format!("tool '{}' inconnu", name))),
+        _ => return Err((-32602, format!("unknown tool '{}'", name))),
     };
 
     Ok(json!({ "content": [ { "type": "text", "text": text } ] }))
@@ -370,7 +435,7 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
 fn run_grep(needle: &str, project: Option<String>, case_sensitive: bool, max: usize, budget: usize) -> String {
     let handles = open_atlas_handles(&project);
     if handles.is_empty() {
-        return "(cortex) aucun index.".into();
+        return "(cortex) no index.".into();
     }
     crate::run_grep_on(&handles, needle, case_sensitive, max, budget).0
 }
@@ -378,21 +443,21 @@ fn run_grep(needle: &str, project: Option<String>, case_sensitive: bool, max: us
 fn run_files(pattern: &str, project: Option<String>, max: usize) -> String {
     let handles = open_atlas_handles(&project);
     if handles.is_empty() {
-        return "(cortex) aucun index.".into();
+        return "(cortex) no index.".into();
     }
     crate::run_files_on(&handles, pattern, max).0
 }
 
 fn run_list() -> String {
     let home = crate::index::cortex_home();
-    let mut out = String::from("Projets indexés :\n");
+    let mut out = String::from("Indexed projects:\n");
     if let Ok(entries) = std::fs::read_dir(&home) {
         for e in entries.flatten() {
             if crate::atlas::is_project_dir(&e.path()) {
                 let n = e.file_name().to_string_lossy().to_string();
                 if let Some(h) = open_atlas(&n) {
                     let (nf, ns, _) = h.counts();
-                    out.push_str(&format!("- {} : {} fichiers, {} symboles\n", n, nf, ns));
+                    out.push_str(&format!("- {}: {} files, {} symbols\n", n, nf, ns));
                 }
             }
         }

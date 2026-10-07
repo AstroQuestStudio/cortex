@@ -21,7 +21,7 @@ reading whole files. Read a full file only when you are about to edit it.
 | what breaks if I change X, and which tests to rerun | `cortex_impact` | `cortex impact <id>` |
 | how does A reach B (call chain with call lines) | `cortex_path` | `cortex path <a> <b>` |
 | what did I change, what calls it, which tests | `cortex_changed` | `cortex changed` |
-| exact text (error message, URL, i18n key, TODO) with the enclosing function | `cortex_grep` | `cortex grep "<text>"` |
+| exact text (error message, URL, i18n key, TODO) with the enclosing function | `cortex_grep`, `cortex_ui` (de ce qu'on voit à l'écran au code : texte, clé i18n, data-testid, composant) | `cortex grep "<text>"` |
 | a file by name fragment or glob | `cortex_files` | `cortex files "<fragment>"` |
 | offline docs of a library you scraped | `cortex_docs` | `cortex docs query "<q>" --source <Lib>` |
 
@@ -34,9 +34,13 @@ Add `-p <Project>` (MCP: `project`) when several projects are indexed, and `-b <
   second homonym in the same file), `D:<path>#<anchor>` (doc section), `F:<path>` (file).
   Copy it verbatim into the next call. Tools also accept a bare name, a path, a unique path
   suffix (`useAuth.ts`) or `path:line`.
+- C and C++ (headers and sources, Unreal macros included): symbol names are qualified
+  (`S:Source/Weapons/FoxMissiles.cpp#FoxFM::MissileSystem::Launch`; a bare `Launch` also works),
+  `decl` is a prototype without a body (`card` and `impact` say `defined in:` / `declared in:`;
+  `find` already shows the definition), data members are not symbols (use `grep`).
 - Line ranges are `L<start>-<end>`; in `card` and `impact`, callers carry the line of the call.
 - `✎` marks code that is not committed yet.
-- The last line, `suite : <call>`, is the most useful next call ("suite" = "next"). Follow it
+- The last line, `next : <call>`, is the most useful next call (formerly "suite"). Follow it
   when in doubt.
 - Output labels are currently in French (`appelle` = calls, `appelé par` = called by,
   `profondeur` = depth, `coupée(s)` = cut by the budget).

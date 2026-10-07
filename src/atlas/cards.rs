@@ -55,14 +55,14 @@ pub fn render_card(
         out.push('\n');
     }
     if !summary.is_empty() {
-        out.push_str("rôle: ");
+        out.push_str("role: ");
         out.push_str(summary);
         out.push('\n');
     }
     if !callees.is_empty() || ambiguous > 0 {
-        out.push_str(&format!("appelle {}", callees.len()));
+        out.push_str(&format!("calls {}", callees.len()));
         if ambiguous > 0 {
-            out.push_str(&format!(" (+{} ambigu{})", ambiguous, if ambiguous > 1 { "s" } else { "" }));
+            out.push_str(&format!(" (+{} ambiguous)", ambiguous));
         }
         if !callees.is_empty() {
             out.push_str(": ");

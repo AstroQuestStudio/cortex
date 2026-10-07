@@ -45,10 +45,10 @@ pub fn parse_config(content: &str, default_max: usize) -> (Vec<SiteJob>, Vec<Str
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        // Format : nom | url | max? | lang?  (max et lang optionnels)
+        // Format: name | url | max? | lang?  (max et lang optionnels)
         let parts: Vec<&str> = line.split('|').map(|p| p.trim()).collect();
         if parts.len() < 2 || parts[0].is_empty() || parts[1].is_empty() {
-            errors.push(format!("ligne {} ignorée (format attendu: nom | url | max? | lang?): {}", lineno + 1, line));
+            errors.push(format!("line {} ignored (expected format: name | url | max? | lang?): {}", lineno + 1, line));
             continue;
         }
         let max = parts.get(2).and_then(|m| m.parse::<usize>().ok()).unwrap_or(default_max);
@@ -66,7 +66,7 @@ pub fn run_batch(jobs: &[SiteJob], workers: usize) -> Vec<(String, Result<usize,
     let done = Arc::new(AtomicUsize::new(0));
     let t0 = Instant::now();
 
-    eprintln!("▶ Batch : {} sites · {} workers parallèles", total, workers);
+    eprintln!("▶ Batch: {} sites · {} parallel workers", total, workers);
 
     let pool = rayon::ThreadPoolBuilder::new().num_threads(workers.max(1)).build().expect("threadpool batch");
 
@@ -97,7 +97,7 @@ pub fn run_batch(jobs: &[SiteJob], workers: usize) -> Vec<(String, Result<usize,
 
     let ok = results.iter().filter(|(_, r)| r.is_ok()).count();
     let pages: usize = results.iter().filter_map(|(_, r)| r.as_ref().ok()).sum();
-    eprintln!("■ Batch terminé en {:.0}s · {}/{} sites OK · {} pages au total", t0.elapsed().as_secs_f64(), ok, total, pages);
+    eprintln!("■ Batch finished in {:.0}s · {}/{} sites OK · {} pages in total", t0.elapsed().as_secs_f64(), ok, total, pages);
     results
 }
 

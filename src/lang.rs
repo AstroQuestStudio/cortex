@@ -11,6 +11,7 @@ pub enum Lang {
     Python,
     CSharp,
     Rust,
+    Cpp,
     Markdown,
     Sql,
     Json,
@@ -34,6 +35,8 @@ impl Lang {
             "py" | "pyi" => Lang::Python,
             "cs" => Lang::CSharp,
             "rs" => Lang::Rust,
+            // C et C++ : une seule grammaire (le C++ en est un sur-ensemble pour notre usage).
+            "h" | "hpp" | "hh" | "hxx" | "inl" | "ipp" | "tpp" | "c" | "cc" | "cpp" | "cxx" | "c++" => Lang::Cpp,
             "md" | "mdx" | "markdown" => Lang::Markdown,
             "sql" => Lang::Sql,
             "json" => Lang::Json,
@@ -55,7 +58,15 @@ impl Lang {
     pub fn has_parser(&self) -> bool {
         matches!(
             self,
-            Lang::TypeScript | Lang::Tsx | Lang::JavaScript | Lang::Jsx | Lang::Python | Lang::CSharp | Lang::Rust | Lang::Markdown
+            Lang::TypeScript
+                | Lang::Tsx
+                | Lang::JavaScript
+                | Lang::Jsx
+                | Lang::Python
+                | Lang::CSharp
+                | Lang::Rust
+                | Lang::Cpp
+                | Lang::Markdown
         )
     }
 
@@ -77,6 +88,7 @@ impl Lang {
             Lang::Html => 12,
             Lang::Css => 13,
             Lang::Other => 14,
+            Lang::Cpp => 15,
         }
     }
 
@@ -96,6 +108,7 @@ impl Lang {
             11 => Lang::Yaml,
             12 => Lang::Html,
             13 => Lang::Css,
+            15 => Lang::Cpp,
             _ => Lang::Other,
         }
     }
@@ -109,6 +122,7 @@ impl Lang {
             Lang::Python => "python",
             Lang::CSharp => "csharp",
             Lang::Rust => "rust",
+            Lang::Cpp => "cpp",
             Lang::Markdown => "markdown",
             Lang::Sql => "sql",
             Lang::Json => "json",

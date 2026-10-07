@@ -18,6 +18,9 @@ pub enum SymbolKind {
     Heading,   // markdown
     Component, // React
     Hook,      // React use*
+    /// Prototype sans corps (C/C++ : déclaration d'en-tête). Le graphe d'appels lui
+    /// préfère la définition quand elle existe.
+    Decl,
 }
 
 /// Un symbole = un "nœud" du graphe de contexte.
@@ -302,6 +305,7 @@ impl SymbolKind {
             SymbolKind::Heading => 10,
             SymbolKind::Component => 11,
             SymbolKind::Hook => 12,
+            SymbolKind::Decl => 13,
         }
     }
 
@@ -319,6 +323,7 @@ impl SymbolKind {
             10 => SymbolKind::Heading,
             11 => SymbolKind::Component,
             12 => SymbolKind::Hook,
+            13 => SymbolKind::Decl,
             _ => SymbolKind::Function,
         }
     }
@@ -338,6 +343,7 @@ impl SymbolKind {
             SymbolKind::Heading => "heading",
             SymbolKind::Component => "component",
             SymbolKind::Hook => "hook",
+            SymbolKind::Decl => "decl",
         }
     }
 }

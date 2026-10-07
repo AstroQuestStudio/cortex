@@ -16,7 +16,7 @@
 //! Règles de sortie, communes : identifiants stables (`ids`) recopiables tels
 //! quels, provenance (chemin dans l'identifiant + `L<début>-<fin>`), budget en
 //! tokens (≈ caractères / 4, `-b`), `✎` sur ce qui vient du travail non commité
-//! (`overlay`), et une dernière ligne `suite : <appel le plus utile ensuite>`.
+//! (`overlay`), et une dernière ligne `next : <appel le plus utile ensuite>`.
 //! Aucune décoration : pas de titre, pas de cadre, pas de ligne vide.
 
 pub mod graphe;
@@ -115,7 +115,7 @@ impl Appel {
 pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> String {
     let budget = budget.unwrap_or_else(|| appel.budget_defaut()).max(50);
     if handles.is_empty() {
-        return "(cortex) aucun projet indexé — cortex index <chemin> --name <Projet>\n".into();
+        return "(cortex) no indexed project: cortex index <path> --name <Project>\n".into();
     }
     match appel {
         Appel::Find { question } => lecture::find(handles, question, budget),
@@ -161,13 +161,13 @@ impl Out {
         true
     }
 
-    /// Termine la sortie : mention des lignes coupées, puis `suite : …`.
+    /// Termine la sortie : mention des lignes coupées, puis `next : …`.
     pub fn fin(mut self, suite: Option<String>) -> String {
         if self.coupees > 0 {
-            self.buf.push_str(&format!("… {} ligne(s) coupée(s) : budget -b {} atteint\n", self.coupees, self.budget));
+            self.buf.push_str(&format!("… {} line(s) cut: budget -b {} reached\n", self.coupees, self.budget));
         }
         if let Some(s) = suite {
-            self.buf.push_str("suite : ");
+            self.buf.push_str("next : ");
             self.buf.push_str(&s);
             self.buf.push('\n');
         }
@@ -232,13 +232,13 @@ fn resoudre_un<'h>(h: &'h Handle, t: &Target) -> Resolu<'h> {
             Ok(Some(f)) => match symbole_du_fichier(h, f, frag, *rank, *doc) {
                 Some(g) => trouve(Cible::Noeud(g)),
                 None => Resolu::Introuvable(format!(
-                    "« {} » introuvable dans {} (outline {} pour la liste)",
+                    "'{}' not found in {} (outline {} lists its symbols)",
                     frag,
                     ids::file_id(h.path_of(f)),
                     ids::file_id(h.path_of(f))
                 )),
             },
-            Ok(None) => Resolu::Introuvable(format!("fichier « {} » introuvable", path)),
+            Ok(None) => Resolu::Introuvable(format!("file '{}' not found", path)),
             Err(c) => Resolu::Ambigu(c),
         },
         Target::File(p) => match fichier(h, p) {
@@ -250,18 +250,23 @@ fn resoudre_un<'h>(h: &'h Handle, t: &Target) -> Resolu<'h> {
                         return r;
                     }
                 }
-                Resolu::Introuvable(format!("fichier « {} » introuvable", p))
+                Resolu::Introuvable(format!("file '{}' not found", p))
             }
             Err(c) => Resolu::Ambigu(c),
         },
         Target::Lines { path, start, end } => match fichier(h, path) {
             Ok(Some(f)) => trouve(Cible::Lignes { fichier: f, debut: *start, fin: *end }),
-            Ok(None) => Resolu::Introuvable(format!("fichier « {} » introuvable", path)),
+            Ok(None) => Resolu::Introuvable(format!("file '{}' not found", path)),
             Err(c) => Resolu::Ambigu(c),
         },
         Target::Name(n) => {
-            let Some(g) = h.find_symbol(n) else { return Resolu::Introuvable(format!("symbole « {} » introuvable", n)) };
-            let mut homonymes: Vec<u32> = h.defs(&n.to_ascii_lowercase()).into_iter().filter(|&x| x != g).collect();
+            let Some(g) = h.find_symbol(n) else { return Resolu::Introuvable(format!("symbol '{}' not found", n)) };
+            let mut homonymes: Vec<u32> = h.defs(&crate::graph::call_key(n)).into_iter().filter(|&x| x != g).collect();
+            // C/C++ : le prototype d'une définition (même nom qualifié) n'est pas un homonyme.
+            if let Some(r) = h.node(g) {
+                let decl = r.kind() == SymbolKind::Decl;
+                homonymes.retain(|&x| !h.node(x).is_some_and(|y| (y.kind() == SymbolKind::Decl) != decl && y.name().eq_ignore_ascii_case(r.name())));
+            }
             homonymes.sort_by(|&a, &b| h.sort_key(a).cmp(&h.sort_key(b)));
             Resolu::Trouve { h, cible: Cible::Noeud(g), homonymes }
         }
@@ -282,7 +287,7 @@ pub fn resoudre<'h>(handles: &'h [Handle], entree: &str) -> Resolu<'h> {
             }
         }
     }
-    premier_echec.unwrap_or_else(|| Resolu::Introuvable(format!("« {} » introuvable", entree)))
+    premier_echec.unwrap_or_else(|| Resolu::Introuvable(format!("'{}' not found", entree)))
 }
 
 /// Message d'échec de résolution, avec la suite utile.
@@ -290,13 +295,13 @@ pub fn echec(r: Resolu, entree: &str) -> String {
     match r {
         Resolu::Ambigu(c) => {
             let mut out = Out::new(400);
-            out.ligne(&format!("« {} » désigne {} fichiers :", entree, c.len()));
+            out.ligne(&format!("'{}' matches {} files:", entree, c.len()));
             for x in c.iter().take(12) {
                 out.ligne(x);
             }
             out.fin(c.first().map(|x| format!("outline {}", x)))
         }
-        Resolu::Introuvable(m) => format!("(cortex) {}\nsuite : find {}\n", m, entree.trim_start_matches("S:").trim_start_matches("F:")),
+        Resolu::Introuvable(m) => format!("(cortex) {}\nnext : find {}\n", m, entree.trim_start_matches("S:").trim_start_matches("F:")),
         Resolu::Trouve { .. } => String::new(),
     }
 }
@@ -347,7 +352,9 @@ pub fn site_appel(h: &Handle, appelant: u32, nom: &str) -> Option<u32> {
     let f = h.node(r.n.owner_file)?;
     let refs = f.refs()?;
     let (a, b) = (r.n.line, if r.n.end_line == 0 { u32::MAX } else { r.n.end_line });
-    refs.calls.iter().filter(|c| c.line >= a && c.line <= b && f.str(c.name).eq_ignore_ascii_case(nom)).map(|c| c.line).min()
+    // Nom qualifié C++ (`AFoo::Bar`) : l'appel ne porte que `Bar`.
+    let simple = nom.rsplit("::").next().unwrap_or(nom);
+    refs.calls.iter().filter(|c| c.line >= a && c.line <= b && f.str(c.name).eq_ignore_ascii_case(simple)).map(|c| c.line).min()
 }
 
 /// Appelants d'un symbole avec leur site d'appel, sans doublon d'imbrication :

@@ -48,6 +48,8 @@ jobs:
           key: ${{ matrix.target }}
       - name: build
         run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: build ui companion
+        run: cargo build --release --locked --target ${{ matrix.target }} --features ui --bin cortex-ui
       - name: package
         id: package
         shell: bash
@@ -57,8 +59,10 @@ jobs:
           mkdir -p dist/stage
           if [ "${{ matrix.archive }}" = "zip" ]; then
             cp "target/${{ matrix.target }}/release/cortex.exe" dist/stage/
+            cp "target/${{ matrix.target }}/release/cortex-ui.exe" dist/stage/
           else
             cp "target/${{ matrix.target }}/release/cortex" dist/stage/
+            cp "target/${{ matrix.target }}/release/cortex-ui" dist/stage/
           fi
           cp README.md LICENSE CHANGELOG.md dist/stage/
           cd dist/stage

@@ -48,7 +48,7 @@ fn dependants(h: &Handle, x: u32) -> Vec<(u32, Option<u32>)> {
             continue;
         }
         let Some(fr) = h.node(f) else { continue };
-        if fr.refs().is_some_and(|refs| refs.imported_names.iter().any(|&n| fr.str(n) == nom)) {
+        if fr.refs().is_some_and(|refs| refs.imported_names.iter().any(|&n| fr.str(n) == nom.rsplit("::").next().unwrap_or(nom))) {
             v.push((f, None));
         }
     }
@@ -99,32 +99,33 @@ pub fn impact(handles: &[Handle], entree: &str, profondeur: usize, budget: usize
 
     let mut out = Out::new(budget);
     out.ligne(&format!("impact {}{}", entete(h, start), marque(&ov, h.path_of(f0))));
+    // C/C++ : le prototype d'en-tête (ou la définition) à modifier avec le symbole.
+    let cp = super::lecture::contreparties(h, start);
+    if !cp.is_empty() {
+        let ids_: Vec<String> = cp.iter().map(|&x| h.node_id(x)).collect();
+        let decl = h.node(start).is_some_and(|r| r.kind() == SymbolKind::Decl);
+        out.ligne(&format!("{}: {}", if decl { "defined in" } else { "declared in" }, liste(&ids_, 3)));
+    }
     let total: usize = niveaux.iter().map(|n| n.len()).sum();
     let fichiers: HashSet<u32> = niveaux.iter().flatten().map(|&(g, _)| fichier_de(h, g)).collect();
     if total == 0 {
-        out.ligne("aucun appelant ni importeur résolu (appel dynamique, chaîne, réexport ?)");
+        out.ligne("no resolved caller or importer (dynamic call, string, re-export?)");
     } else {
         out.ligne(&format!(
-            "{} dépendant(s) sur {} niveau(x), {} fichier(s){}",
+            "{} dependent(s) over {} level(s), {} file(s){}",
             total,
             niveaux.len(),
             fichiers.len(),
-            if borne { format!(" (borné à {} nœuds)", IMPACT_MAX_NOEUDS) } else { String::new() }
+            if borne { format!(" (capped at {} nodes)", IMPACT_MAX_NOEUDS) } else { String::new() }
         ));
     }
     if !tests.is_empty() {
         let t: Vec<String> = tests.iter().map(|&t| h.node_id(t)).collect();
-        out.ligne(&format!("tests à relancer {}: {}", tests.len(), liste(&t, 10)));
+        out.ligne(&format!("tests to re-run {}: {}", tests.len(), liste(&t, 10)));
     }
     for (d, niv) in niveaux.iter().enumerate() {
         let nf: HashSet<u32> = niv.iter().map(|&(g, _)| fichier_de(h, g)).collect();
-        out.ligne(&format!(
-            "profondeur {} — {} ({} fichiers){}",
-            d + 1,
-            niv.len(),
-            nf.len(),
-            if d == 0 { ", L = ligne de l'appel" } else { "" }
-        ));
+        out.ligne(&format!("depth {} — {} ({} files){}", d + 1, niv.len(), nf.len(), if d == 0 { ", L = call line" } else { "" }));
         for &(g, site) in niv {
             let s = site.map(|l| format!(" L{}", l)).unwrap_or_default();
             out.ligne(&format!("  {}{}{}", h.node_id(g), s, marque(&ov, h.path_of(fichier_de(h, g)))));
@@ -237,7 +238,7 @@ pub fn path(handles: &[Handle], de: &str, vers: &str, budget: usize) -> String {
             Some(c) => (c, true),
             None => {
                 out.ligne(&format!(
-                    "aucun chemin d'appels ni d'imports entre {} et {} (≤ {} sauts, dans les deux sens)",
+                    "no call or import path between {} and {} (<= {} hops, both directions)",
                     h.node_id(a),
                     h.node_id(b),
                     PATH_MAX_SAUTS
@@ -247,13 +248,13 @@ pub fn path(handles: &[Handle], de: &str, vers: &str, budget: usize) -> String {
         },
     };
     if inverse {
-        out.ligne(&format!("aucun chemin de {} vers {} ; chemin inverse :", h.node_id(a), h.node_id(b)));
+        out.ligne(&format!("no path from {} to {}; reverse path:", h.node_id(a), h.node_id(b)));
     }
     let noeuds = match &chemin {
         Chemin::Appels(c) | Chemin::Imports(c) => c.clone(),
     };
-    let genre = if matches!(chemin, Chemin::Appels(_)) { "appels" } else { "imports" };
-    out.ligne(&format!("{} {} saut(s):", genre, noeuds.len().saturating_sub(1)));
+    let genre = if matches!(chemin, Chemin::Appels(_)) { "calls" } else { "imports" };
+    out.ligne(&format!("{} {} hop(s):", genre, noeuds.len().saturating_sub(1)));
     out.ligne(&entete(h, noeuds[0]));
     for w in noeuds.windows(2) {
         let (p, n) = (w[0], w[1]);
@@ -261,11 +262,11 @@ pub fn path(handles: &[Handle], de: &str, vers: &str, budget: usize) -> String {
             Chemin::Appels(_) => {
                 let nom = h.node(n).map(|r| r.name().to_string()).unwrap_or_default();
                 match site_appel(h, p, &nom) {
-                    Some(l) => format!("→ appelle en L{}", l),
-                    None => "→ appelle".to_string(),
+                    Some(l) => format!("→ calls at L{}", l),
+                    None => "→ calls".to_string(),
                 }
             }
-            Chemin::Imports(_) => "→ importe".to_string(),
+            Chemin::Imports(_) => "→ imports".to_string(),
         };
         out.ligne(&format!("  {} {}", lien, entete(h, n)));
     }
@@ -303,7 +304,7 @@ pub fn overview(handles: &[Handle], dossier: &str, budget: usize) -> String {
         if let Resolu::Trouve { .. } = resoudre(handles, &d) {
             return super::lecture::outline(handles, &d, budget);
         }
-        return format!("(cortex) aucun fichier indexé sous « {} »\nsuite : files {}\n", d, d.rsplit('/').next().unwrap_or(&d));
+        return format!("(cortex) no indexed file under '{}'\nnext : files {}\n", d, d.rsplit('/').next().unwrap_or(&d));
     };
     let ov = overlay::charger(h);
     let dedans = |p: &str| p.starts_with(&prefixe);
@@ -354,11 +355,11 @@ pub fn overview(handles: &[Handle], dossier: &str, budget: usize) -> String {
     let mut out = Out::new(budget);
     let titre = if d.is_empty() { h.project.clone() } else { format!("{}/", d) };
     out.ligne(&format!(
-        "overview {} — {} fichiers, {} symboles{}",
+        "overview {} — {} files, {} symbols{}",
         titre,
         fichiers.len(),
         n_sym,
-        if n_modifies > 0 { format!(", {} ✎ non commité(s)", n_modifies) } else { String::new() }
+        if n_modifies > 0 { format!(", {} ✎ uncommitted", n_modifies) } else { String::new() }
     ));
     // Rôle du module : README ou index du dossier lui-même.
     for (p, f) in &fichiers {
@@ -368,13 +369,13 @@ pub fn overview(handles: &[Handle], dossier: &str, budget: usize) -> String {
         {
             let r = role(h, *f);
             if !r.is_empty() {
-                out.ligne(&format!("rôle: {} ({})", court(r, 140), ids::file_id(p)));
+                out.ligne(&format!("role: {} ({})", court(r, 140), ids::file_id(p)));
                 break;
             }
         }
     }
     if !entrees.is_empty() {
-        out.ligne(&format!("points d'entrée (importés de l'extérieur) {}:", entrees.len()));
+        out.ligne(&format!("entry points (imported from outside) {}:", entrees.len()));
         for (n, p, f) in entrees.iter().take(8) {
             let r = role(h, *f);
             let r = if r.is_empty() { String::new() } else { format!(" — {}", court(r, 80)) };
@@ -382,21 +383,21 @@ pub fn overview(handles: &[Handle], dossier: &str, budget: usize) -> String {
         }
     }
     if !sortant.is_empty() {
-        out.ligne(&format!("dépend de : {}", liste(&tri(sortant), 8)));
+        out.ligne(&format!("depends on: {}", liste(&tri(sortant), 8)));
     }
     if !entrant.is_empty() {
-        out.ligne(&format!("utilisé par (dossiers) : {}", liste(&tri(entrant), 8)));
+        out.ligne(&format!("used by (folders): {}", liste(&tri(entrant), 8)));
         // Les fichiers extérieurs eux-mêmes : code d'abord, tests ensuite.
         let mut u: Vec<u32> = utilisateurs.into_iter().collect();
         u.sort_by(|&a, &b| is_test_path(h.path_of(a)).cmp(&is_test_path(h.path_of(b))).then_with(|| h.path_of(a).cmp(h.path_of(b))));
         let ids_u: Vec<String> = u.iter().map(|&f| ids::file_id(h.path_of(f))).collect();
-        out.ligne(&format!("utilisé par (fichiers) {}: {}", ids_u.len(), liste(&ids_u, 8)));
+        out.ligne(&format!("used by (files) {}: {}", ids_u.len(), liste(&ids_u, 8)));
     }
     if !paquets.is_empty() {
-        out.ligne(&format!("paquets : {}", liste(&tri(paquets), 8)));
+        out.ligne(&format!("packages: {}", liste(&tri(paquets), 8)));
     }
     if fichiers.len() <= 40 {
-        out.ligne("fichiers:");
+        out.ligne("files:");
         for (p, f) in &fichiers {
             let r = role(h, *f);
             let r = if r.is_empty() { String::new() } else { format!(" — {}", court(r, 70)) };
@@ -414,9 +415,9 @@ pub fn overview(handles: &[Handle], dossier: &str, budget: usize) -> String {
         }
         let mut v: Vec<(String, usize)> = sous.into_iter().collect();
         v.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-        out.ligne(&format!("sous-dossiers ({}):", v.len()));
+        out.ligne(&format!("subfolders ({}):", v.len()));
         for (s, n) in v.iter().take(20) {
-            out.ligne(&format!("  {} {} fichiers", s, n));
+            out.ligne(&format!("  {} {} files", s, n));
         }
     }
     let suite = entrees

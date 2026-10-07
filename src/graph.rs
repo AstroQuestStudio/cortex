@@ -24,7 +24,17 @@ pub const GENERIC_CALLS: &[&str] = &[
 ];
 
 /// Extensions essayées pour résoudre un spécificateur d'import sans extension.
-const RESOLVE_EXTS: &[&str] = &["ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "rs"];
+const RESOLVE_EXTS: &[&str] =
+    &["ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "rs", "h", "hpp", "hh", "hxx", "inl", "ipp", "tpp", "c", "cc", "cpp", "cxx"];
+
+/// Clé de résolution d'un nom de symbole : minuscules ASCII du DERNIER segment
+/// d'un nom qualifié (`AFoxMissile::Launch` → `launch`). Un appel (`Launch()`,
+/// `obj->Launch()`) ne porte que le nom simple ; les noms sans `::` (tous les
+/// langages hors C/C++) ne changent pas.
+pub fn call_key(name: &str) -> String {
+    let simple = name.rsplit("::").next().unwrap_or(name);
+    simple.to_ascii_lowercase()
+}
 
 /// Retire l'extension connue d'un chemin (index "stem" : `./Foo` → `Foo.tsx`).
 pub fn strip_known_ext(path: &str) -> &str {
@@ -138,10 +148,19 @@ enum Resolution<F, S> {
 
 /// Résolution d'un appel `name_lower` fait DEPUIS `from` (voir l'en-tête).
 fn resolve_call<U: Universe>(u: &U, name_lower: &str, from: U::F, imported: &[U::F]) -> Option<Resolution<U::F, U::S>> {
-    let cands = u.defs(name_lower);
-    if cands.is_empty() {
+    let all = u.defs(name_lower);
+    if all.is_empty() {
         return None;
     }
+    // Un prototype d'en-tête (`Decl`) cède la place à la définition (.cpp) quand
+    // elle existe ; seul, il reste une cible valable.
+    let defined: Vec<Cand<U::F, U::S>>;
+    let cands: &[Cand<U::F, U::S>] = if all.iter().any(|c| c.kind == SymbolKind::Decl) && all.iter().any(|c| c.kind != SymbolKind::Decl) {
+        defined = all.iter().filter(|c| c.kind != SymbolKind::Decl).copied().collect();
+        &defined
+    } else {
+        all
+    };
     if let Some(c) = cands.iter().filter(|c| c.file == from).min_by_key(|c| c.ord) {
         return Some(Resolution::Found(*c));
     }
@@ -176,7 +195,7 @@ impl<'a> FileCalls<'a> {
     ) -> Self {
         let calls_lower = calls.iter().map(|(n, _)| n.to_ascii_lowercase()).collect();
         FileCalls {
-            own_lower: own_names.map(|n| n.to_ascii_lowercase()).collect(),
+            own_lower: own_names.map(call_key).collect(),
             imported_lower: imported_names.map(|n| n.to_ascii_lowercase()).collect(),
             calls,
             calls_lower,
@@ -264,7 +283,7 @@ impl<'a> IndexUniverse<'a> {
             path_index.insert(f.path.as_str(), fi);
             stem_index.entry(strip_known_ext(&f.path)).or_default().push(fi);
             for (si, s) in f.symbols.iter().enumerate() {
-                defs.entry(s.name.to_ascii_lowercase()).or_default().push(Cand { file: fi, sym: (fi, si), ord: si as u32, kind: s.kind });
+                defs.entry(call_key(&s.name)).or_default().push(Cand { file: fi, sym: (fi, si), ord: si as u32, kind: s.kind });
             }
         }
         IndexUniverse { path_index, stem_index, defs }
@@ -441,6 +460,22 @@ mod tests {
         let (out_f, _) = resolve_symbol_calls(&u, 1, &[], &fc, 1, 5, &mut FxHashMap::default());
         assert_eq!(out_f.len(), 1);
         assert_eq!(p.files[0].symbols[out_f[0].sym.1].name, "alpha");
+    }
+
+    /// C++ : le prototype d'en-tête (`Decl`) cède la place à la définition du .cpp
+    /// (même nom qualifié, l'appel ne porte que le dernier segment).
+    #[test]
+    fn prefere_la_definition_au_prototype() {
+        let h = file("src/a/Foo.h", vec![sym("AFoo::Bar", SymbolKind::Decl, 5, 5)], FileRefs::default());
+        let c = file("src/a/Foo.cpp", vec![sym("AFoo::Bar", SymbolKind::Method, 10, 20)], FileRefs::default());
+        let mut refs = FileRefs::default();
+        refs.imports.push("/src/a/Foo".to_string());
+        refs.imported_names.push("Bar".to_string());
+        refs.calls.push(CallRef { name: "Bar".to_string(), line: 4 });
+        let caller = file("src/b/Use.cpp", vec![sym("Use::Run", SymbolKind::Method, 1, 9)], refs);
+        assert_eq!(callees(&idx(vec![h, c, caller]), "Use::Run").0, vec!["src/a/Foo.cpp".to_string()]);
+        assert_eq!(call_key("AFoo::Bar"), "bar");
+        assert_eq!(call_key("useThing"), "usething");
     }
 
     #[test]

@@ -112,7 +112,7 @@ checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
 
 [[package]]
 name = "astroquest-cortex"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "blake3",
  "clap",
@@ -131,6 +131,7 @@ dependencies = [
  "serde_json",
  "tree-sitter",
  "tree-sitter-c-sharp",
+ "tree-sitter-cpp",
  "tree-sitter-javascript",
  "tree-sitter-md",
  "tree-sitter-python",
@@ -2028,6 +2029,16 @@ name = "tree-sitter-c-sharp"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8997ad04502208449025114e434c9024a33a74e700513c702a9d2cac6522a771"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-cpp"
+version = "0.22.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d509a22a992790d38f2c291961ff8a1ff016c437c7ec6befc9220b8eec8918c"
 dependencies = [
  "cc",
  "tree-sitter",

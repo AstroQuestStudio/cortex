@@ -283,7 +283,7 @@ pub fn build_galaxy(indexes: &[ProjectIndex], out_path: &std::path::Path) -> std
             }
         }
         projects.push(ProjectStat { name: idx.name.clone(), kind: "code".into(), nodes: count, color, center });
-        eprintln!("  + [code] {} : {} nœuds (code + infra rattachée)", idx.name, count);
+        eprintln!("  + [code] {}: {} nodes (code + attached infra)", idx.name, count);
         ci += 1;
     }
     let n_code = nodes.iter().filter(|n| n.t == 0).count();

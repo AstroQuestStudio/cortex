@@ -11,6 +11,7 @@ mod batch;
 mod bench;
 mod comparatif;
 mod config;
+mod cpp;
 mod dash;
 mod engine;
 mod extract;
@@ -31,6 +32,8 @@ mod semantic;
 mod stem;
 mod symbol;
 mod textsearch;
+#[cfg(feature = "ui")]
+mod ui_locate;
 mod walk;
 
 #[global_allocator]
@@ -44,71 +47,71 @@ use std::time::Instant;
 #[command(
     name = "cortex",
     version = concat!(env!("CARGO_PKG_VERSION"), " — by AstroQuest"),
-    about = "Cortex — moteur de contexte code pour agents IA (find, card, read, impact…), by AstroQuest"
+    about = "Cortex — code context engine for AI agents (find, card, read, impact…), by AstroQuest"
 )]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
-    /// Nombre de threads de tout le code parallèle (défaut : un par cœur logique ;
-    /// aussi `CORTEX_THREADS`).
+    /// Thread count for all parallel code (default: one per logical core;
+    /// also `CORTEX_THREADS`).
     #[arg(long, global = true)]
     threads: Option<usize>,
 }
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Indexe un projet (chemin) sous un nom. Ex: cortex index . --name MonProjet
+    /// Indexes a project (path) under a name. E.g. cortex index . --name MyProject
     Index {
-        /// Chemin du projet à indexer (défaut: répertoire courant).
+        /// Path of the project to index (default: current directory).
         path: Option<PathBuf>,
-        /// Nom du projet (défaut: nom du dossier).
+        /// Project name (default: folder name).
         #[arg(short, long)]
         name: Option<String>,
     },
-    /// Met à jour l'atlas : parcours complet, compare taille + hash blake3 de chaque
-    /// fichier sur disque (indépendant de git : le travail non commité est vu), puis
-    /// écrit un segment delta (ou reconstruit si le changement est massif).
+    /// Updates the atlas: full walk, compares size + blake3 hash of each file on
+    /// disk (independent of git: uncommitted work is seen), then writes a delta
+    /// segment (or rebuilds if the change is massive).
     Update {
-        /// Nom du projet déjà indexé.
+        /// Name of an already indexed project.
         name: String,
-        /// Chemin (défaut: la racine enregistrée dans l'index).
+        /// Path (default: the root recorded in the index).
         path: Option<PathBuf>,
-        /// Rapide : le contrôle de fraîcheur (mtime/taille lus dans les dossiers,
-        /// nouveaux fichiers selon les mêmes règles d'exclusion), sans relire ni
-        /// hacher les fichiers inchangés. Sans git.
+        /// Fast: the freshness check (mtime/size read from directories, new files
+        /// under the same exclusion rules), without re-reading or hashing unchanged
+        /// files. No git.
         #[arg(long)]
         changed: bool,
     },
-    /// Affiche les stats d'un index existant (fichiers, lignes, symboles, langages).
+    /// Shows the stats of an existing index (files, lines, symbols, languages).
     Stats {
-        /// Nom du projet indexé.
+        /// Name of the indexed project.
         name: String,
     },
-    /// OÙ EST X ? Symboles classés pour une question (BM25F : noms camelCase, chemins,
-    /// en-têtes de fichier, doc-comments, corps des fichiers ; racinisation FR/EN,
-    /// synonymes FR↔EN, fautes tolérées). Une ligne par symbole : identifiant stable
-    /// `S:chemin#nom`, genre, plage ; rôle des premiers.
+    /// WHERE IS X? Symbols ranked for a question (BM25F: camelCase names, paths,
+    /// file headers, doc-comments, file bodies; FR/EN stemming, FR<->EN synonyms,
+    /// typo tolerant). One line per symbol: stable id `S:path#name`, kind, range;
+    /// role of the first ones.
     Find {
-        /// Question en langage naturel ou mots-clés (FR ou EN).
+        /// Natural-language question or keywords (FR or EN).
         question: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// Alias de `find` (compatibilité).
+    /// Alias of `find` (compatibility).
     Query {
         question: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// C'EST QUOI ? Carte d'un symbole : signature, rôle, appelés, appelants (avec
-    /// site d'appel), importeurs, tests, homonymes. Entrée : identifiant, nom,
-    /// chemin:ligne ; un fichier donne son outline.
+    /// WHAT IS IT? Card of a symbol: signature, role, callees, callers (with call
+    /// site), importers, tests, homonyms. Input: id, name, path:line; a file gives
+    /// its outline.
     Card {
         cible: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// Alias de `card` (compatibilité ; `-d`/`-l` acceptés et ignorés).
+    /// Alias of `card` (compatibility; `-d`/`-l` accepted and ignored).
     Explain {
         symbol: String,
         #[arg(short, long, default_value_t = 1)]
@@ -118,293 +121,321 @@ enum Cmd {
         #[command(flatten)]
         c: Commun,
     },
-    /// Alias de `card` + les docs (docs/**/*.md) qui citent le symbole.
+    /// Alias of `card` + the docs (docs/**/*.md) that cite the symbol.
     Context {
         symbol: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// QUE CONTIENT CE FICHIER ? Rôle, imports, importeurs, symboles imbriqués avec
-    /// plages et exports. Entrée : F:chemin, chemin, suffixe unique (`useX.ts`).
+    /// WHAT DOES THIS FILE CONTAIN? Role, imports, importers, nested symbols with
+    /// ranges and exports. Input: F:path, path, unique suffix (`useX.ts`).
     Outline {
         cible: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// MONTRE LE CODE : les lignes exactes d'un symbole (section de doc, fichier,
-    /// ou plage `chemin:12-40`), numérotées.
+    /// SHOW THE CODE: the exact lines of a symbol (doc section, file, or range
+    /// `path:12-40`), numbered.
     Read {
         cible: String,
-        /// Lignes de contexte de part et d'autre.
+        /// Context lines on each side.
         #[arg(short = 'C', long = "contexte", default_value_t = 0)]
         contexte: u32,
         #[command(flatten)]
         c: Commun,
     },
-    /// COMMENT MARCHE CE MODULE ? Fichiers et rôles, points d'entrée (importés de
-    /// l'extérieur), dépendances sortantes/entrantes, paquets externes.
+    /// HOW DOES THIS MODULE WORK? Files and roles, entry points (imported from
+    /// outside), outgoing/incoming dependencies, external packages.
     Overview {
-        /// Dossier (relatif à la racine du projet ; `.` = tout le projet).
+        /// Folder (relative to the project root; `.` = whole project).
         dossier: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// QU'EST-CE QUI CASSE SI JE CHANGE ÇA ? Appelants (et importeurs) transitifs par
-    /// profondeur, avec sites d'appel, et tests à relancer.
+    /// WHAT BREAKS IF I CHANGE THIS? Transitive callers (and importers) by depth,
+    /// with call sites, and tests to re-run.
     Impact {
         cible: String,
-        /// Profondeur (1 à 6).
+        /// Depth (1 to 6).
         #[arg(short, long, default_value_t = 3)]
         depth: usize,
         #[command(flatten)]
         c: Commun,
     },
-    /// COMMENT A ARRIVE À B ? Plus court chemin d'appels (sinon d'imports), dans un
-    /// sens ou dans l'autre.
+    /// HOW DOES A REACH B? Shortest call path (else import path), in either
+    /// direction.
     Path {
         de: String,
         vers: String,
         #[command(flatten)]
         c: Commun,
     },
-    /// QU'AI-JE MODIFIÉ ? Fichiers non commités (git), fonctions touchées, leurs
-    /// appelants hors du travail en cours et les tests à relancer.
+    /// WHAT DID I CHANGE? Uncommitted files (git), touched functions, their callers
+    /// outside the work in progress and the tests to re-run.
     Changed {
         #[command(flatten)]
         c: Commun,
     },
-    /// Banc d'AGENT (architecture v2 §7) : rejoue des tâches de compréhension avec
-    /// Cortex et sans (rg + lecture de fichiers) ; appels, tokens lus, faits couverts.
+    /// AGENT bench (architecture v2 §7): replays comprehension tasks with and
+    /// without Cortex (rg + file reads); calls, tokens read, facts covered.
     BenchAgent {
-        /// Fichier de tâches (défaut : `$CORTEX_BENCH_DIR/agent_tasks.json`, sinon
+        /// Tasks file (default: `$CORTEX_BENCH_DIR/agent_tasks.json`, else
         /// `bench/agent_tasks.json`).
         file: Option<PathBuf>,
         #[arg(short, long)]
         project: Option<String>,
-        /// Affiche les sorties de chaque appel.
+        /// Prints the output of each call.
         #[arg(short, long)]
         verbose: bool,
-        /// Ne joue que les tâches dont l'identifiant contient ce texte.
+        /// Only plays tasks whose id contains this text.
         #[arg(long)]
         tache: Option<String>,
     },
-    /// Banc de pertinence : lance chaque question d'un fichier JSON et calcule
-    /// top-1, top-5 et MRR sur le rang du fichier attendu.
+    /// Relevance bench: runs each question of a JSON file and computes top-1,
+    /// top-5 and MRR on the rank of the expected file.
     Bench {
-        /// Fichier de banc JSON ({"project": .., "queries": [{"q","expect":[..]}]}).
+        /// Bench JSON file ({"project": .., "queries": [{"q","expect":[..]}]}).
         file: PathBuf,
-        /// Projet à interroger (défaut: champ "project" du fichier).
+        /// Project to query (default: the file's "project" field).
         #[arg(short, long)]
         project: Option<String>,
-        /// Affiche le détail de chaque question (sinon seulement les échecs).
+        /// Prints the detail of each question (otherwise only failures).
         #[arg(short, long)]
         verbose: bool,
-        /// Moteur mesuré : seul `atlas` existe (l'ancien moteur v1 a été retiré ;
-        /// sa référence est figée : 72,0 % / 88,0 % / MRR 0,776).
+        /// Engine measured: only `atlas` exists (the old v1 engine was removed;
+        /// its reference is frozen: 72.0% / 88.0% / MRR 0.776).
         #[arg(short = 'm', long, default_value = "atlas")]
         moteur: String,
     },
-    /// Banc COMPARATIF (architecture v2 §11) : mêmes questions, même juge, même
-    /// corpus pour ripgrep par mots-clés, BM25 pur, RAG dense, hybride RRF et
-    /// Cortex. Top-1/top-5/MRR, latence, construction, tokens lus par l'agent.
-    /// Le dense et l'hybride exigent un build `--features bench`.
+    /// COMPARATIVE bench (architecture v2 §11): same questions, same judge, same
+    /// corpus for keyword ripgrep, pure BM25, dense RAG, RRF hybrid and Cortex.
+    /// Top-1/top-5/MRR, latency, build, tokens read by the agent. Dense and hybrid
+    /// need a `--features bench` build.
     BenchCompare {
-        /// Fichier de banc JSON (même format que `cortex bench`).
+        /// Bench JSON file (same format as `cortex bench`).
         file: PathBuf,
-        /// Projet à interroger (défaut: champ "project" du fichier).
+        /// Project to query (default: the file's "project" field).
         #[arg(short, long)]
         project: Option<String>,
-        /// Ne mesure pas la construction complète d'un atlas Cortex (≈ 1 min).
+        /// Does not measure the full build of a Cortex atlas (about 1 min).
         #[arg(long)]
         sans_construction: bool,
-        /// Dossier du JSON de résultats (défaut : `$CORTEX_BENCH_RESULTS`, sinon
-        /// `$CORTEX_BENCH_DIR/resultats`, sinon `bench/resultats`).
+        /// Results JSON folder (default: `$CORTEX_BENCH_RESULTS`, else
+        /// `$CORTEX_BENCH_DIR/resultats`, else `bench/resultats`).
         #[arg(long)]
         sortie: Option<PathBuf>,
     },
-    /// Recherche plein-texte ULTRA-RAPIDE dans le contenu (remplace grep). Multithread,
-    /// scanne uniquement les fichiers indexés (pas de re-walk de node_modules).
+    /// ULTRA-FAST full-text search in file contents (replaces grep). Multithreaded,
+    /// scans only indexed files (no re-walk of node_modules).
     Grep {
-        /// Chaîne/mot à chercher dans le contenu des fichiers.
+        /// String/word to look for in file contents.
         needle: String,
-        /// Limiter à un projet (défaut: tous les projets actifs).
+        /// Limit to one project (default: all active projects).
         #[arg(short, long)]
         project: Option<String>,
-        /// Sensible à la casse (défaut: insensible).
+        /// Case sensitive (default: insensitive).
         #[arg(short = 's', long)]
         case_sensitive: bool,
-        /// Nombre max de résultats.
+        /// Max number of results.
         #[arg(short, long, default_value_t = 60)]
         max: usize,
-        /// Budget de sortie en tokens approximatifs.
+        /// Output budget in approximate tokens.
         #[arg(short, long, default_value_t = 2000)]
         budget: usize,
-        /// Saute le contrôle de fraîcheur automatique (lecture des dossiers) avant de répondre.
+        /// Skips the automatic freshness check (directory read) before answering.
         #[arg(long)]
         no_refresh: bool,
     },
-    /// Trouve un fichier par nom/fragment de chemin (remplace find -name). Instantané.
-    Files {
-        /// Fragment de nom/chemin (insensible à la casse), ou pattern glob si le
-        /// pattern contient '*'/'?' (ex: "**/*.test.ts", "src/hooks/*.ts").
-        pattern: String,
-        /// Limiter à un projet (défaut: tous les projets actifs).
+    /// WHERE IS THIS UI? From what you SEE (button text, test id, aria-label, id, React
+    /// component name) to the code that renders it: resolves i18n keys and their usages,
+    /// ignores comments, docs and tests. One line per candidate: stable id, file:line, why.
+    Ui {
+        /// Visible text (button label, heading…). May be empty if another signal is given.
+        #[arg(default_value = "")]
+        text: String,
+        /// data-testid / data-test / data-cy value (repeatable).
+        #[arg(long)]
+        testid: Vec<String>,
+        /// aria-label / title / placeholder value (repeatable).
+        #[arg(long)]
+        aria: Vec<String>,
+        /// DOM id (repeatable).
+        #[arg(long)]
+        id: Vec<String>,
+        /// React component names, nearest first, comma-separated (e.g. SubmitButton,FormFooter).
+        #[arg(long, value_delimiter = ',')]
+        component: Vec<String>,
+        /// Limit to one project (default: all active projects).
         #[arg(short, long)]
         project: Option<String>,
-        /// Nombre max de fichiers affichés.
-        #[arg(short, long, default_value_t = 80)]
+        /// Max number of candidates.
+        #[arg(short, long, default_value_t = 6)]
         max: usize,
-        /// Saute le contrôle de fraîcheur automatique (lecture des dossiers) avant de répondre.
+        /// Skips the automatic freshness check (directory read) before answering.
         #[arg(long)]
         no_refresh: bool,
     },
-    /// Liste les projets indexés.
+    /// Finds a file by name/path fragment (replaces find -name). Instant.
+    Files {
+        /// Name/path fragment (case-insensitive), or glob pattern if it contains
+        /// '*'/'?' (e.g. "**/*.test.ts", "src/hooks/*.ts").
+        pattern: String,
+        /// Limit to one project (default: all active projects).
+        #[arg(short, long)]
+        project: Option<String>,
+        /// Max number of files shown.
+        #[arg(short, long, default_value_t = 80)]
+        max: usize,
+        /// Skips the automatic freshness check (directory read) before answering.
+        #[arg(long)]
+        no_refresh: bool,
+    },
+    /// Lists the indexed projects.
     List,
-    /// Exporte tous les projets + docs en galaxie 3D JSON (~/.cortex/galaxy.json).
+    /// Exports all projects + docs as a 3D galaxy JSON (~/.cortex/galaxy.json).
     Galaxy {
-        /// Chemin de sortie (défaut: ~/.cortex/galaxy.json).
+        /// Output path (default: ~/.cortex/galaxy.json).
         #[arg(short, long)]
         out: Option<PathBuf>,
     },
-    /// Génère la galaxie et ouvre le VIEWER 3D dans le navigateur (serveur local).
+    /// Generates the galaxy and opens the 3D VIEWER in the browser (local server).
     Viewer {
-        /// Port du serveur local (défaut 7777).
+        /// Local server port (default 7777).
         #[arg(short, long, default_value_t = 7777)]
         port: u16,
-        /// Ne pas régénérer la galaxie (réutilise ~/.cortex/galaxy.json existant).
+        /// Do not regenerate the galaxy (reuses the existing ~/.cortex/galaxy.json).
         #[arg(long)]
         no_build: bool,
     },
-    /// Active/désactive un projet pour la recherche (focus). Sans arg: affiche l'état.
+    /// Enables/disables a project for search (focus). No arg: shows the state.
     Config {
         #[command(subcommand)]
         action: Option<ConfigAction>,
     },
-    /// Lance le serveur MCP (stdio) — outils cortex_query/explain/context/grep/files/docs/docs_list/list.
+    /// Runs the MCP server (stdio): tools cortex_find/card/outline/read/overview/impact/path/changed/grep/files/docs/docs_list/list.
     Mcp,
-    /// Documentation offline : scrape un site de doc et la rend cherchable en local.
+    /// Offline documentation: scrapes a doc site and makes it searchable locally.
     Docs {
         #[command(subcommand)]
         action: DocsAction,
     },
-    /// Snapshot de l'architecture des serveurs d'un projet (SSH lecture seule, sinon
-    /// topologie statique). Serveurs lus dans un .env : chaque préfixe `<P>` qui a
-    /// une clé `<P>_IPV4` (ou `<P>_HOST`) ; `<P>_SSH_PORT`, `<P>_LOGIN`,
-    /// `<P>_SSH_KEY_PATH`, `<P>_LABEL` optionnels. Aucun secret n'est recopié.
+    /// Snapshot of a project's server architecture (read-only SSH, else static
+    /// topology). Servers read from a .env: each prefix `<P>` that has a key
+    /// `<P>_IPV4` (or `<P>_HOST`); `<P>_SSH_PORT`, `<P>_LOGIN`, `<P>_SSH_KEY_PATH`,
+    /// `<P>_LABEL` optional. No secret is copied.
     Infra {
-        /// Nom du projet auquel rattacher l'infra.
+        /// Name of the project the infra is attached to.
         #[arg(short, long)]
         project: String,
-        /// Chemin du .env contenant les coordonnées des serveurs (défaut : ./.env).
+        /// Path of the .env holding the server coordinates (default: ./.env).
         #[arg(short, long)]
         env: Option<PathBuf>,
     },
-    /// MET À JOUR TOUTE la base de connaissance : tous les index + la galaxie.
+    /// UPDATES THE WHOLE knowledge base: all indexes + the galaxy.
     UpdateAll,
-    /// Banc de LATENCE (architecture v2 §4) : ouverture, requête (médiane/p95 sur
-    /// le banc de pertinence), `context`, `files`, `grep`, contrôle de fraîcheur,
-    /// mise à jour d'un fichier par delta, compaction.
+    /// LATENCY bench (architecture v2 §4): open, query (median/p95 over the
+    /// relevance bench), `context`, `files`, `grep`, freshness check, single-file
+    /// delta update, compaction.
     BenchLatence {
         #[arg(short, long)]
         project: String,
-        /// Banc de pertinence dont les questions servent à mesurer `find` (défaut :
-        /// `$CORTEX_BENCH_DIR/queries.json`, sinon `bench/queries.json`).
+        /// Relevance bench whose questions are used to measure `find` (default:
+        /// `$CORTEX_BENCH_DIR/queries.json`, else `bench/queries.json`).
         #[arg(long)]
         questions: Option<PathBuf>,
-        /// Courbe de passage à l'échelle : chaque poste à 1, 2, 4, 8 et 16 threads
-        /// (médiane, min, max des passes) + construction complète ; JSON dans
-        /// `bench/resultats/`.
+        /// Scaling curve: each item at 1, 2, 4, 8 and 16 threads (median, min, max
+        /// of the passes) + full build; JSON in `bench/resultats/`.
         #[arg(long)]
         echelle: bool,
-        /// Passes par nombre de threads (avec --echelle).
+        /// Passes per thread count (with --echelle).
         #[arg(long, default_value_t = 3)]
         passes: usize,
-        /// Ne mesure pas la construction complète (avec --echelle).
+        /// Does not measure the full build (with --echelle).
         #[arg(long)]
         sans_construction: bool,
-        /// Nombres de threads mesurés (avec --echelle ; défaut : 1,2,4,8,16).
+        /// Thread counts measured (with --echelle; default: 1,2,4,8,16).
         #[arg(long, value_delimiter = ',')]
         threads_liste: Vec<usize>,
     },
 }
 
-/// Options communes des outils pour agents.
+/// Options shared by the agent tools.
 #[derive(clap::Args, Clone)]
 struct Commun {
-    /// Limiter à un projet (défaut : tous les projets actifs).
+    /// Limit to one project (default: all active projects).
     #[arg(short, long)]
     project: Option<String>,
-    /// Budget de sortie en tokens (≈ caractères / 4 ; défaut propre à l'outil).
+    /// Output budget in tokens (about characters / 4; default depends on the tool).
     #[arg(short, long)]
     budget: Option<usize>,
-    /// Saute le contrôle de fraîcheur automatique (lecture des dossiers) avant de répondre.
+    /// Skips the automatic freshness check (directory read) before answering.
     #[arg(long)]
     no_refresh: bool,
 }
 
 #[derive(Subcommand)]
 enum DocsAction {
-    /// Scrape un site de doc en local. Ex: cortex docs add https://react.dev/reference --name React
+    /// Scrapes a doc site locally. E.g. cortex docs add https://react.dev/reference --name React
     Add {
-        /// URL de départ du crawl (même domaine, sous-chemin de doc déduit de l'URL).
+        /// Crawl start URL (same domain, doc sub-path inferred from the URL).
         url: String,
-        /// Nom de la doc (sert de --source pour `docs query`).
+        /// Doc name (used as --source for `docs query`).
         #[arg(short, long)]
         name: String,
-        /// Nombre max de pages à crawler (défaut 200).
+        /// Max number of pages to crawl (default 200).
         #[arg(short, long, default_value_t = 200)]
         max: usize,
     },
-    /// Recherche dans les docs scrapées (offline).
+    /// Searches the scraped docs (offline).
     Query {
-        /// Question / mots-clés.
+        /// Question / keywords.
         question: String,
-        /// Limiter à une doc (ex: React, Tauri). Défaut: toutes.
+        /// Limit to one doc (e.g. React, Tauri). Default: all.
         #[arg(short, long)]
         source: Option<String>,
-        /// Budget de sortie en tokens approximatifs.
+        /// Output budget in approximate tokens.
         #[arg(short, long, default_value_t = 1500)]
         budget: usize,
     },
-    /// Scrape EN BATCH une liste de sites (config file) avec DASHBOARD live.
-    /// Format config (1 ligne/site) : nom | url | max_pages?
-    /// Contrôles live : +/- concurrence · [ ] délai · ↑↓ select · p pause · q quitter.
+    /// BATCH-scrapes a list of sites (config file) with a live DASHBOARD.
+    /// Config format (1 line/site): name | url | max_pages?
+    /// Live controls: +/- concurrency · [ ] delay · up/down select · p pause · q quit.
     Batch {
-        /// Fichier de config (liste de sites).
+        /// Config file (list of sites).
         config: PathBuf,
-        /// Nombre de SITES en parallèle (défaut: TOUS). À ne pas confondre avec
-        /// --concurrency (pages en vol DANS un site). Ex: 14 sites × 20 pages.
+        /// Number of SITES in parallel (default: ALL). Not to be confused with
+        /// --concurrency (pages in flight WITHIN a site). E.g. 14 sites x 20 pages.
         #[arg(short, long)]
         workers: Option<usize>,
-        /// Limite le nb de sites en // : light(2) | normal(tous) | turbo(8).
+        /// Limits the number of sites in parallel: light(2) | normal(all) | turbo(8).
         #[arg(short, long, default_value = "normal")]
         preset: String,
-        /// max_pages par défaut si non précisé dans la config (garde-fou crawl complet).
+        /// Default max_pages if not set in the config (full-crawl safeguard).
         #[arg(short = 'm', long, default_value_t = 800)]
         default_max: usize,
-        /// Concurrence intra-site initiale (pages en vol par site). Réglable en live (←/→).
+        /// Initial intra-site concurrency (pages in flight per site). Adjustable live (left/right).
         #[arg(short, long, default_value_t = 20)]
         concurrency: usize,
-        /// Délai min entre lancements de requêtes (ms). Réglable en live.
+        /// Min delay between request launches (ms). Adjustable live.
         #[arg(short = 'd', long, default_value_t = 120)]
         delay: u64,
-        /// AUTO-relance : les sites qui atteignent leur budget continuent
-        /// automatiquement jusqu'à épuisement (finissent seuls). Toggle live: touche a.
+        /// AUTO-resume: sites that hit their budget keep going automatically until
+        /// exhausted (finish on their own). Live toggle: key a.
         #[arg(long, default_value_t = true)]
         auto: bool,
-        /// Affichage simple (pas de dashboard TUI) — pour logs/CI/pipe.
+        /// Plain output (no TUI dashboard), for logs/CI/pipes.
         #[arg(long)]
         plain: bool,
     },
-    /// Liste les docs scrapées.
+    /// Lists the scraped docs.
     List,
 }
 
 #[derive(Subcommand)]
 enum ConfigAction {
-    /// Active un projet (inclus dans la recherche cross-projets).
+    /// Enables a project (included in cross-project search).
     Enable { project: String },
-    /// Désactive un projet (exclu de la recherche — focus + vitesse).
+    /// Disables a project (excluded from search: focus + speed).
     Disable { project: String },
 }
 
@@ -441,6 +472,27 @@ fn main() {
         }
         Cmd::Grep { needle, project, case_sensitive, max, budget, no_refresh } => {
             cmd_grep(&needle, project, case_sensitive, max, budget, no_refresh)
+        }
+        #[cfg(not(feature = "ui"))]
+        Cmd::Ui { text, testid, aria, id, component, project, max, no_refresh } => {
+            let mut args = vec!["ui".to_string(), text];
+            for v in testid { args.push("--testid".into()); args.push(v); }
+            for v in aria { args.push("--aria".into()); args.push(v); }
+            for v in id { args.push("--id".into()); args.push(v); }
+            if !component.is_empty() { args.push("--component".into()); args.push(component.join(",")); }
+            if let Some(p) = project { args.push("--project".into()); args.push(p); }
+            args.push("--max".into());
+            args.push(max.to_string());
+            if no_refresh { args.push("--no-refresh".into()); }
+            std::process::exit(lancer_cortex_ui(&args));
+        }
+        #[cfg(feature = "ui")]
+        Cmd::Ui { text, testid, aria, id, component, project, max, no_refresh } => {
+            let q = ui_locate::UiQuery { text, testid, aria, id, component };
+            let t0 = Instant::now();
+            let handles = require_handles(&project, no_refresh);
+            print!("{}", ui_locate::run_ui_on(&handles, &q, max));
+            eprintln!("[cortex ui] {:.1}ms", t0.elapsed().as_secs_f64() * 1000.0);
         }
         Cmd::Files { pattern, project, max, no_refresh } => cmd_files(&pattern, project, max, no_refresh),
         Cmd::List => cmd_list(),
@@ -501,7 +553,7 @@ fn atlas_handles(project: &Option<String>, no_refresh: bool) -> Vec<atlas::Handl
                 }
                 handles.push(h);
             }
-            Err(e) => eprintln!("[cortex] atlas '{}' indisponible ({}) — ignoré", n, e),
+            Err(e) => eprintln!("[cortex] atlas '{}' unavailable ({}) - skipped", n, e),
         }
     }
     handles
@@ -509,23 +561,26 @@ fn atlas_handles(project: &Option<String>, no_refresh: bool) -> Vec<atlas::Handl
 
 /// Log discret (stderr) du coût/résultat du contrôle de fraîcheur.
 fn report_refresh(project: &str, s: atlas::fresh::RefreshStats) {
+    if s.read_only {
+        return; // l'avertissement « lecture seule » a déjà été donné (une fois)
+    }
     if s.walked {
-        eprintln!("[cortex] fraîcheur {} : règles d'exclusion changées (ou premier contrôle) — parcours complet", project);
+        eprintln!("[cortex] freshness {}: exclusion rules changed (or first check), full walk", project);
     }
     if s.refreshed {
         eprintln!(
-            "[cortex] fraîcheur {} : contrôle {:.1}ms ({} vérifiés) puis {} chemin(s) réindexé(s) en {:.1}ms",
+            "[cortex] freshness {}: check {:.1}ms ({} verified) then {} path(s) reindexed in {:.1}ms",
             project, s.check_ms, s.checked, s.examined, s.update_ms
         );
     } else if s.examined > 0 {
         eprintln!(
-            "[cortex] fraîcheur {} : {} chemin(s) relu(s), contenu inchangé ({:.1}ms)",
+            "[cortex] freshness {}: {} path(s) re-read, content unchanged ({:.1}ms)",
             project,
             s.examined,
             s.check_ms + s.update_ms
         );
     } else {
-        eprintln!("[cortex] fraîcheur {} : rien de changé ({:.1}ms, {} vérifiés)", project, s.check_ms, s.checked);
+        eprintln!("[cortex] freshness {}: nothing changed ({:.1}ms, {} verified)", project, s.check_ms, s.checked);
     }
 }
 
@@ -533,8 +588,8 @@ fn require_handles(project: &Option<String>, no_refresh: bool) -> Vec<atlas::Han
     let handles = atlas_handles(project, no_refresh);
     if handles.is_empty() {
         match project {
-            Some(n) => eprintln!("cortex: projet '{}' introuvable. Lance: cortex index <path> --name {}", n, n),
-            None => eprintln!("cortex: aucun projet actif. Lance: cortex index <path> (ou cortex config enable <projet>)"),
+            Some(n) => eprintln!("cortex: project '{}' not found. Run: cortex index <path> --name {}", n, n),
+            None => eprintln!("cortex: no active project. Run: cortex index <path> (or cortex config enable <project>)"),
         }
         std::process::exit(1);
     }
@@ -546,7 +601,7 @@ fn file_sets(handles: &[atlas::Handle]) -> Vec<textsearch::FileSet<'_>> {
     handles.iter().map(|h| textsearch::FileSet { project: &h.project, root: h.root(), paths: h.file_paths() }).collect()
 }
 
-/// Un outil pour agents (`outils`) en CLI : ouverture, fraîcheur, sortie.
+/// An agent tool (`outils`) on the CLI: open, freshness, output.
 fn cmd_outil(nom: &str, appel: outils::Appel, c: Commun) {
     let t0 = Instant::now();
     let handles = require_handles(&c.project, c.no_refresh);
@@ -578,7 +633,7 @@ pub(crate) fn run_files_on(handles: &[atlas::Handle], pattern: &str, max: usize)
     let sets = file_sets(handles);
     let found = textsearch::find_files(&sets, pattern, max);
     if found.is_empty() {
-        return (format!("(aucun fichier ne contient '{}')\n", pattern), 0);
+        return (format!("(no file matches '{}')\n", pattern), 0);
     }
     let multi = handles.len() > 1;
     let mut out = String::new();
@@ -597,37 +652,37 @@ fn cmd_update_all() {
     let t0 = Instant::now();
     let names = project_names(false);
     if names.is_empty() {
-        eprintln!("cortex: aucun projet indexé. Lance d'abord: cortex index <path> --name <Projet>");
+        eprintln!("cortex: no indexed project. Run first: cortex index <path> --name <Project>");
         std::process::exit(1);
     }
-    println!("Mise à jour de {} projet(s)…", names.len());
+    println!("Updating {} project(s)…", names.len());
     let (mut ok, mut skipped) = (0, 0);
     for n in &names {
         let Some(root) = atlas::project_root(n) else {
-            eprintln!("  ⚠ {} : racine inconnue — ignoré", n);
+            eprintln!("  ⚠ {}: unknown root, skipped", n);
             skipped += 1;
             continue;
         };
         let root = PathBuf::from(root);
         if !root.exists() {
-            eprintln!("  ⚠ {} : source absente ({}) — ignoré", n, root.display());
+            eprintln!("  ⚠ {}: source missing ({}), skipped", n, root.display());
             skipped += 1;
             continue;
         }
         match atlas::fresh::update_full(n, &root) {
             Ok((out, changed, total)) => {
-                println!("  ✓ {} : {} chemin(s) changé(s) sur {} → {:?}", n, changed, total, out);
+                println!("  ✓ {}: {} path(s) changed out of {} → {:?}", n, changed, total, out);
                 ok += 1;
             }
             Err(e) => {
-                eprintln!("  ⚠ {} : {} — ignoré", n, e);
+                eprintln!("  ⚠ {}: {}, skipped", n, e);
                 skipped += 1;
             }
         }
     }
-    println!("\nRégénération de la galaxie…");
+    println!("\nRegenerating the galaxy…");
     cmd_galaxy(None);
-    println!("\n✓ {} projet(s) à jour ({} ignoré(s)) en {:.1}s", ok, skipped, t0.elapsed().as_secs_f64());
+    println!("\n✓ {} project(s) up to date ({} skipped) in {:.1}s", ok, skipped, t0.elapsed().as_secs_f64());
 }
 
 fn cmd_config(action: Option<ConfigAction>) {
@@ -636,15 +691,15 @@ fn cmd_config(action: Option<ConfigAction>) {
         Some(ConfigAction::Enable { project }) => {
             cfg.enable(&project);
             cfg.save().ok();
-            println!("OK {} active", project);
+            println!("OK {} enabled", project);
         }
         Some(ConfigAction::Disable { project }) => {
             cfg.disable(&project);
             cfg.save().ok();
-            println!("OK {} desactive (exclu de la recherche)", project);
+            println!("OK {} disabled (excluded from search)", project);
         }
         None => {
-            println!("Projets (actif/desactive) :");
+            println!("Projects (enabled/disabled):");
             for n in project_names(false) {
                 let state = if cfg.is_enabled(&n) { "[ON] " } else { "[off]" };
                 println!("  {} {}", state, n);
@@ -662,16 +717,16 @@ fn cmd_galaxy(out: Option<PathBuf>) {
         }
     }
     if indexes.is_empty() {
-        eprintln!("cortex: aucun index. Lance: cortex index <path>");
+        eprintln!("cortex: no index. Run: cortex index <path>");
         std::process::exit(1);
     }
     let out = out.unwrap_or_else(|| index::cortex_home().join("galaxy.json"));
     match galaxy::build_galaxy(&indexes, &out) {
         Ok((n, p)) => {
-            println!("OK galaxie : {} symboles, {} projets - {} - {:.2}s", n, p, out.display(), t0.elapsed().as_secs_f64());
+            println!("OK galaxy: {} symbols, {} projects - {} - {:.2}s", n, p, out.display(), t0.elapsed().as_secs_f64());
         }
         Err(e) => {
-            eprintln!("cortex: échec galaxy: {}", e);
+            eprintln!("cortex: galaxy failed: {}", e);
             std::process::exit(1);
         }
     }
@@ -682,24 +737,24 @@ fn cmd_index(path: Option<PathBuf>, name: Option<String>) {
     let root = match root.canonicalize() {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("cortex: chemin invalide: {}", e);
+            eprintln!("cortex: invalid path: {}", e);
             std::process::exit(1);
         }
     };
-    let name = name.unwrap_or_else(|| root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "projet".to_string()));
+    let name = name.unwrap_or_else(|| root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "project".to_string()));
     let t0 = Instant::now();
     match index::build_index(&name, &root) {
         Ok((idx, tracked)) => {
             let (nf, ns, nl) = idx.stats();
             if let Err(e) = atlas::rebuild_full(&name, &idx, tracked) {
-                eprintln!("cortex: échec écriture de l'atlas: {}", e);
+                eprintln!("cortex: atlas write failed: {}", e);
                 std::process::exit(1);
             }
-            println!("OK {} indexe : {} fichiers - {} lignes - {} symboles - {:.2}s", name, nf, nl, ns, t0.elapsed().as_secs_f64());
+            println!("OK {} indexed: {} files - {} lines - {} symbols - {:.2}s", name, nf, nl, ns, t0.elapsed().as_secs_f64());
             println!("  -> {}", atlas::atlas_root_for(&name).display());
         }
         Err(e) => {
-            eprintln!("cortex: échec indexation: {}", e);
+            eprintln!("cortex: indexing failed: {}", e);
             std::process::exit(1);
         }
     }
@@ -709,7 +764,7 @@ fn cmd_update(name: &str, path: Option<PathBuf>) {
     let root = match path.map(|p| p.to_string_lossy().to_string()).or_else(|| atlas::project_root(name)) {
         Some(r) => PathBuf::from(r),
         None => {
-            eprintln!("cortex: projet '{}' introuvable. Lance d'abord: cortex index <path> --name {}", name, name);
+            eprintln!("cortex: project '{}' not found. Run first: cortex index <path> --name {}", name, name);
             std::process::exit(1);
         }
     };
@@ -718,7 +773,7 @@ fn cmd_update(name: &str, path: Option<PathBuf>) {
     match atlas::fresh::update_full(name, &root) {
         Ok((out, changed, total)) => {
             println!(
-                "OK {} a jour : {} chemin(s) changé(s) sur {} fichiers ({:?}) - {:.2}s",
+                "OK {} up to date: {} path(s) changed out of {} files ({:?}) - {:.2}s",
                 name,
                 changed,
                 total,
@@ -727,25 +782,25 @@ fn cmd_update(name: &str, path: Option<PathBuf>) {
             );
         }
         Err(e) => {
-            eprintln!("cortex: échec update: {}", e);
+            eprintln!("cortex: update failed: {}", e);
             std::process::exit(1);
         }
     }
 }
 
-/// `cortex update --changed` : contrôle rapide (lecture des dossiers, sans git).
+/// `cortex update --changed`: fast check (directory read, no git).
 fn cmd_update_changed(name: &str) {
     let t0 = Instant::now();
     match atlas::fresh::update_changed(name) {
         Ok((out, n)) => println!(
-            "OK {} a jour (--changed, {} chemin(s) relu(s) ou retiré(s)) : {:?} - {:.2}s",
+            "OK {} up to date (--changed, {} path(s) re-read or removed): {:?} - {:.2}s",
             name,
             n,
             out,
             t0.elapsed().as_secs_f64()
         ),
         Err(e) => {
-            eprintln!("cortex: {} — utilise `cortex update {}` (complet).", e, name);
+            eprintln!("cortex: {}. Use `cortex update {}` (full).", e, name);
             std::process::exit(1);
         }
     }
@@ -754,20 +809,20 @@ fn cmd_update_changed(name: &str) {
 /// `cortex bench` : top-1 / top-5 / MRR du classement de query sur un banc JSON.
 fn cmd_bench(file: &std::path::Path, project: Option<String>, verbose: bool, moteur: &str) {
     if moteur != "atlas" {
-        eprintln!("cortex: seul le moteur 'atlas' existe (v1 retiré : 72,0 % / 88,0 % / MRR 0,776, voir docs/ARCHITECTURE.md)");
+        eprintln!("cortex: only the 'atlas' engine exists (v1 removed: 72.0% / 88.0% / MRR 0.776, see docs/ARCHITECTURE.md)");
         std::process::exit(1);
     }
     let content = match std::fs::read_to_string(file) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("cortex: impossible de lire {}: {}", file.display(), e);
+            eprintln!("cortex: cannot read {}: {}", file.display(), e);
             std::process::exit(1);
         }
     };
     let bench = match bench::parse(&content) {
         Ok(b) => b,
         Err(e) => {
-            eprintln!("cortex: banc invalide ({}): {}", file.display(), e);
+            eprintln!("cortex: invalid bench ({}): {}", file.display(), e);
             std::process::exit(1);
         }
     };
@@ -781,7 +836,7 @@ fn cmd_bench(file: &std::path::Path, project: Option<String>, verbose: bool, mot
         let r = bench::run_one_atlas(&handles, q);
         let ok = r.rank.map(|k| k.to_string()).unwrap_or_else(|| "-".into());
         if verbose || r.rank.map(|k| k > 5).unwrap_or(true) {
-            println!("[{:>2}] rang {:>2}  {:<48} attendu {}", i + 1, ok, q.q, q.expect.join(" | "));
+            println!("[{:>2}] rank {:>2}  {:<48} expected {}", i + 1, ok, q.q, q.expect.join(" | "));
             if r.rank != Some(1) {
                 for (j, f) in r.top_files.iter().take(3).enumerate() {
                     println!("        {}. {}", j + 1, f);
@@ -792,7 +847,7 @@ fn cmd_bench(file: &std::path::Path, project: Option<String>, verbose: bool, mot
         results.push(r);
     }
     let s = bench::summarize(&results);
-    println!("\n== moteur atlas · {} questions · {:.0} ms ==", s.n, t0.elapsed().as_secs_f64() * 1000.0);
+    println!("\n== atlas engine · {} questions · {:.0} ms ==", s.n, t0.elapsed().as_secs_f64() * 1000.0);
     println!("top-1 {:.1}%  top-5 {:.1}%  MRR {:.3}", s.top1 * 100.0, s.top5 * 100.0, s.mrr);
     for (tag, ids) in &by_tag {
         let sub: Vec<bench::QueryResult> =
@@ -807,12 +862,12 @@ fn cmd_bench_compare(file: &std::path::Path, project: Option<String>, sans_const
     let bench = match std::fs::read_to_string(file).map_err(|e| e.to_string()).and_then(|c| bench::parse(&c)) {
         Ok(b) => b,
         Err(e) => {
-            eprintln!("cortex: banc illisible ({}): {}", file.display(), e);
+            eprintln!("cortex: unreadable bench ({}): {}", file.display(), e);
             std::process::exit(1);
         }
     };
     let Some(project) = project.or(bench.project.clone()) else {
-        eprintln!("cortex: précise le projet (-p) ou le champ \"project\" du banc");
+        eprintln!("cortex: give the project (-p) or the bench \"project\" field");
         std::process::exit(1);
     };
     // Index STABLE : pas de contrôle de fraîcheur (reproductible, comme `bench`).
@@ -824,11 +879,11 @@ fn cmd_stats(name: &str) {
     match atlas::ensure_and_open(name) {
         Ok(h) => {
             let (nf, ns, nl) = h.counts();
-            println!("Projet  : {}", h.project);
-            println!("Racine  : {}", h.root());
-            println!("Fichiers: {}", nf);
-            println!("Lignes  : {}", nl);
-            println!("Symboles: {}", ns);
+            println!("Project : {}", h.project);
+            println!("Root    : {}", h.root());
+            println!("Files   : {}", nf);
+            println!("Lines   : {}", nl);
+            println!("Symbols : {}", ns);
             println!("Segments: {}", h.segment_count());
             let mut by_lang: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
             for r in h.file_langs() {
@@ -836,14 +891,14 @@ fn cmd_stats(name: &str) {
             }
             let mut langs: Vec<_> = by_lang.into_iter().collect();
             langs.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
-            print!("Langages: ");
+            print!("Languages: ");
             for (l, c) in langs.iter().take(8) {
                 print!("{}({}) ", l, c);
             }
             println!();
         }
         Err(e) => {
-            eprintln!("cortex: projet '{}' introuvable ({}). Lance: cortex index <path> --name {}", name, e, name);
+            eprintln!("cortex: project '{}' not found ({}). Run: cortex index <path> --name {}", name, e, name);
             std::process::exit(1);
         }
     }
@@ -854,7 +909,7 @@ fn cmd_grep(needle: &str, project: Option<String>, case_sensitive: bool, max: us
     let handles = require_handles(&project, no_refresh);
     let (out, n, scanned) = run_grep_on(&handles, needle, case_sensitive, max, budget);
     print!("{}", out);
-    eprintln!("[cortex grep] {} occurrence(s) en {:.1}ms ({} fichiers scannés)", n, t0.elapsed().as_secs_f64() * 1000.0, scanned);
+    eprintln!("[cortex grep] {} occurrence(s) in {:.1}ms ({} files scanned)", n, t0.elapsed().as_secs_f64() * 1000.0, scanned);
 }
 
 fn cmd_files(pattern: &str, project: Option<String>, max: usize, no_refresh: bool) {
@@ -862,23 +917,23 @@ fn cmd_files(pattern: &str, project: Option<String>, max: usize, no_refresh: boo
     let handles = require_handles(&project, no_refresh);
     let (out, n) = run_files_on(&handles, pattern, max);
     print!("{}", out);
-    eprintln!("[cortex files] {} fichier(s) en {:.1}ms", n, t0.elapsed().as_secs_f64() * 1000.0);
+    eprintln!("[cortex files] {} file(s) in {:.1}ms", n, t0.elapsed().as_secs_f64() * 1000.0);
 }
 
 fn cmd_list() {
     let names = project_names(false);
     if names.is_empty() {
-        println!("Aucun projet indexe. Lance: cortex index <path>");
+        println!("No indexed project. Run: cortex index <path>");
         return;
     }
-    println!("Projets indexes (~/.cortex/) :");
+    println!("Indexed projects (~/.cortex/):");
     for name in names {
         match atlas::Handle::open(&name) {
             Ok(h) => {
                 let (nf, ns, _) = h.counts();
-                println!("  - {:<20} {} fichiers, {} symboles", name, nf, ns);
+                println!("  - {:<20} {} files, {} symbols", name, nf, ns);
             }
-            Err(_) => println!("  - {:<20} (à migrer : réindexé au prochain usage)", name),
+            Err(_) => println!("  - {:<20} (to migrate: reindexed on next use)", name),
         }
     }
 }
@@ -886,12 +941,12 @@ fn cmd_list() {
 fn cmd_infra(project: &str, env: Option<PathBuf>) {
     let env_path = env.unwrap_or_else(|| PathBuf::from(".env"));
     if !env_path.exists() {
-        eprintln!("cortex infra: .env introuvable: {} (précise --env)", env_path.display());
+        eprintln!("cortex infra: .env not found: {} (give --env)", env_path.display());
         std::process::exit(1);
     }
-    println!("Snapshot infra de {} (env: {})…", project, env_path.display());
+    println!("Infra snapshot of {} (env: {})…", project, env_path.display());
     match infra::snapshot(project, &env_path) {
-        Ok(n) => println!("OK : {} serveur(s) → ~/.cortex/infra/ (cherchables + dans la galaxie)", n),
+        Ok(n) => println!("OK: {} server(s) → ~/.cortex/infra/ (searchable + in the galaxy)", n),
         Err(e) => {
             eprintln!("cortex infra: {}", e);
             std::process::exit(1);
@@ -905,9 +960,9 @@ fn cmd_docs(action: DocsAction) {
             let t0 = Instant::now();
             println!("Scraping {} → doc '{}' (max {} pages)…", url, name, max);
             match scrape::scrape_site(&url, &name, max) {
-                Ok(n) => println!("OK {} : {} pages scrapees en {:.0}s → ~/.cortex/docs/{}", name, n, t0.elapsed().as_secs_f64(), name),
+                Ok(n) => println!("OK {}: {} pages scraped in {:.0}s → ~/.cortex/docs/{}", name, n, t0.elapsed().as_secs_f64(), name),
                 Err(e) => {
-                    eprintln!("cortex: scrape echoue: {}", e);
+                    eprintln!("cortex: scrape failed: {}", e);
                     std::process::exit(1);
                 }
             }
@@ -919,7 +974,7 @@ fn cmd_docs(action: DocsAction) {
             let content = match std::fs::read_to_string(&config) {
                 Ok(c) => c,
                 Err(e) => {
-                    eprintln!("cortex: impossible de lire {}: {}", config.display(), e);
+                    eprintln!("cortex: cannot read {}: {}", config.display(), e);
                     std::process::exit(1);
                 }
             };
@@ -928,7 +983,7 @@ fn cmd_docs(action: DocsAction) {
                 eprintln!("  ⚠ {}", err);
             }
             if jobs.is_empty() {
-                eprintln!("cortex: aucun site valide dans {}. Format: nom | url | max_pages?", config.display());
+                eprintln!("cortex: no valid site in {}. Format: name | url | max_pages?", config.display());
                 std::process::exit(1);
             }
             // Workers = sites en parallèle. Par défaut : TOUS les sites d'un coup
@@ -937,17 +992,17 @@ fn cmd_docs(action: DocsAction) {
             let n_workers = workers.unwrap_or_else(|| if preset == "normal" { jobs.len() } else { batch::preset_workers(&preset) });
             if plain {
                 // Mode simple (pipe/CI) : ancien affichage ligne-à-ligne.
-                println!("Sites à scraper ({}) :", jobs.len());
+                println!("Sites to scrape ({}):", jobs.len());
                 for j in &jobs {
                     println!("  • {:<16} {} (max {})", j.name, j.url, j.max_pages);
                 }
                 println!();
                 let results = batch::run_batch(&jobs, n_workers);
-                println!("\n── Récap ──");
+                println!("\n── Recap ──");
                 for (name, res) in &results {
                     match res {
                         Ok(p) => println!("  ✓ {:<16} {} pages", name, p),
-                        Err(e) => println!("  ✗ {:<16} ÉCHEC: {}", name, e),
+                        Err(e) => println!("  ✗ {:<16} FAILED: {}", name, e),
                     }
                 }
             } else {
@@ -958,9 +1013,9 @@ fn cmd_docs(action: DocsAction) {
         DocsAction::List => {
             let docs = scrape::list_docs();
             if docs.is_empty() {
-                println!("Aucune doc scrapee. Lance: cortex docs add <url> --name <nom>");
+                println!("No scraped doc. Run: cortex docs add <url> --name <name>");
             } else {
-                println!("Docs scrapees (~/.cortex/docs/) :");
+                println!("Scraped docs (~/.cortex/docs/):");
                 for (name, pages) in docs {
                     println!("  - {:<20} {} pages", name, pages);
                 }
@@ -975,11 +1030,11 @@ fn cmd_viewer(port: u16, no_build: bool) {
     if !no_build {
         cmd_galaxy(Some(galaxy_path.clone()));
     } else if !galaxy_path.exists() {
-        eprintln!("cortex: pas de galaxy.json — retire --no-build pour la générer.");
+        eprintln!("cortex: no galaxy.json; drop --no-build to generate it.");
         std::process::exit(1);
     }
     let url = format!("http://127.0.0.1:{}/", port);
-    println!("Viewer Cortex → {}\n(Ctrl+C pour arrêter)", url);
+    println!("Cortex viewer → {}\n(Ctrl+C to stop)", url);
     open_browser(&url);
     serve_viewer(port, &galaxy_path);
 }
@@ -998,7 +1053,7 @@ fn open_browser(url: &str) {
         std::process::Command::new("xdg-open").arg(url).spawn()
     };
     if r.is_err() {
-        eprintln!("cortex: ouvre {} dans ton navigateur", url);
+        eprintln!("cortex: open {} in your browser", url);
     }
 }
 
@@ -1008,7 +1063,7 @@ fn serve_viewer(port: u16, galaxy_path: &std::path::Path) {
     let listener = match std::net::TcpListener::bind(("127.0.0.1", port)) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("cortex: port {} occupé ({}). Essaie --port autre.", port, e);
+            eprintln!("cortex: port {} is busy ({}). Try another --port.", port, e);
             std::process::exit(1);
         }
     };
@@ -1036,5 +1091,31 @@ fn serve_viewer(port: u16, galaxy_path: &std::path::Path) {
         let _ = s.write_all(header.as_bytes());
         let _ = s.write_all(&body);
         let _ = s.flush();
+    }
+}
+
+/// `cortex ui` et l'outil MCP `cortex_ui` : délèguent au binaire compagnon `cortex-ui` (même dossier).
+#[cfg(not(feature = "ui"))]
+pub fn lancer_cortex_ui(args: &[String]) -> i32 {
+    let exe = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join(format!("cortex-ui{}", std::env::consts::EXE_SUFFIX))));
+    match exe.filter(|p| p.exists()) {
+        Some(p) => std::process::Command::new(p).args(args).status().map(|s| s.code().unwrap_or(1)).unwrap_or(1),
+        None => {
+            eprintln!("cortex ui : binaire cortex-ui introuvable. Construire : cargo build --release --features ui --bin cortex-ui");
+            1
+        }
+    }
+}
+
+/// Sortie texte du binaire compagnon (pour l'outil MCP `cortex_ui`).
+#[cfg(not(feature = "ui"))]
+pub fn sortie_cortex_ui(args: &[String]) -> String {
+    let exe = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join(format!("cortex-ui{}", std::env::consts::EXE_SUFFIX))));
+    match exe.filter(|p| p.exists()) {
+        Some(p) => match std::process::Command::new(p).args(args).output() {
+            Ok(o) => format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr)),
+            Err(e) => format!("(cortex) cortex-ui inaccessible : {e}"),
+        },
+        None => "(cortex) cortex-ui introuvable. Construire : cargo build --release --features ui --bin cortex-ui".to_string(),
     }
 }

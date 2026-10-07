@@ -61,14 +61,14 @@ fn identifiants_stables_et_homonymes() {
     let f = run(&h, "find formater une date");
     let id = f.lines().next().unwrap().split_whitespace().next().unwrap().to_string();
     assert_eq!(id, "S:src/lib/util.ts#formatDate");
-    assert!(f.ends_with(&format!("suite : card {}\n", id)), "{}", f);
+    assert!(f.ends_with(&format!("next : card {}\n", id)), "{}", f);
     assert!(run(&h, &format!("read {}", id)).contains("4│export function formatDate(d: Date): string {"));
     // Titres markdown : D:chemin#ancre.
     let md = run(&h, "outline docs/guide.md");
     assert!(md.contains("D:docs/guide.md#guide L1 — Intro du guide."), "{}", md);
     assert!(md.contains("    D:docs/guide.md#installation L3"), "{}", md);
     // Introuvable / ambigu : message + suite.
-    assert!(run(&h, "card S:src/lib/util.ts#absent").contains("suite : find"));
+    assert!(run(&h, "card S:src/lib/util.ts#absent").contains("next : find"));
     drop(h);
     fin(&name, &dir);
 }
@@ -80,21 +80,21 @@ fn carte_precompilee_et_partie_entrante() {
     let stockee = h.node(g).map(|r| r.str(r.n.card).to_string()).unwrap();
     assert_eq!(
         stockee,
-        "S:src/lib/util.ts#formatDate fn L4-6\nsig: export function formatDate(d: Date): string\nrôle: Formate une date en ISO court.\n"
+        "S:src/lib/util.ts#formatDate fn L4-6\nsig: export function formatDate(d: Date): string\nrole: Formate une date en ISO court.\n"
     );
     let v = h.node(h.find_symbol("valider").unwrap()).map(|r| r.str(r.n.card).to_string()).unwrap();
-    assert!(v.contains("appelle 1: S:src/lib/util.ts#formatDate"), "{}", v);
+    assert!(v.contains("calls 1: S:src/lib/util.ts#formatDate"), "{}", v);
     let c = run(&h, "card formatDate");
     assert!(
-        c.contains("appelé par 2 (2 fichiers, L = ligne de l'appel): S:src/app/page.tsx#Page L6, S:src/lib/util.ts#valider L9"),
+        c.contains("called by 2 (2 files, L = call line): S:src/app/page.tsx#Page L6, S:src/lib/util.ts#valider L9"),
         "{}",
         c
     );
     assert!(c.contains("tests: F:src/lib/util.test.ts"), "{}", c);
-    assert!(c.ends_with("suite : read S:src/lib/util.ts#formatDate\n"), "{}", c);
+    assert!(c.ends_with("next : read S:src/lib/util.ts#formatDate\n"), "{}", c);
     // Sans rôle propre : celui du fichier.
     let c = run(&h, "card valider");
-    assert!(c.contains("rôle (fichier): Utilitaires de test : formatage et validation."), "{}", c);
+    assert!(c.contains("role (file): Utilitaires de test : formatage et validation."), "{}", c);
     // Alias : explain = card ; query = find.
     assert_eq!(run(&h, "explain formatDate"), run(&h, "card formatDate"));
     assert_eq!(run(&h, "query date"), run(&h, "find date"));
@@ -109,13 +109,13 @@ fn read_lignes_exactes_section_plage_budget() {
     assert_eq!(r.lines().next().unwrap(), "S:src/lib/util.ts#valider fn L8-10");
     assert!(r.contains("8│export function valider(x: string): boolean {\n9│  return formatDate(new Date()) !== x\n10│}\n"), "{}", r);
     let r = run(&h, "read S:src/lib/util.ts#valider -c 1");
-    assert!(r.starts_with("S:src/lib/util.ts#valider fn L8-10 (lignes 7-11)") && r.contains("7│\n"), "{}", r);
+    assert!(r.starts_with("S:src/lib/util.ts#valider fn L8-10 (lines 7-11)") && r.contains("7│\n"), "{}", r);
     let r = run(&h, "read D:docs/guide.md#installation");
     assert!(r.contains("3│## Installation\n4│Lancer la commande.\n") && !r.contains("5│"), "{}", r);
     let r = run(&h, "read src/app/page.tsx:4-5");
     assert!(r.starts_with("F:src/app/page.tsx L4-5") && r.contains("5│  const ok = valider(o.a)"), "{}", r);
     let r = executer(std::slice::from_ref(&h), &Appel::Read { cible: "src/lib/util.ts".into(), contexte: 0 }, Some(60));
-    assert!(r.contains("coupée(s)") && r.contains("suite : read src/lib/util.ts:"), "{}", r);
+    assert!(r.contains("cut") && r.contains("next : read src/lib/util.ts:"), "{}", r);
     drop(h);
     fin(&name, &dir);
 }
@@ -125,9 +125,9 @@ fn impact_chemin_apercu() {
     let (name, dir, h) = projet("graphe");
     let i = run(&h, "impact formatDate");
     assert!(i.starts_with("impact S:src/lib/util.ts#formatDate fn L4-6\n"), "{}", i);
-    assert!(i.contains("profondeur 1 — 2 (2 fichiers)"), "{}", i);
+    assert!(i.contains("depth 1 — 2 (2 files)"), "{}", i);
     assert!(i.contains("  S:src/lib/util.ts#valider L9\n"), "{}", i);
-    assert!(i.contains("tests à relancer 1: F:src/lib/util.test.ts"), "{}", i);
+    assert!(i.contains("tests to re-run 1: F:src/lib/util.test.ts"), "{}", i);
     // Un type importé sans être appelé : le fichier importeur est un dépendant.
     let t = run(&h, "impact Options");
     assert!(t.contains("  F:src/app/page.tsx\n"), "{}", t);
@@ -137,15 +137,15 @@ fn impact_chemin_apercu() {
     // Chemin d'appels, puis sens inverse.
     let p = run(&h, "path src/app/page.tsx formatDate");
     assert!(
-        p.contains("appels 1 saut(s):\nS:src/app/page.tsx#Page component L4-7\n  → appelle en L6 S:src/lib/util.ts#formatDate fn L4-6\n"),
+        p.contains("calls 1 hop(s):\nS:src/app/page.tsx#Page component L4-7\n  → calls at L6 S:src/lib/util.ts#formatDate fn L4-6\n"),
         "{}",
         p
     );
     let p = run(&h, "path formatDate valider");
-    assert!(p.starts_with("aucun chemin de S:src/lib/util.ts#formatDate vers S:src/lib/util.ts#valider ; chemin inverse :"), "{}", p);
+    assert!(p.starts_with("no path from S:src/lib/util.ts#formatDate to S:src/lib/util.ts#valider; reverse path:"), "{}", p);
     let o = run(&h, "overview src/lib");
-    assert!(o.contains("points d'entrée (importés de l'extérieur) 2:"), "{}", o);
-    assert!(o.contains("utilisé par (dossiers) : src/app (2)\nutilisé par (fichiers) 1: F:src/app/page.tsx\n"), "{}", o);
+    assert!(o.contains("entry points (imported from outside) 2:"), "{}", o);
+    assert!(o.contains("used by (folders): src/app (2)\nused by (files) 1: F:src/app/page.tsx\n"), "{}", o);
     assert!(o.contains("F:src/lib/util.ts 6 sym — Utilitaires de test : formatage et validation."), "{}", o);
     drop(h);
     fin(&name, &dir);
@@ -162,7 +162,7 @@ fn analyse_des_appels_et_budget() {
     assert!(!o.ligne(&"x".repeat(80)));
     assert!(!o.ligne("court"));
     let s = o.fin(Some("card X".into()));
-    assert_eq!(s, "court\n… 2 ligne(s) coupée(s) : budget -b 10 atteint\nsuite : card X\n");
+    assert_eq!(s, "court\n… 2 line(s) cut: budget -b 10 reached\nnext : card X\n");
 }
 
 /// `changed` et la marque ✎ : un dépôt git, un commit, puis une modification.
@@ -187,7 +187,7 @@ fn changed_et_marque_non_commite() {
     g(&["add", "-A"]);
     g(&["commit", "-q", "-m", "init"]);
     let mut h = Handle::open(&name).unwrap();
-    assert!(run(&h, "changed").contains("aucun travail non commité"));
+    assert!(run(&h, "changed").contains("no uncommitted work"));
     // Modifie le corps de `valider`, ajoute un fichier.
     let p = dir.join("src/lib/util.ts");
     let src = std::fs::read_to_string(&p).unwrap().replace("!== x", "=== x");
@@ -196,10 +196,10 @@ fn changed_et_marque_non_commite() {
     crate::atlas::fresh::refresh(&mut h);
     let h = Handle::open(&name).unwrap();
     let c = run(&h, "changed");
-    assert!(c.contains("F:src/lib/util.ts ✎ modifié · 1 symbole(s) touché(s)\n  S:src/lib/util.ts#valider fn L8-10 · 1 appelant(s) — ex. S:src/app/page.tsx#Page L5"), "{}", c);
-    assert!(c.contains("F:src/lib/neuf.ts ✎ nouveau · 1 symbole(s)"), "{}", c);
+    assert!(c.contains("F:src/lib/util.ts ✎ modified · 1 symbol(s) touched\n  S:src/lib/util.ts#valider fn L8-10 · 1 caller(s) — e.g. S:src/app/page.tsx#Page L5"), "{}", c);
+    assert!(c.contains("F:src/lib/neuf.ts ✎ new · 1 symbol(s)"), "{}", c);
     assert!(c.contains("tests : F:src/lib/util.test.ts"), "{}", c);
-    assert!(c.ends_with("suite : impact S:src/lib/util.ts#valider\n"), "{}", c);
+    assert!(c.ends_with("next : impact S:src/lib/util.ts#valider\n"), "{}", c);
     assert!(run(&h, "card valider").lines().next().unwrap().ends_with(" ✎"));
     assert!(run(&h, "find valider").lines().next().unwrap().contains(" ✎"));
     drop(h);
