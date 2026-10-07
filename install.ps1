@@ -5,7 +5,8 @@
 # What it does, and nothing else:
 #   1. downloads cortex-x86_64-pc-windows-msvc.zip and SHA256SUMS.txt from the GitHub release,
 #   2. refuses to continue unless the SHA-256 checksum matches,
-#   3. copies cortex.exe into %LOCALAPPDATA%\cortex\bin (no administrator rights needed),
+#   3. copies cortex.exe and cortex-ui.exe (UI locator, for `cortex ui`) into %LOCALAPPDATA%\cortex\bin
+#      (no administrator rights needed),
 #   4. adds that folder to your user PATH (not the system PATH), once.
 #
 # Options (environment variables, set before running):
@@ -13,7 +14,7 @@
 #   CORTEX_VERSION          release to install, e.g. 0.3.0 (default: latest)
 #   CORTEX_NO_MODIFY_PATH=1 do not touch the user PATH
 #
-# Source: https://github.com/AstroQuestStudio/cortex (MIT). Made by AstroQuest.
+# Source: https://github.com/AstroQuestStudio/cortex (PolyForm Shield 1.0.0). Made by AstroQuest.
 
 & {
     Set-StrictMode -Version 2.0
