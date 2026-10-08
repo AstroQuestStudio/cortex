@@ -56,7 +56,7 @@ const SYNONYM_GROUPS: &[&[&str]] = &[
     &["gdpr", "rgpd", "privacy"],
     &["url", "adresse", "link", "lien"],
     &["password", "passe", "mdp"],
-    &["reminder", "relance", "rappel", "dunning"],
+    &["reminder", "relance", "relancer", "relances", "rappel", "dunning"],
     &["salary", "salaire", "payroll", "paie"],
     &["bank", "banque", "bancaire"],
     &["weekly", "hebdomadaire"],
@@ -64,6 +64,13 @@ const SYNONYM_GROUPS: &[&[&str]] = &[
     &["tab", "onglet"],
     &["title", "titre"],
     &["guest", "anonymous", "anonyme", "invite"],
+    // Vocabulaire général (étape précision) : chaque groupe a été retenu parce qu'il
+    // ne dégrade aucun des trois bancs (réglage, caché, étendu).
+    &["text", "texte"],
+    &["native", "natif"],
+    &["hidden", "masque", "invisible"],
+    &["transfer", "virement", "sepa"],
+    &["automatic", "automatique", "automatiquement", "auto"],
     // « base aérienne » : le mot composé `Airbase` ne contient pas le mot « base »
     &["airbase", "airfield", "aerodrome", "aerienne", "aeriennes"],
     // Réseau / multijoueur (réplication Unreal, sessions) : questions FR, identifiants EN
@@ -111,16 +118,25 @@ fn gloss_flags() -> &'static str {
     G.get_or_init(|| std::env::var("CORTEX_GLOSS").unwrap_or_default())
 }
 
+fn active_groups() -> &'static [&'static [&'static str]] {
+    static G: std::sync::OnceLock<Vec<&'static [&'static str]>> = std::sync::OnceLock::new();
+    G.get_or_init(|| {
+        let f = gloss_flags();
+        let mut groups: Vec<&[&str]> = SYNONYM_GROUPS.to_vec();
+        if f.contains('p') {
+            groups.extend_from_slice(EXTRA_P);
+        }
+        if f.contains('h') {
+            groups.extend_from_slice(EXTRA_H);
+        }
+        groups
+    })
+}
+
 pub fn expand_synonyms(terms: &[String]) -> Vec<String> {
     let mut out: Vec<String> = terms.to_vec();
     let f = gloss_flags();
-    let mut groups: Vec<&[&str]> = SYNONYM_GROUPS.to_vec();
-    if f.contains('p') {
-        groups.extend_from_slice(EXTRA_P);
-    }
-    if f.contains('h') {
-        groups.extend_from_slice(EXTRA_H);
-    }
+    let groups = active_groups();
     let by_stem = f.contains('s');
     for t in terms {
         let lt = t.to_ascii_lowercase();

@@ -97,6 +97,16 @@ enum Cmd {
         #[command(flatten)]
         c: Commun,
     },
+    /// ASK in one call: intent (locate / explain / impact / path / module) by rules, then
+    /// the best facts for the question (definition + signature, callees, callers, tests,
+    /// key body lines) picked greedily under the token budget `-b` (default 600), with a
+    /// redundancy penalty. Replaces find -> card -> read.
+    Ask {
+        /// Question in natural language (FR or EN); may name symbols, files or folders.
+        question: String,
+        #[command(flatten)]
+        c: Commun,
+    },
     /// Alias of `find` (compatibility).
     Query {
         question: String,
@@ -190,6 +200,9 @@ enum Cmd {
         /// Only plays tasks whose id contains this text.
         #[arg(long)]
         tache: Option<String>,
+        /// Token budget of the `ask` arm (default 600).
+        #[arg(long, default_value_t = 600)]
+        budget_ask: usize,
     },
     /// Relevance bench: runs each question of a JSON file and computes top-1,
     /// top-5 and MRR on the rank of the expected file.
@@ -452,6 +465,7 @@ fn main() {
             }
         }
         Cmd::Stats { name } => cmd_stats(&name),
+        Cmd::Ask { question, c } => cmd_outil("ask", outils::Appel::Ask { question, budget: None }, c),
         Cmd::Find { question, c } | Cmd::Query { question, c } => cmd_outil("find", outils::Appel::Find { question }, c),
         Cmd::Card { cible, c } => cmd_outil("card", outils::Appel::Card { cible }, c),
         Cmd::Explain { symbol, depth: _, level: _, c } => cmd_outil("card", outils::Appel::Card { cible: symbol }, c),
@@ -462,9 +476,9 @@ fn main() {
         Cmd::Impact { cible, depth, c } => cmd_outil("impact", outils::Appel::Impact { cible, profondeur: depth }, c),
         Cmd::Path { de, vers, c } => cmd_outil("path", outils::Appel::Path { de, vers }, c),
         Cmd::Changed { c } => cmd_outil("changed", outils::Appel::Changed, c),
-        Cmd::BenchAgent { file, project, verbose, tache } => {
+        Cmd::BenchAgent { file, project, verbose, tache, budget_ask } => {
             let file = file.unwrap_or_else(|| bench::bench_file("agent_tasks.json"));
-            banc_agent::run(&file, project, verbose, tache)
+            banc_agent::run(&file, project, verbose, tache, budget_ask)
         }
         Cmd::Bench { file, project, verbose, moteur } => cmd_bench(&file, project, verbose, &moteur),
         Cmd::BenchCompare { file, project, sans_construction, sortie } => {
@@ -845,6 +859,18 @@ fn cmd_bench(file: &std::path::Path, project: Option<String>, verbose: bool, mot
         }
         by_tag.entry(if q.tag.is_empty() { "-".into() } else { q.tag.clone() }).or_default().push(i);
         results.push(r);
+    }
+    if let Ok(r) = std::env::var("CORTEX_BENCH_REP") {
+        let mut all = Vec::new();
+        for _ in 0..r.parse::<usize>().unwrap_or(0) {
+            let t = Instant::now();
+            for q in &bench.queries {
+                let _ = bench::run_one_atlas(&handles, q);
+            }
+            all.push(t.elapsed().as_secs_f64() * 1000.0);
+        }
+        all.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        println!("REP best {:.1} median {:.1}", all[0], all[all.len() / 2]);
     }
     let s = bench::summarize(&results);
     println!("\n== atlas engine · {} questions · {:.0} ms ==", s.n, t0.elapsed().as_secs_f64() * 1000.0);

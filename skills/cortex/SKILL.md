@@ -13,6 +13,7 @@ reading whole files. Read a full file only when you are about to edit it.
 
 | You want… | MCP tool | CLI |
 |---|---|---|
+| a whole answer in one call (locate, explain, impact, path, module), token-bounded | `cortex_ask` | `cortex ask "<question>" -b 600` |
 | where is X? (natural language, English or French, or keywords) | `cortex_find` | `cortex find "<question>"` |
 | what is this symbol: signature, role, callees, callers with call line, tests | `cortex_card` | `cortex card <id>` |
 | the exact lines of a symbol, doc section or range | `cortex_read` | `cortex read <id>` |

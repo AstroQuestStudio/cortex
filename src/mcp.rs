@@ -5,7 +5,7 @@
 //! lourde, robuste sur le toolchain MinGW. Synchrone (stdio = pas besoin d'async).
 //!
 //! Tools exposés (mêmes noms que la CLI, préfixe `cortex_`, voir `outils`) :
-//!   - cortex_find / card / outline / read / overview / impact / path / changed
+//!   - cortex_ask / cortex_find / card / outline / read / overview / impact / path / changed
 //!   - cortex_query, cortex_explain, cortex_context : alias compatibles
 //!   - cortex_grep      : plein-texte dans les fichiers indexés
 //!   - cortex_ui        : de ce qu'on voit à l'écran (texte, data-testid, composant) au code qui l'affiche
@@ -185,6 +185,11 @@ fn tools_list() -> Value {
                 "inputSchema": schema("question", "Question or keywords (FR or EN)", json!({}))
             },
             {
+                "name": "cortex_ask",
+                "description": format!("ASK IN ONE CALL (replaces find -> card -> read). Give a question (FR/EN) and a token budget: Cortex classifies the intent by rules (locate / explain / impact / path / module), gathers candidate facts (definition + signature, callees, callers, tests, key body lines), and picks the most informative ones under the budget (greedy, with a redundancy penalty). Output: stable ids to read or card next. Name a symbol, file or folder in the question to get impact / path / overview directly.{}", REGLE),
+                "inputSchema": schema("question", "Question in natural language (FR or EN); may name symbols, files, folders", json!({}))
+            },
+            {
                 "name": "cortex_card",
                 "description": format!("WHAT IS IT? Card of a symbol in one call, without reading its file: signature, role (doc-comment), what it calls, who calls it (with the call line), how many files import its file, related tests, homonyms. A file as input gives its outline.{}", REGLE),
                 "inputSchema": schema("cible", ID_DESC, json!({}))
@@ -334,6 +339,7 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
 
     let text = match name {
         "cortex_find" | "cortex_query" => run_outil(&args, Appel::Find { question: arg_str(&args, "question") }),
+        "cortex_ask" => run_outil(&args, Appel::Ask { question: arg_str(&args, "question"), budget: None }),
         "cortex_card" => run_outil(&args, Appel::Card { cible: arg_str(&args, "cible") }),
         "cortex_explain" => run_outil(&args, Appel::Card { cible: arg_str(&args, "symbol") }),
         "cortex_context" => run_outil(&args, Appel::Context { cible: arg_str(&args, "symbol") }),

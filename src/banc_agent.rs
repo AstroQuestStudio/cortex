@@ -173,6 +173,17 @@ fn jouer_cortex(handles: &[Handle], t: &Tache) -> Trace {
     tr
 }
 
+/// Bras « ask » : UN appel `ask <question> -b <budget>`, avec les seuls mots de la question.
+fn jouer_ask(handles: &[Handle], t: &Tache, budget: usize) -> Trace {
+    let mut tr = Trace::default();
+    let appel = Appel::Ask { question: t.question.clone(), budget: Some(budget) };
+    let sortie = outils::executer(handles, &appel, None);
+    tr.appels = 1;
+    tr.tokens = tokens(&sortie);
+    tr.sorties.push((format!("ask {} -b {}", t.question, budget), sortie, false));
+    tr
+}
+
 /// Fichiers de l'atlas (chemins relatifs) et racine.
 struct Corpus<'a> {
     root: &'a str,
@@ -313,7 +324,7 @@ fn couverts(t: &Tache, tr: &Trace) -> Vec<bool> {
         .collect()
 }
 
-pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<String>) {
+pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<String>, budget_ask: usize) {
     let f: Fichier =
         match std::fs::read_to_string(file).map_err(|e| e.to_string()).and_then(|c| serde_json::from_str(&c).map_err(|e| e.to_string())) {
             Ok(f) => f,
@@ -332,11 +343,11 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
     let corpus = Corpus { root: h.root(), project: &h.project, paths: h.file_paths() };
     println!("== Banc d'agent — {} ({} tâches) ==", project, f.tasks.len());
     println!(
-        "{:<26} {:>16} | {:>6} {:>7} {:>6} | {:>6} {:>7} {:>6}",
-        "tâche", "type", "appels", "tokens", "faits", "appels", "tokens", "faits"
+        "{:<26} {:>16} | {:>6} {:>7} {:>6} | {:>6} {:>7} {:>6} | {:>6} {:>7} {:>6}",
+        "tâche", "type", "appels", "tokens", "faits", "appels", "tokens", "faits", "appels", "tokens", "faits"
     );
-    println!("{:<26} {:>16} | {:^22} | {:^22}", "", "", "avec Cortex", "sans Cortex");
-    let (mut tc, mut ts) = ((0usize, 0usize, 0usize), (0usize, 0usize, 0usize));
+    println!("{:<26} {:>16} | {:^22} | {:^22} | {:^22}", "", "", "avec Cortex", "sans Cortex", format!("ask -b {}", budget_ask));
+    let (mut tc, mut ts, mut ta) = ((0usize, 0usize, 0usize), (0usize, 0usize, 0usize), (0usize, 0usize, 0usize));
     let mut n_faits = 0usize;
     let mut json_taches = Vec::new();
     let mut toutes_violations: Vec<String> = Vec::new();
@@ -347,13 +358,17 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
         let t1 = std::time::Instant::now();
         let s = jouer_sans(&corpus, t);
         let ms_s = t1.elapsed().as_secs_f64() * 1000.0;
+        let a = jouer_ask(&handles, t, budget_ask);
+        let fa = couverts(t, &a);
+        let na = fa.iter().filter(|&&x| x).count();
+        ta = (ta.0 + a.appels, ta.1 + a.tokens, ta.2 + na);
         let (fc, fs) = (couverts(t, &c), couverts(t, &s));
         let (nc, ns) = (fc.iter().filter(|&&x| x).count(), fs.iter().filter(|&&x| x).count());
         n_faits += t.facts.len();
         tc = (tc.0 + c.appels, tc.1 + c.tokens, tc.2 + nc);
         ts = (ts.0 + s.appels, ts.1 + s.tokens, ts.2 + ns);
         println!(
-            "{:<26} {:>16} | {:>6} {:>7} {:>3}/{:<2} | {:>6} {:>7} {:>3}/{:<2}",
+            "{:<26} {:>16} | {:>6} {:>7} {:>3}/{:<2} | {:>6} {:>7} {:>3}/{:<2} | {:>6} {:>7} {:>3}/{:<2}",
             t.id,
             t.genre,
             c.appels,
@@ -363,6 +378,10 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
             s.appels,
             s.tokens,
             ns,
+            t.facts.len(),
+            a.appels,
+            a.tokens,
+            na,
             t.facts.len()
         );
         let manques = |v: &[bool]| t.facts.iter().zip(v).filter(|(_, &ok)| !ok).map(|(f, _)| f.clone()).collect::<Vec<_>>();
@@ -374,6 +393,13 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
                 println!("\n--- sans {} ({} tokens, {} lignes)", e, tokens(out), out.lines().count());
             }
             println!("  manqués avec Cortex : {:?}\n  manqués sans Cortex : {:?}\n", manques(&fc), manques(&fs));
+            for (e, out, _) in &a.sorties {
+                println!("
+--- ask {} ({} tokens)
+{}", e, tokens(out), out);
+            }
+            println!("  manqués avec ask : {:?}
+", manques(&fa));
         }
         for v in c
             .violations
@@ -387,17 +413,30 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
             "id": t.id, "type": t.genre, "faits": t.facts.len(),
             "cortex": { "appels": c.appels, "tokens": c.tokens, "faits": nc, "manques": manques(&fc), "ms": ms_c, "etapes": c.sorties.iter().map(|x| &x.0).collect::<Vec<_>>(), "violations": c.violations },
             "sans_cortex": { "appels": s.appels, "tokens": s.tokens, "faits": ns, "manques": manques(&fs), "ms": ms_s, "etapes": s.sorties.iter().map(|x| &x.0).collect::<Vec<_>>(), "violations": s.violations },
+            "ask": { "appels": a.appels, "tokens": a.tokens, "faits": na, "manques": manques(&fa), "budget": budget_ask },
         }));
     }
     println!(
-        "{:<26} {:>16} | {:>6} {:>7} {:>3}/{:<2} | {:>6} {:>7} {:>3}/{:<2}",
-        "TOTAL", "", tc.0, tc.1, tc.2, n_faits, ts.0, ts.1, ts.2, n_faits
+        "{:<26} {:>16} | {:>6} {:>7} {:>3}/{:<2} | {:>6} {:>7} {:>3}/{:<2} | {:>6} {:>7} {:>3}/{:<2}",
+        "TOTAL", "", tc.0, tc.1, tc.2, n_faits, ts.0, ts.1, ts.2, n_faits, ta.0, ta.1, ta.2, n_faits
     );
     println!(
         "\nfaits couverts : {:.0} % avec Cortex, {:.0} % sans ; tokens lus : ×{:.1} de moins avec Cortex",
         100.0 * tc.2 as f64 / n_faits.max(1) as f64,
         100.0 * ts.2 as f64 / n_faits.max(1) as f64,
         ts.1 as f64 / tc.1.max(1) as f64
+    );
+    println!(
+        "ask -b {} : tokens lus {:+.0} % vs find→card→read ({} → {}), appels {} → {}, faits {} → {} sur {}",
+        budget_ask,
+        100.0 * (ta.1 as f64 - tc.1 as f64) / tc.1.max(1) as f64,
+        tc.1,
+        ta.1,
+        tc.0,
+        ta.0,
+        tc.2,
+        ta.2,
+        n_faits
     );
     if !toutes_violations.is_empty() {
         println!("\nétapes NON jouées (règle : rien que la question, son vocabulaire et les sorties précédentes) :");
@@ -414,6 +453,7 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
             "faits": n_faits,
             "cortex": { "appels": tc.0, "tokens": tc.1, "faits": tc.2 },
             "sans_cortex": { "appels": ts.0, "tokens": ts.1, "faits": ts.2 },
+            "ask": { "appels": ta.0, "tokens": ta.1, "faits": ta.2, "budget": budget_ask },
         },
         "taches": json_taches,
     });

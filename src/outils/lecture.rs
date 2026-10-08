@@ -79,12 +79,16 @@ pub fn find(handles: &[Handle], question: &str, budget: usize) -> String {
         if suite.is_none() {
             suite = Some(format!("card {}", id));
         }
-        let path = h.path_of(r.n.owner_file);
+        // Un fichier sans symbole (script de haut niveau, fonction serveur inline) est
+        // lui-même le résultat : le nœud est le fichier.
+        let is_file = r.n.kind == 0;
+        let file_g = if is_file { g } else { r.n.owner_file };
+        let path = h.path_of(file_g);
         let mut l = format!(
             "{}{} {} {}{}",
             if multi { format!("[{}] ", h.project) } else { String::new() },
             id,
-            r.kind().as_str(),
+            if is_file { "file" } else { r.kind().as_str() },
             lines(r.n.line, r.n.end_line),
             marque(&ovs[*hi], path)
         );
@@ -94,7 +98,7 @@ pub fn find(handles: &[Handle], question: &str, budget: usize) -> String {
                 role_s = role_decl;
             }
             if role_s.is_empty() {
-                role_s = role(h, r.n.owner_file);
+                role_s = role(h, file_g);
             }
             if !role_s.is_empty() {
                 l.push_str(" — ");
@@ -135,7 +139,7 @@ fn docs_citant(h: &Handle, nom: &str, file_path: &str) -> Vec<(usize, String)> {
 
 /// Tests liés à un symbole : fichiers de test qui l'appellent, qui importent
 /// son fichier, ou nommés d'après lui ou son fichier.
-fn tests_du_symbole(h: &Handle, g: u32, appelants: &[u32]) -> Vec<u32> {
+pub(super) fn tests_du_symbole(h: &Handle, g: u32, appelants: &[u32]) -> Vec<u32> {
     let Some(r) = h.node(g) else { return Vec::new() };
     let f = r.n.owner_file;
     let mut t: Vec<u32> = appelants.iter().map(|&c| super::fichier_de(h, c)).filter(|&cf| is_test_path(h.path_of(cf))).collect();
@@ -296,7 +300,7 @@ pub fn card(handles: &[Handle], entree: &str, budget: usize, avec_docs: bool) ->
 
 // ─── outline ────────────────────────────────────────────────────────────────
 
-fn exporte(sig: &str) -> bool {
+pub(super) fn exporte(sig: &str) -> bool {
     sig.starts_with("export ") || sig.starts_with("pub ") || sig.starts_with("pub(")
 }
 
@@ -409,7 +413,7 @@ pub(crate) fn outline_de(h: &Handle, f: u32, budget: usize) -> String {
 // ─── read ───────────────────────────────────────────────────────────────────
 
 /// Lignes d'un fichier du projet, lues sur disque (fin de ligne `\r` retirée).
-fn lignes_fichier(h: &Handle, path: &str) -> Option<Vec<String>> {
+pub(super) fn lignes_fichier(h: &Handle, path: &str) -> Option<Vec<String>> {
     let bytes = std::fs::read(std::path::Path::new(h.root()).join(path)).ok()?;
     let txt = String::from_utf8_lossy(&bytes);
     let mut v: Vec<String> = txt.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l).to_string()).collect();

@@ -206,6 +206,7 @@ instruction block you can paste into `AGENTS.md`, `CLAUDE.md` or your rules file
 
 | Tool (CLI / MCP) | The agent's question | Replaces |
 |---|---|---|
+| `ask` / `cortex_ask` | Everything useful for a question in ONE call, under a token budget (`-b`, default 600): ids, signatures, callers, callees, tests, key lines | find then card then read |
 | `find` / `cortex_find` | Where is X? (natural language, English or French, or keywords) | grep, find |
 | `card` / `cortex_card` | What is this symbol: signature, role, callees, callers with call line, tests? | grep + reads |
 | `read` / `cortex_read` | Show me exactly this function (or doc section, or line range) | Read with a guessed offset |
@@ -217,6 +218,11 @@ instruction block you can paste into `AGENTS.md`, `CLAUDE.md` or your rules file
 | `grep` / `cortex_grep` | Exact text, grouped by file and enclosing function | rg |
 | `files` / `cortex_files` | A file by name fragment or glob | find, Glob |
 | `docs` / `cortex_docs` | Offline docs of a library you scraped (`cortex docs add <url>`) | web search |
+
+`ask` picks its facts greedily by value per token, with a redundancy penalty, and routes questions
+that name a symbol, two code targets or a folder to `impact`, `path` or `overview`. On the bundled
+agent benchmark it reads about a third fewer tokens than `find` then `card` then `read`, in one call
+instead of two or three, for the same facts covered (`cortex bench-agent`, `ask` arm).
 
 ## Why not grep, embeddings or a language server?
 
@@ -255,8 +261,8 @@ Public, in the order we expect to build it. Every item ships with a benchmark th
 
 - **Ingesters**: git history (`why <id>`: who changed this and why), SQL schemas (`schema
   <table>`: columns, policies, who reads and writes it), docs linked to the code they mention.
-- **I1 — `ask` under a budget**: one call assembles the best set of facts (definition, callers,
-  tests, docs, commits) for a question within N tokens.
+- **I1 — `ask` under a budget** (first version shipped, rule-based): one call assembles the best set of facts (definition, callers,
+  tests; next: docs, commits, learned weights) for a question within N tokens.
 - **I2 — differential context**: the MCP server remembers what it already sent in a session and
   sends only what changed.
 - **I5 — predictive impact**: call graph × co-change history, ranked by risk.

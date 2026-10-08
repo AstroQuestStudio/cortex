@@ -32,6 +32,11 @@ pub(crate) const B: f32 = 0.75;
 /// Vrai si le chemin désigne un fichier de test (`*.test.*`, `*.spec.*`, `*_test.*`,
 /// `tests.rs`, `test_*.py`, `__tests__/`, dossier `tests/` ou `test/`).
 pub fn is_test_path(path: &str) -> bool {
+    // Chemin rapide sans allocation : tous les motifs contiennent « test » ou « spec ».
+    let has = |needle: &[u8]| path.as_bytes().windows(needle.len()).any(|w| w.eq_ignore_ascii_case(needle));
+    if !has(b"test") && !has(b"spec") {
+        return false;
+    }
     let p = path.to_ascii_lowercase().replace('\\', "/");
     let name = p.rsplit('/').next().unwrap_or(&p);
     name.contains(".test.")
@@ -63,6 +68,8 @@ pub(crate) struct Weights {
     pub(crate) test_penalty: f32,
     /// Poids du score BM25 du CORPS d'un fichier (ajouté au meilleur symbole du fichier).
     pub(crate) body: f32,
+    /// Poids de la couverture des termes de la question par l'identité d'un fichier.
+    pub(crate) cov_id: f32,
 }
 
 impl Weights {
@@ -73,9 +80,18 @@ impl Weights {
             doc: env("CORTEX_W_DOC", 0.4),
             test_penalty: env("CORTEX_TEST_PENALTY", 0.8),
             body: env("CORTEX_W_BODY", 0.5),
+            cov_id: env("CORTEX_COV_ID", 2.0),
         }
     }
 }
+
+/// Mots vides propres aux QUESTIONS (possessifs, prépositions de temps) : sans effet sur
+/// l'indexation, donc sans besoin de réindexer.
+const QUERY_STOPWORDS: &[&str] = &[
+    "my", "mine", "your", "his", "her", "their", "own", "after", "before", "each", "every", "any", "some", "than", "then", "there",
+    "mon", "ma", "mes", "ton", "ta", "tes", "notre", "nos", "votre", "vos", "apres", "avant", "depuis", "vers", "chez", "chaque",
+    "entre", "seulement", "uniquement",
+];
 
 /// Décompose la question en tokens de recherche (même transform que les symboles),
 /// accents repliés et mots vides retirés (sauf si la question n'est faite que de ça).
@@ -92,7 +108,7 @@ pub fn query_terms(question: &str) -> Vec<String> {
             }
         }
     }
-    let content: Vec<String> = terms.iter().filter(|t| !is_stopword(t)).cloned().collect();
+    let content: Vec<String> = terms.iter().filter(|t| !is_stopword(t) && !QUERY_STOPWORDS.contains(&t.as_str())).cloned().collect();
     if content.is_empty() {
         terms
     } else {

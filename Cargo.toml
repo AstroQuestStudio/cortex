@@ -1,6 +1,6 @@
 [package]
 name = "astroquest-cortex"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["AstroQuest"]
 description = "Cortex by AstroQuest: the code-context engine for AI agents. Find, card, read, impact: understand a codebase in a few calls and ~10x fewer tokens than grep + read. CLI and MCP server."

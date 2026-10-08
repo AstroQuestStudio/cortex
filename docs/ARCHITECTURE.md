@@ -458,7 +458,7 @@ the changed paths, then a delta segment; `update` (full walk, blake3 fingerprint
 the same exclusion rule. A known path is only reread if (mtime µs, size) changed, and an
 already-seen unindexable file is remembered: a second call with no change rereads nothing.
 
-The agent tools (§6: find, card, outline, read, overview, impact, path, changed) read the atlas,
+The agent tools (§6: ask, find, card, outline, read, overview, impact, path, changed) read the atlas,
 and the MCP server exposes them under the same names (`cortex_find`…), with `query`, `explain`
 and `context` kept as aliases.
 
@@ -486,6 +486,21 @@ A single `ask "<question>" -b 1500` tool. Cortex:
    thing, are worth less together).
 Result: the best possible answer for N tokens, instead of a truncated list.
 Measured on: the agent benchmark, for the same answer quality, in tokens and calls.
+
+**Seed (current state).** `ask` (`src/outils/ask.rs`, CLI `cortex ask`, MCP `cortex_ask`) implements
+the steps above with rules and no model. Intent: a question that names a symbol with an impact word
+("breaks", "change") goes to `impact`; two code targets with a path word ("reaches", "until") go to
+`path`; a folder goes to `overview`; otherwise explain (how/why) or locate (where/who uses). For the
+two last, seeds are the best `find` results (relevance cubed, types and isolated symbols
+down-weighted) plus the callees of the first two whose name overlaps the question. Candidate facts per
+seed: definition (id, kind, range), role, signature, callees, callers with call line, tests, other
+exports of the file, two key body lines; the other `find` results as bare ids. Each fact costs the
+tokens of its line and is worth the relevance of its seed times a per-kind weight (callees weighted by
+rarity and name overlap with the question). Greedy selection by value per token; the k-th fact of a
+kind for a seed is worth 0.85^k, the k-th callee or definition in a file 0.75^k, and facts of a seed
+are eligible only once its definition is chosen. Measured on the agent benchmark with `-b 600`:
+-33 % tokens read vs find, card, read (6 696 to 4 501), 16 calls to 10, facts covered 48 to 48 of 57.
+Remaining: intents `why` and `schema`, a learned value model (I6), session memory (I2).
 
 ### I2. Differential context protocol (session memory)
 The MCP daemon remembers which facts it already sent in the session (by stable identifier). It

@@ -78,6 +78,8 @@ pub const EXTRA_IGNORE_DIRS: &[&str] = &[
     "bin",
     "Logs",
     ".turbo",
+    // Code désactivé (AstroQuest) : hors recherche, pour ne pas polluer les résultats.
+    "_disabled",
 ];
 
 /// Vrai si un chemin relatif traverse un répertoire toujours ignoré.

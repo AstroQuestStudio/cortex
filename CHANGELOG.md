@@ -6,6 +6,19 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-08
+
+### Changed
+- Search relevance: a file that covers ALL the words of the question (path, symbol names, doc-comments,
+  header; synonyms count for the word they come from) now ranks ahead of one that matches a single word.
+- Files without any symbol (inline server functions, top-level scripts) are now returned as `F:` results
+  instead of being invisible to `find`.
+- Possessives and time prepositions (`my`, `own`, `after`, `mon`, `apres`...) are ignored in questions.
+- A few more FR/EN glossary pairs (text, native, hidden, transfer, automatic, reminder forms).
+
+### Added
+- `cortex ask "<question>" -b <tokens>` / MCP `cortex_ask`: one call assembles the answer (rule-based intent, candidate facts with token cost, greedy selection under the budget with a redundancy penalty); `bench-agent` gains an `ask` arm.
+
 ## [0.4.0] — 2026-10-07
 
 ### Added
@@ -98,6 +111,7 @@ First public release of **Cortex by AstroQuest**.
   `<P>_SSH_PORT`, `<P>_LOGIN`, `<P>_SSH_KEY_PATH`, `<P>_LABEL`) and never copies other keys.
 - `CORTEX_HOME` overrides the data directory (`~/.cortex`).
 
-[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.0
 [0.4.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.3.0

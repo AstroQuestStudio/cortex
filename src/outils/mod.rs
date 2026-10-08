@@ -19,6 +19,7 @@
 //! (`overlay`), et une dernière ligne `next : <appel le plus utile ensuite>`.
 //! Aucune décoration : pas de titre, pas de cadre, pas de ligne vide.
 
+pub mod ask;
 pub mod graphe;
 pub mod lecture;
 pub mod overlay;
@@ -60,6 +61,11 @@ pub enum Appel {
     Context {
         cible: String,
     },
+    /// `ask` : tout le contexte utile à une question, sous un budget (`-b`).
+    Ask {
+        question: String,
+        budget: Option<usize>,
+    },
 }
 
 impl Appel {
@@ -68,6 +74,7 @@ impl Appel {
         match self {
             Appel::Find { .. } => 1000,
             Appel::Card { .. } | Appel::Context { .. } => 800,
+            Appel::Ask { .. } => ask::BUDGET_DEFAUT,
             Appel::Read { .. } => 4000,
             Appel::Path { .. } => 800,
             _ => 1500,
@@ -91,6 +98,10 @@ impl Appel {
             "find" | "query" => Appel::Find { question: reste.to_string() },
             "card" | "explain" => Appel::Card { cible: reste.to_string() },
             "context" => Appel::Context { cible: reste.to_string() },
+            "ask" => {
+                let b = option("-b").map(|b| b as usize);
+                Appel::Ask { question: mots.join(" "), budget: b }
+            }
             "outline" => Appel::Outline { cible: reste.to_string() },
             "read" => {
                 let c = option("-c").or_else(|| option("-C")).unwrap_or(0);
@@ -113,6 +124,10 @@ impl Appel {
 
 /// Exécute un appel sur les atlas ouverts (un par projet).
 pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> String {
+    let budget = match (budget, appel) {
+        (None, Appel::Ask { budget: Some(b), .. }) => Some(*b),
+        (b, _) => b,
+    };
     let budget = budget.unwrap_or_else(|| appel.budget_defaut()).max(50);
     if handles.is_empty() {
         return "(cortex) no indexed project: cortex index <path> --name <Project>\n".into();
@@ -121,6 +136,7 @@ pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> Str
         Appel::Find { question } => lecture::find(handles, question, budget),
         Appel::Card { cible } => lecture::card(handles, cible, budget, false),
         Appel::Context { cible } => lecture::card(handles, cible, budget, true),
+        Appel::Ask { question, .. } => ask::ask(handles, question, budget),
         Appel::Outline { cible } => lecture::outline(handles, cible, budget),
         Appel::Read { cible, contexte } => lecture::read(handles, cible, *contexte, budget),
         Appel::Overview { dossier } => graphe::overview(handles, dossier, budget),

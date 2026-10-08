@@ -1,7 +1,7 @@
 {
   "name": "cortex",
   "displayName": "Cortex by AstroQuest",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Code-context engine for AI agents: find, card, read, impact, path in a few calls and ~10x fewer tokens than grep + read. Local, no service, MCP.",
   "author": { "name": "AstroQuest", "url": "https://astroquest.fr" },
   "homepage": "https://astroquest.fr/cortex",

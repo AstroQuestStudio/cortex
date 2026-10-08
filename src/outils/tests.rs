@@ -205,3 +205,40 @@ fn changed_et_marque_non_commite() {
     drop(h);
     fin(&name, &dir);
 }
+
+#[test]
+fn ask_un_appel_sous_budget() {
+    let (name, dir, h) = projet("ask");
+    // Impact : la question nomme un symbole et demande ce qui casse.
+    let a = run(&h, "ask Qu'est-ce qui casse si je change formatDate ?");
+    assert_eq!(a, run(&h, "impact formatDate"), "{}", a);
+    // Chemin : deux cibles et « arrive ».
+    let p = run(&h, "ask Comment src/app/page.tsx arrive-t-il jusqu'à formatDate ?");
+    assert_eq!(p, run(&h, "path src/app/page.tsx formatDate"), "{}", p);
+    // Module : un dossier.
+    let m = run(&h, "ask Que contient le module src/lib ?");
+    assert_eq!(m, run(&h, "overview src/lib"), "{}", m);
+    // Expliquer / localiser : définition, rôle, appelants, identifiants stables, `next`.
+    let e = run(&h, "ask Comment formater une date ?");
+    assert!(e.starts_with("ask explain"), "{}", e);
+    assert!(e.contains("S:src/lib/util.ts#formatDate fn L4-6 — Formate une date en ISO court."), "{}", e);
+    assert!(e.contains("called by: S:src/app/page.tsx#Page L6"), "{}", e);
+    assert!(e.contains("tests: F:src/lib/util.test.ts"), "{}", e);
+    assert!(e.ends_with('\n') && e.lines().last().unwrap().starts_with("next : read S:"), "{}", e);
+    let l = run(&h, "ask Où est formatDate et qui l'utilise ?");
+    assert!(l.starts_with("ask locate"), "{}", l);
+    // Le budget `-b` borne la sortie (≈ caractères / 4), avec une marge pour l'en-tête et `next`.
+    for b in [60usize, 150, 400] {
+        let s = run(&h, &format!("ask Comment formater une date ? -b {}", b));
+        let jetons = s.chars().count().div_ceil(4);
+        assert!(jetons <= b + 20, "-b {} → {} jetons\n{}", b, jetons, s);
+    }
+    // Un budget plus large ne rend jamais moins de faits.
+    let petit = run(&h, "ask Comment formater une date ? -b 80");
+    let grand = run(&h, "ask Comment formater une date ? -b 800");
+    assert!(grand.lines().count() >= petit.lines().count(), "{}\n---\n{}", petit, grand);
+    // Rien à trouver : message et suite.
+    assert!(run(&h, "ask zzqxv").contains("next : grep"));
+    drop(h);
+    fin(&name, &dir);
+}
