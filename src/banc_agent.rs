@@ -394,12 +394,20 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
             }
             println!("  manqués avec Cortex : {:?}\n  manqués sans Cortex : {:?}\n", manques(&fc), manques(&fs));
             for (e, out, _) in &a.sorties {
-                println!("
+                println!(
+                    "
 --- ask {} ({} tokens)
-{}", e, tokens(out), out);
+{}",
+                    e,
+                    tokens(out),
+                    out
+                );
             }
-            println!("  manqués avec ask : {:?}
-", manques(&fa));
+            println!(
+                "  manqués avec ask : {:?}
+",
+                manques(&fa)
+            );
         }
         for v in c
             .violations

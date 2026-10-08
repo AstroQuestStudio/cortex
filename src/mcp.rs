@@ -395,7 +395,9 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
                 testid: one("testid"),
                 aria: one("aria"),
                 id: one("id"),
-                component: get("component").map(|c| c.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect()).unwrap_or_default(),
+                component: get("component")
+                    .map(|c| c.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect())
+                    .unwrap_or_default(),
             };
             let max = args.get("max").and_then(|v| v.as_u64()).unwrap_or(6) as usize;
             let handles = open_atlas_handles(&get("project"));

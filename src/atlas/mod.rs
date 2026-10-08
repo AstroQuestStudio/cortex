@@ -138,7 +138,10 @@ pub fn ensure_and_open(project: &str) -> std::io::Result<Handle> {
                 if matches!(we.kind(), std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::ReadOnlyFilesystem) {
                     std::io::Error::new(
                         we.kind(),
-                        format!("index of '{}' must be rebuilt ({}) but the cortex home is read-only: run cortex outside the sandbox once", project, e),
+                        format!(
+                            "index of '{}' must be rebuilt ({}) but the cortex home is read-only: run cortex outside the sandbox once",
+                            project, e
+                        ),
                     )
                 } else {
                     we

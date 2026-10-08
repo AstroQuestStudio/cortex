@@ -52,7 +52,7 @@ jobs:
           $BIN --version
           $BIN index . --name cortex-self
           $BIN find "stable identifiers" -p cortex-self | tee find.txt
-          grep -q "suite :" find.txt
+          grep -q "next :" find.txt
 
   installers:
     name: installers (lint)

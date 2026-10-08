@@ -597,12 +597,20 @@ mod tests {
     #[test]
     fn refresh_lecture_seule_sert_l_index_tel_quel() {
         let (name, dir) = project("ro");
-        std::fs::write(dir.join("a.ts"), "export function alpha() {}
-").unwrap();
+        std::fs::write(
+            dir.join("a.ts"),
+            "export function alpha() {}
+",
+        )
+        .unwrap();
         let mut h = index_it(&name, &dir);
-        std::fs::write(dir.join("a.ts"), "export function alpha() {}
+        std::fs::write(
+            dir.join("a.ts"),
+            "export function alpha() {}
 export function beta() {}
-").unwrap();
+",
+        )
+        .unwrap();
         let s = refresh_if(&mut h, false);
         assert!(s.read_only && !s.refreshed && s.examined == 0);
         assert_eq!(h.segment_count(), 1, "aucun delta écrit");

@@ -397,7 +397,7 @@ fn candidats(cx: &Contexte, graines: &[Graine], res: &[(usize, u32, f32)]) -> Ve
         let cle_f = ((gr.hi as u64) << 32) | f as u64;
         let r_ = gr.r;
         // Définition.
-        let mut def = format!(
+        let def = format!(
             "{}{}{}",
             if cx.multi { format!("[{}] ", h.project) } else { String::new() },
             entete(h, gr.g),

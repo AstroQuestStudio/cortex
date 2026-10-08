@@ -37,7 +37,8 @@ impl UiQuery {
     }
 }
 
-const CODE_EXT: &[&str] = &["ts", "tsx", "js", "jsx", "mjs", "cjs", "vue", "svelte", "html", "rs", "py", "php", "kt", "swift", "java", "cs", "dart"];
+const CODE_EXT: &[&str] =
+    &["ts", "tsx", "js", "jsx", "mjs", "cjs", "vue", "svelte", "html", "rs", "py", "php", "kt", "swift", "java", "cs", "dart"];
 
 fn ext(p: &str) -> &str {
     p.rsplit('.').next().unwrap_or("")
@@ -71,7 +72,11 @@ fn is_archived(p: &str) -> bool {
 
 fn is_comment_line(t: &str) -> bool {
     let t = t.trim_start();
-    t.starts_with("//") || t.starts_with("/*") || t.starts_with('*') || t.starts_with("<!--") || (t.starts_with('#') && !t.starts_with("#["))
+    t.starts_with("//")
+        || t.starts_with("/*")
+        || t.starts_with('*')
+        || t.starts_with("<!--")
+        || (t.starts_with('#') && !t.starts_with("#["))
 }
 
 fn is_ident(c: char) -> bool {
@@ -100,7 +105,8 @@ pub fn i18n_key(line: &str, text: &str) -> Option<String> {
     let before = line[..idx].trim_end_matches(|c: char| c.is_whitespace() || "'\"`".contains(c));
     let before = before.trim_end_matches(|c: char| c == ':' || c == '=' || c.is_whitespace());
     let before = before.trim_end_matches(|c: char| "'\"`".contains(c));
-    let key: String = before.chars().rev().take_while(|c| is_ident(*c) || *c == '.' || *c == '-').collect::<Vec<_>>().into_iter().rev().collect();
+    let key: String =
+        before.chars().rev().take_while(|c| is_ident(*c) || *c == '.' || *c == '-').collect::<Vec<_>>().into_iter().rev().collect();
     (key.len() >= 2 && key.chars().any(|c| c.is_alphabetic())).then_some(key)
 }
 
@@ -183,7 +189,10 @@ pub fn run_ui_on(handles: &[atlas::Handle], q: &UiQuery, max: usize) -> String {
     // dix recherches par attribut et par guillemet coûtaient des secondes.
     for v in &q.testid {
         for h in grep(v, true, 300) {
-            if is_code_path(&h.file) && !is_comment_line(&h.text) && line_has_attr(&h.text, &["data-testid", "data-test", "data-cy", "data-qa", "testId"], v) {
+            if is_code_path(&h.file)
+                && !is_comment_line(&h.text)
+                && line_has_attr(&h.text, &["data-testid", "data-test", "data-cy", "data-qa", "testId"], v)
+            {
                 add(&h, 100, format!("data-testid « {v} »"));
             }
         }

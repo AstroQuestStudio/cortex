@@ -490,14 +490,31 @@ fn main() {
         #[cfg(not(feature = "ui"))]
         Cmd::Ui { text, testid, aria, id, component, project, max, no_refresh } => {
             let mut args = vec!["ui".to_string(), text];
-            for v in testid { args.push("--testid".into()); args.push(v); }
-            for v in aria { args.push("--aria".into()); args.push(v); }
-            for v in id { args.push("--id".into()); args.push(v); }
-            if !component.is_empty() { args.push("--component".into()); args.push(component.join(",")); }
-            if let Some(p) = project { args.push("--project".into()); args.push(p); }
+            for v in testid {
+                args.push("--testid".into());
+                args.push(v);
+            }
+            for v in aria {
+                args.push("--aria".into());
+                args.push(v);
+            }
+            for v in id {
+                args.push("--id".into());
+                args.push(v);
+            }
+            if !component.is_empty() {
+                args.push("--component".into());
+                args.push(component.join(","));
+            }
+            if let Some(p) = project {
+                args.push("--project".into());
+                args.push(p);
+            }
             args.push("--max".into());
             args.push(max.to_string());
-            if no_refresh { args.push("--no-refresh".into()); }
+            if no_refresh {
+                args.push("--no-refresh".into());
+            }
             std::process::exit(lancer_cortex_ui(&args));
         }
         #[cfg(feature = "ui")]
@@ -587,12 +604,7 @@ fn report_refresh(project: &str, s: atlas::fresh::RefreshStats) {
             project, s.check_ms, s.checked, s.examined, s.update_ms
         );
     } else if s.examined > 0 {
-        eprintln!(
-            "[cortex] freshness {}: {} path(s) re-read, content unchanged ({:.1}ms)",
-            project,
-            s.examined,
-            s.check_ms + s.update_ms
-        );
+        eprintln!("[cortex] freshness {}: {} path(s) re-read, content unchanged ({:.1}ms)", project, s.examined, s.check_ms + s.update_ms);
     } else {
         eprintln!("[cortex] freshness {}: nothing changed ({:.1}ms, {} verified)", project, s.check_ms, s.checked);
     }
@@ -806,13 +818,9 @@ fn cmd_update(name: &str, path: Option<PathBuf>) {
 fn cmd_update_changed(name: &str) {
     let t0 = Instant::now();
     match atlas::fresh::update_changed(name) {
-        Ok((out, n)) => println!(
-            "OK {} up to date (--changed, {} path(s) re-read or removed): {:?} - {:.2}s",
-            name,
-            n,
-            out,
-            t0.elapsed().as_secs_f64()
-        ),
+        Ok((out, n)) => {
+            println!("OK {} up to date (--changed, {} path(s) re-read or removed): {:?} - {:.2}s", name, n, out, t0.elapsed().as_secs_f64())
+        }
         Err(e) => {
             eprintln!("cortex: {}. Use `cortex update {}` (full).", e, name);
             std::process::exit(1);

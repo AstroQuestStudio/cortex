@@ -85,11 +85,7 @@ fn carte_precompilee_et_partie_entrante() {
     let v = h.node(h.find_symbol("valider").unwrap()).map(|r| r.str(r.n.card).to_string()).unwrap();
     assert!(v.contains("calls 1: S:src/lib/util.ts#formatDate"), "{}", v);
     let c = run(&h, "card formatDate");
-    assert!(
-        c.contains("called by 2 (2 files, L = call line): S:src/app/page.tsx#Page L6, S:src/lib/util.ts#valider L9"),
-        "{}",
-        c
-    );
+    assert!(c.contains("called by 2 (2 files, L = call line): S:src/app/page.tsx#Page L6, S:src/lib/util.ts#valider L9"), "{}", c);
     assert!(c.contains("tests: F:src/lib/util.test.ts"), "{}", c);
     assert!(c.ends_with("next : read S:src/lib/util.ts#formatDate\n"), "{}", c);
     // Sans rôle propre : celui du fichier.

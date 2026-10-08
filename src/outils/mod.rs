@@ -281,7 +281,9 @@ fn resoudre_un<'h>(h: &'h Handle, t: &Target) -> Resolu<'h> {
             // C/C++ : le prototype d'une définition (même nom qualifié) n'est pas un homonyme.
             if let Some(r) = h.node(g) {
                 let decl = r.kind() == SymbolKind::Decl;
-                homonymes.retain(|&x| !h.node(x).is_some_and(|y| (y.kind() == SymbolKind::Decl) != decl && y.name().eq_ignore_ascii_case(r.name())));
+                homonymes.retain(|&x| {
+                    !h.node(x).is_some_and(|y| (y.kind() == SymbolKind::Decl) != decl && y.name().eq_ignore_ascii_case(r.name()))
+                });
             }
             homonymes.sort_by(|&a, &b| h.sort_key(a).cmp(&h.sort_key(b)));
             Resolu::Trouve { h, cible: Cible::Noeud(g), homonymes }

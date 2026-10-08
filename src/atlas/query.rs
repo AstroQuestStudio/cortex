@@ -490,7 +490,18 @@ impl Handle {
                         score *= 1.0 + file_extra[file_g as usize];
                     }
                     let ci = cands.len();
-                    cands.push(Cand { score, name: name_str, phase: 0, file: self.path_of(file_g), ord: n.ord, kind, line: n.line, g, file_g, pend: false });
+                    cands.push(Cand {
+                        score,
+                        name: name_str,
+                        phase: 0,
+                        file: self.path_of(file_g),
+                        ord: n.ord,
+                        kind,
+                        line: n.line,
+                        g,
+                        file_g,
+                        pend: false,
+                    });
                     let e = best.entry(file_g).or_insert((f32::MIN, u32::MAX, ci));
                     if score > e.0 || (score == e.0 && n.ord < e.1) {
                         *e = (score, n.ord, ci);
