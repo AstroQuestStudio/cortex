@@ -6,6 +6,12 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+### Benchmarks
+- Public benchmark re-run with Cortex 0.5.0 (60 questions): 56.7% top-1, 86.7% top-5, MRR 0.702
+  (0.3.0: 55.0% / 88.3% / 0.685). Head to head with graphify 0.8.38 on the same questions and judge:
+  best of five settings 13.3% / 35.0% / 0.238 (default 10.0% / 30.0% / 0.204), ~570 ms per question
+  against ~24 ms, and no fresh index after an edit. Rerun with `bench/public/graphify-bench.py`.
+
 ## [0.5.0] — 2026-10-08
 
 ### Changed

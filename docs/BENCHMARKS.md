@@ -80,6 +80,36 @@ Latency per question (median): Cortex 7–10 ms, BM25 < 0.1 ms, dense 0.3–1.2 
 (Ryzen 7 5800H, Windows 11, warm cache). Index build: Cortex 0.07–0.37 s per repository;
 the dense baseline needs a 506 MiB model.
 
+### Cortex 0.5.0 and graphify 0.8.38 (2026-10-12)
+
+Same 60 questions, same judge, same machine. Cortex 0.5.0 (`cortex find`), top-1 / top-5 / MRR:
+
+| | flask | hono | ripgrep | 60 questions |
+|---|---|---|---|---|
+| Cortex 0.5.0 | 60 / 100 / 0.771 | 65 / 85 / 0.745 | 45 / 75 / 0.589 | **56.7 / 86.7 / 0.702** |
+| Cortex 0.3.0 | 70 / 95 / 0.789 | 60 / 85 / 0.718 | 35 / 85 / 0.549 | 55.0 / 88.3 / 0.685 |
+| BM25 over whole files | 60 / 95 / 0.758 | 40 / 70 / 0.517 | 50 / 70 / 0.601 | 50.0 / 78.3 / 0.625 |
+| graphify, default | 20 / 30 / 0.28 | 0 / 20 / 0.10 | 10 / 40 / 0.23 | 10.0 / 30.0 / 0.204 |
+
+graphify is built with `graphify update <repo>` (AST only, no LLM, no API key) and asked with
+`graphify query`; files are ranked by first appearance among the nodes it prints. Five ways of
+asking were tried (natural question or keywords only, breadth-first or
+depth-first, budget 2,000 or 10,000): the best, depth-first with keywords only and 2,000 tokens, gets
+13.3% / 35.0% / 0.238, which is the figure in the README. Rerun it with
+`python bench/public/graphify-bench.py 2000 --dfs --keywords` (the default setting is
+`python bench/public/graphify-bench.py`).
+
+Caveats, so nobody has to find them: graphify's `query` is an exploration walk, not a ranked locator;
+its semantic layer (docs, images, papers) was not run because it needs an LLM key; the questions are
+Cortex's "where is X" questions, written blind to Cortex's output but not to graphify. A graphify
+user who knows the graph by heart would ask differently. Per-question latency includes starting a
+Python interpreter (graphify, ~570 ms) against starting a native binary (Cortex, ~24 ms).
+
+Side measurements on the same repositories: index build 5 to 16 s (graphify) against under 0.4 s;
+answer ~1,500 tokens against ~415; after appending a function to a file, `cortex find` returns it in
+18 ms (freshness check and one-file re-index inside the call) while `graphify query` answers
+"No matching nodes found" until `graphify update` is run again.
+
 ### Reading the numbers honestly
 
 - **Against grep, Cortex wins by far**: 55% vs 7–17% top-1, and the right file comes after

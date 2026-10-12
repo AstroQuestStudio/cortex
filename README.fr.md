@@ -96,26 +96,61 @@ Même corpus, même juge pour chaque approche. Rejouable par tous :
 
 | Approche | top-1 | top-5 | MRR | tokens lus avant le bon fichier (médiane par dépôt) |
 |---|---:|---:|---:|---:|
+| **graphify 0.8.38** (`graphify query`, meilleur de 5 réglages essayés) | 13,3 % | 35,0 % | 0,238 | pas de liste classée : ~1 500 tokens de graphe par question |
 | grep par mots-clés (`rg`, fichiers classés par mots distincts) | 16,7 % | 58,3 % | 0,345 | 5 141 – 31 710 |
-| RAG dense (morceaux de 40 lignes, model2vec) | 38,3 % | 68,3 % | 0,516 | 417 – 1 782 |
-| RAG hybride (BM25 + dense, RRF) | 41,7 % | 81,7 % | 0,580 | 403 – 1 270 |
 | BM25 sur les fichiers entiers | 50,0 % | 78,3 % | 0,625 | 8 – 22 |
-| **Cortex 0.3.0** | **55,0 %** | **88,3 %** | **0,685** | **14 – 29** |
+| **Cortex 0.5.0** | **56,7 %** | **86,7 %** | **0,702** | **14 – 29** |
 
-Là où Cortex **ne gagne pas** : BM25 sur les fichiers entiers le bat en top-1 sur ripgrep (50 %
-contre 35 %), où un symbole homonyme d'un fichier voisin passe parfois en tête ; Cortex garde le
-meilleur top-5 sur chaque dépôt. Une fusion Cortex + BM25 fait mieux sur ce banc (63,3 % en
-top-1) mais *moins bien* sur le banc caché privé ci-dessous : elle n'est donc pas livrée. Avec
-20 questions par dépôt, une question vaut 5 points de top-1 : un écart de moins de deux
-questions est du bruit. Tout le détail, dépôt par dépôt : [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+Les références RAG dense (38,3 % / 68,3 %) et hybride (41,7 % / 81,7 %), mesurées avec Cortex 0.3.0
+(elles demandent un modèle de 506 Mio), sont dans [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+
+### Cortex contre graphify, face à face
+
+Mêmes 60 questions, même juge (rang du premier fichier attendu, coupé à 20). graphify est construit
+avec son propre `graphify update` et interrogé avec son propre `graphify query`, sur la même machine
+(Ryzen 7 5800H, Windows 11). Pour être juste avec graphify, nous avons essayé cinq façons de
+l'interroger (question naturelle ou mots-clés seuls, largeur ou profondeur, budget 2 000 ou 10 000
+tokens) et retenu la meilleure : profondeur, mots-clés seuls. Son réglage par défaut (question
+naturelle, largeur) donne 10,0 % / 30,0 % / 0,204. Rejouable : [`bench/public/graphify-bench.py`](bench/public/graphify-bench.py).
+
+| | graphify 0.8.38 | **Cortex 0.5.0** | |
+|---|---:|---:|---|
+| top-1 / top-5 (60 questions) | 13,3 % / 35,0 % | **56,7 % / 86,7 %** | **4,3× / 2,5×** |
+| MRR | 0,238 | **0,702** | 3,0× |
+| Une question, processus complet | ~570 ms | **~24 ms** | **~24× plus vite** |
+| Construire l'index (flask / hono / ripgrep) | 5–7 s / 14–16 s / 8–9 s | **moins de 0,4 s chacun** | 20× ou plus |
+| Taille de la réponse | ~1 500 tokens | **~415 tokens** | 3,6× plus petite |
+| On vient d'ajouter une fonction, on la demande | *No matching nodes found* tant qu'on ne relance pas `graphify update` | **trouvée en 18 ms** (vérification et réindexation du seul fichier dans l'appel) | toujours à jour |
+| Impact de `parseFormData` dans hono | 4 nœuds, profondeur 2 par défaut, pas de liste de tests | **10 dépendants sur 3 niveaux, 4 tests à relancer** | |
+| Clé d'API LLM | pour les docs et les liens sémantiques | **jamais** | 100 % local |
+
+Ce que graphify a et pas Cortex : une page de graphe interactive (`graph.html`), la détection de
+communautés et une couche sémantique pour docs, images et articles (elle demande un LLM ; les
+chiffres ci-dessus sont son mode AST seul, celui que donnent `graphify update` et `graphify query`
+sans clé d'API). Son `query` est un parcours du graphe fait pour explorer, pas un localisateur
+classé « où est X », qui est la question de ce banc. Ce que Cortex a et pas graphify : une réponse
+classée avec identifiants stables, `card`, `read` (les lignes exactes d'un symbole), `ask` (tout
+pour une question en un appel sous budget), `grep` avec la fonction englobante, `ui` (du texte
+affiché au code), les docs de bibliothèques hors ligne, un index qui se rafraîchit à chaque appel.
+
+### Là où Cortex ne gagne **pas**
+
+BM25 sur les fichiers entiers bat encore Cortex en top-1 sur ripgrep (50 % contre 45 %). Face à la
+0.3.0, la 0.5.0 bouge peu sur ce banc public : +1,7 point de top-1, −1,7 de top-5, +0,017 de MRR
+(flask top-1 de 70 % à 60 %, ripgrep top-5 de 85 % à 75 %, hono et ripgrep top-1 en hausse). C'est
+dans le bruit de 20 questions par dépôt (une question = 5 points) : les gains de la 0.5.0 se voient
+sur le gros monorepo privé ci-dessous. Détail : [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 **Vitrine réelle** : le monorepo propriétaire d'AstroQuest (8 069 fichiers, 1,7 M lignes de
-TypeScript, Rust et SQL), questions cachées écrites avant tout réglage : **67,5 % en top-1,
-85 % en top-5** (BM25 : 30 % / 57,5 %, RAG dense : 25 % / 35 %, grep : 7,5 % / 30 %). Sur 10
-tâches de compréhension d'agent (impact, flux de données, vue d'un module, tests à relancer) :
-86 % des faits couverts contre 89 % avec grep + lecture, pour **10,9 fois moins de tokens et
-40 % d'appels en moins**. Latence : `find` 5–9 ms, `card` ~2 ms, `impact` ~2 ms, mise à jour
-d'un fichier modifié 7 ms, index complet ~5 s.
+TypeScript, Rust et SQL), questions cachées écrites avant tout réglage. Cortex 0.5.0 :
+**67,6 % en top-1, 94,6 % en top-5** sur les 37 questions cachées (0.3.0 sur les mêmes : 59,5 % /
+81,1 %), et 66 % / 85 % sur un jeu étendu de 100 questions (BM25 sur fichiers, ancien jeu de 40
+questions : 30 % / 57,5 % ; RAG dense : 25 % / 35 % ; grep : 7,5 % / 30 %). Sur 37 questions plus
+vagues jamais utilisées pour régler quoi que ce soit : 21,6 % / 51,4 % (0.3.0 : 18,9 % / 45,9 %) :
+la formulation vague reste son point faible. Sur 10 tâches de compréhension d'agent (impact, flux
+de données, vue d'un module, tests à relancer) : 86 % des faits couverts contre 89 % avec grep +
+lecture, pour **10,9 fois moins de tokens et 40 % d'appels en moins**. Latence : `find` 5–9 ms,
+`card` ~2 ms, `impact` ~2 ms, mise à jour d'un fichier modifié 7 ms, index complet ~5 s.
 
 ## Une vraie session
 
