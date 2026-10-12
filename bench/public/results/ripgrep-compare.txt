@@ -5,46 +5,46 @@ mesure de la construction d'un atlas Cortex complet…
 
 ── Global (20 questions) ─ tokens = caractères/4 ; « 1er bon » = médiane sur les trouvées ; « moy. » = échec compté comme la sortie complète
 approche              top-1  top-5    MRR  lat méd  lat p95  1er bon     moy.    top-5   sortie
-rg-compte              0.0%  25.0%  0.132   2.98ms   4.50ms    39683    93851    46080   118337
-rg-termes             10.0%  45.0%  0.250   2.91ms   4.63ms    31710    70196    35004   118337
+rg-compte              0.0%  25.0%  0.132   3.30ms   6.00ms    39683    93851    46080   118337
+rg-termes             10.0%  45.0%  0.250   3.22ms   5.72ms    31710    70196    35004   118337
 bm25-fich             50.0%  70.0%  0.601   0.02ms   0.03ms       10       38       34      136
-cortex                45.0%  75.0%  0.589   9.31ms  12.42ms       28       89       69      765
-exp:cortex+bm25       50.0%  80.0%  0.630   9.16ms  12.45ms       10       31       38      148
-exp:rerank20-bm25     50.0%  75.0%  0.631   8.88ms  11.68ms       10       30       38      152
+cortex                55.0%  75.0%  0.648   9.36ms  13.22ms       16       94       70      766
+exp:cortex+bm25       55.0%  80.0%  0.656   9.59ms  12.46ms       10       29       38      144
+exp:rerank20-bm25     55.0%  80.0%  0.659   9.93ms  12.38ms       10       28       38      152
 
 ── Par catégorie : top-1 / top-5 / MRR
 approche                           fr (n=4)              en (n=12)             tech (n=4)
 rg-compte                   0% / 0% / 0.044       0% / 25% / 0.107       0% / 50% / 0.294
 rg-termes                  0% / 50% / 0.133       8% / 33% / 0.212      25% / 75% / 0.479
 bm25-fich                 50% / 50% / 0.500      33% / 67% / 0.501    100% / 100% / 1.000
-cortex                    25% / 50% / 0.336      42% / 75% / 0.578     75% / 100% / 0.875
-exp:cortex+bm25           25% / 50% / 0.396      50% / 83% / 0.626     75% / 100% / 0.875
-exp:rerank20-bm25         25% / 50% / 0.406      50% / 75% / 0.624     75% / 100% / 0.875
+cortex                    25% / 25% / 0.321      58% / 83% / 0.681     75% / 100% / 0.875
+exp:cortex+bm25           25% / 50% / 0.354      58% / 83% / 0.683     75% / 100% / 0.875
+exp:rerank20-bm25         25% / 50% / 0.361      58% / 83% / 0.686     75% / 100% / 0.875
 
 ── Construction de l'index
 rg-compte                0.00s     4.0 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
 rg-termes                0.00s     4.0 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
 bm25-fich                0.02s     0.4 Mio  index inversé en RAM (taille estimée)
-cortex                   0.10s     1.9 Mio  atlas complet (rayon, 16 threads), segment rkyv
+cortex                   0.12s     1.9 Mio  atlas complet (rayon, 16 threads), segment rkyv
 exp:cortex+bm25              —           —  RRF k=60 : 100 fichiers Cortex + 100 fichiers BM25 (contenu)
 exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF(rang Cortex, rang BM25 contenu)
 
 ── Rang du bon fichier par question (- = absent du top-20)
    # tag    a1  a2  a3  a4  a5  a6  question
    1 en      4   7   2   1   1   1  Where is a file path actually tested against parsed .gitignore patterns to decide if it should be excluded?
-   2 en      7   7   2   3   2   2  How does ripgrep decide during a search that a file's contents are binary and should be skipped or truncated?
+   2 en      7   7   2   1   1   1  How does ripgrep decide during a search that a file's contents are binary and should be skipped or truncated?
    3 en      5   8  12   3   4   4  Where does ripgrep turn a shell-style glob pattern like *.rs or src/** into something it can match against paths?
    4 en     11   1   1   2   1   1  Where does ripgrep pull out required literal substrings from a compiled regex so it can prefilter candidate lines quickly?
    5 en      -   4   1   1   1   1  How does ripgrep search inside a gzip or xz compressed file without the user manually decompressing it first?
-   6 en      6   8   1  14   5   6  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file?
+   6 en      6   8   1  16   6   7  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file?
    7 en      3   2   1   1   1   1  Where is the code that formats matches as JSON objects for the --json output option?
-   8 en      -   -  19  18  15  14  Where does ripgrep accumulate the match/line/byte counters that get printed with the --stats flag?
-   9 en      -  16   7   2   3   3  How does ripgrep let a user override or re-include paths that .gitignore would otherwise exclude, via a command-line glob?
+   8 en      -   -  19  13  12  11  Where does ripgrep accumulate the match/line/byte counters that get printed with the --stats flag?
+   9 en      -  16   7   1   2   2  How does ripgrep let a user override or re-include paths that .gitignore would otherwise exclude, via a command-line glob?
   10 en     10   5   3   1   1   1  Where does ripgrep transcode a file from a user-specified character encoding to UTF-8 before it gets searched?
   11 en      -   -   3   1   1   1  Where does ripgrep look for an rc/config file of default arguments (RIPGREP_CONFIG_PATH) and turn it into extra CLI args?
-  12 en      -   -  15   7   6   6  How does ripgrep turn on PCRE2's just-in-time compiler for faster matching?
-  13 fr     13   3   1   5   2   2  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ?
-  14 fr      -   -   -   7  12   8  Comment ripgrep convertit-il une taille lisible par un humain comme "10M" ou "2K" (pour --max-filesize) en nombre d'octets ?
+  12 en      -   -  15   5   5   4  How does ripgrep turn on PCRE2's just-in-time compiler for faster matching?
+  13 fr     13   3   1   7   3   3  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ?
+  14 fr      -   -   -   7  12   9  Comment ripgrep convertit-il une taille lisible par un humain comme "10M" ou "2K" (pour --max-filesize) en nombre d'octets ?
   15 fr      -   -   -   -   -   -  Où ripgrep lit-il la liste de motifs de recherche fournie via un fichier avec l'option -f ?
   16 fr     10   5   1   1   1   1  Comment ripgrep verrouille-t-il la sortie standard pour éviter que les messages d'erreur sur stderr ne s'entremêlent avec les résultats ?
   17 tech    2   4   1   1   1   1  Matcher trait definition find_at is_match capture group semantics
@@ -53,4 +53,4 @@ exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF
   20 tech   12   6   1   1   1   1  JSONSink struct definition
       a1=rg-compte  a2=rg-termes  a3=bm25-fich  a4=cortex  a5=exp:cortex+bm25  a6=exp:rerank20-bm25
 
-résultats : bench/public/results/comparatif-bench-ripgrep-2026-10-12-e427dfa.json
+résultats : bench/public/results/comparatif-bench-ripgrep-2026-10-12-dbb3d9f.json

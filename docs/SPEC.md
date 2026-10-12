@@ -218,6 +218,23 @@ tests to rerun. Last line: `next : impact <most-called changed symbol>`.
 the markdown docs (`docs/**/*.md`) that mention the symbol or its file. Aliases exist for
 compatibility and MAY be dropped in v1.0.
 
+### 4.11 Project profile (optional)
+
+A project MAY carry `.cortex/profile.toml` at its root. An implementation that supports it
+MUST read it at query time (no re-index), MUST behave exactly as without it when the file is
+absent or empty, and MUST NOT fail on a malformed line (the line is ignored and reported by a
+check command). Sections:
+
+| Section | Keys | Effect |
+|---|---|---|
+| `[synonyms]` | `word = ["other", ...]`, `always = true` | Groups of equivalent words. By default they expand a question word only when that word is rare in the project (vocabulary gap); declared synonyms weigh less than typed words. |
+| `[ignore]` | `terms = [...]` | Question words dropped before ranking (never all of them). |
+| `[boost]` / `[penalty]` | `"path/" = <multiplier>` | Multiplies the score of files whose project-relative path starts with the pattern, or contains it as a path segment. Multipliers are clamped to 0.1 .. 2.0. |
+| `[entry]` | `files = [...]`, `boost = <m>` | Entry-point files, multiplied by `boost` (default 1.05, clamped to 1 .. 2). |
+
+CLI: `cortex profile init [path] [--force] [--print]` writes a skeleton from the tree and the
+README; `cortex profile check [path]` parses it and lists rules and warnings.
+
 ## 5. MCP binding
 
 - Server name `cortex`, transport stdio, JSON-RPC 2.0, tools capability only.
@@ -261,3 +278,4 @@ An implementation claiming a level SHOULD publish its results on the public benc
 ## 8. Changes
 
 - **v0.1 (Cortex 0.3.0)** — first public draft.
+- **v0.2 (unreleased)** — section 4.11 optional project profile.

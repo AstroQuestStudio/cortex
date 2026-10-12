@@ -396,6 +396,43 @@ pub(crate) mod tests {
         clean(name);
     }
 
+    /// Profil de projet (`.cortex/profile.toml`) : un synonyme déclaré comble un écart de
+    /// vocabulaire, une pénalité de chemin déclasse, et sans fichier le moteur est inchangé.
+    #[test]
+    fn project_profile_applies_and_is_optional() {
+        let name = "cortex-test-atlas-profile";
+        clean(name);
+        let dir = std::env::temp_dir().join(format!("cortex-profile-fixture-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".cortex")).unwrap();
+        let mut idx = fixture(name);
+        idx.root = dir.to_string_lossy().to_string();
+        rebuild_full(name, &idx, Default::default()).expect("rebuild_full");
+        let h = Handle::open(name).expect("open");
+
+        // Sans profil : « purger » n'existe nulle part.
+        assert!(h.search("purger", 5).is_empty(), "sans profil, un mot inconnu ne trouve rien");
+        let base = h.search("vider", 5);
+        assert_eq!(base[0].name, "vider");
+
+        // Avec profil : synonyme déclaré + pénalité du dossier src/.
+        std::fs::write(dir.join(".cortex/profile.toml"), "[synonyms]\npurger = [\"vider\"]\n[penalty]\n\"src/lib\" = 0.5\n").unwrap();
+        // Le cache relit au plus tard après le délai de revérification.
+        std::thread::sleep(std::time::Duration::from_millis(700));
+        let hits = h.search("purger", 5);
+        assert!(hits.iter().any(|x| x.name == "vider"), "le synonyme déclaré doit retrouver `vider`");
+        let pen = h.search("vider", 5);
+        assert_eq!(pen[0].name, "vider");
+        assert!(pen[0].score < base[0].score * 0.6, "la pénalité de chemin doit baisser le score ({} vs {})", pen[0].score, base[0].score);
+
+        // Profil supprimé : retour au comportement de base.
+        std::fs::remove_file(dir.join(".cortex/profile.toml")).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(700));
+        assert!(h.search("purger", 5).is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+        clean(name);
+    }
+
     /// Piège Windows (§4) : un segment déjà mmap-é reste lisible APRÈS qu'une
     /// mise à jour a écrit un segment neuf et basculé le manifeste.
     #[test]

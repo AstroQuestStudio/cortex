@@ -99,7 +99,8 @@ Même corpus, même juge pour chaque approche. Rejouable par tous :
 | **graphify 0.8.38** (`graphify query`, meilleur de 5 réglages essayés) | 13,3 % | 35,0 % | 0,238 | pas de liste classée : ~1 500 tokens de graphe par question |
 | grep par mots-clés (`rg`, fichiers classés par mots distincts) | 16,7 % | 58,3 % | 0,345 | 5 141 – 31 710 |
 | BM25 sur les fichiers entiers | 50,0 % | 78,3 % | 0,625 | 8 – 22 |
-| **Cortex 0.5.0** | **56,7 %** | **86,7 %** | **0,702** | **14 – 29** |
+| **Cortex** (`main`, après la 0.5.0) | **63,3 %** | **86,7 %** | **0,737** | **14 – 29** |
+| Cortex 0.5.0 (publié) | 56,7 % | 86,7 % | 0,702 | 14 – 29 |
 
 Les références RAG dense (38,3 % / 68,3 %) et hybride (41,7 % / 81,7 %), mesurées avec Cortex 0.3.0
 (elles demandent un modèle de 506 Mio), sont dans [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
@@ -113,10 +114,10 @@ l'interroger (question naturelle ou mots-clés seuls, largeur ou profondeur, bud
 tokens) et retenu la meilleure : profondeur, mots-clés seuls. Son réglage par défaut (question
 naturelle, largeur) donne 10,0 % / 30,0 % / 0,204. Rejouable : [`bench/public/graphify-bench.py`](bench/public/graphify-bench.py).
 
-| | graphify 0.8.38 | **Cortex 0.5.0** | |
+| | graphify 0.8.38 | **Cortex** (`main`) | |
 |---|---:|---:|---|
-| top-1 / top-5 (60 questions) | 13,3 % / 35,0 % | **56,7 % / 86,7 %** | **4,3× / 2,5×** |
-| MRR | 0,238 | **0,702** | 3,0× |
+| top-1 / top-5 (60 questions) | 13,3 % / 35,0 % | **63,3 % / 86,7 %** | **4,8× / 2,5×** |
+| MRR | 0,238 | **0,737** | 3,1× |
 | Une question, processus complet | ~570 ms | **~24 ms** | **~24× plus vite** |
 | Construire l'index (flask / hono / ripgrep) | 5–7 s / 14–16 s / 8–9 s | **moins de 0,4 s chacun** | 20× ou plus |
 | Taille de la réponse | ~1 500 tokens | **~415 tokens** | 3,6× plus petite |
@@ -135,19 +136,24 @@ affiché au code), les docs de bibliothèques hors ligne, un index qui se rafra�
 
 ### Là où Cortex ne gagne **pas**
 
-BM25 sur les fichiers entiers bat encore Cortex en top-1 sur ripgrep (50 % contre 45 %). Face à la
-0.3.0, la 0.5.0 bouge peu sur ce banc public : +1,7 point de top-1, −1,7 de top-5, +0,017 de MRR
-(flask top-1 de 70 % à 60 %, ripgrep top-5 de 85 % à 75 %, hono et ripgrep top-1 en hausse). C'est
-dans le bruit de 20 questions par dépôt (une question = 5 points) : les gains de la 0.5.0 se voient
-sur le gros monorepo privé ci-dessous. Détail : [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+Les chiffres de `main` viennent d'une passe qui n'a gardé que les changements n'abaissant aucun de
+cinq jeux privés (voir [docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 3) ; la 0.5.0 publiée fait
+56,7 % / 86,7 % / 0,702 sur les mêmes questions. Limites honnêtes : le top-5 public n'a pas bougé
+(86,7 %, ripgrep 75 %) ; les questions en français restent faibles sur les dépôts publics (flask
+top-1 25 %, ripgrep top-5 25 %, avec 4 questions seulement par dépôt) ; et sur les **questions
+vagues, reformulées**, sans mot commun avec le code, Cortex est faible (22,5 % en top-1, 27,5 % en
+top-5 sur 40 questions aveugles) : un moteur lexical ne comble pas cela, il faut de la sémantique.
+Avec 20 questions par dépôt, une question vaut 5 points : un écart de moins de deux questions est du
+bruit.
 
 **Vitrine réelle** : le monorepo propriétaire d'AstroQuest (8 069 fichiers, 1,7 M lignes de
-TypeScript, Rust et SQL), questions cachées écrites avant tout réglage. Cortex 0.5.0 :
-**67,6 % en top-1, 94,6 % en top-5** sur les 37 questions cachées (0.3.0 sur les mêmes : 59,5 % /
-81,1 %), et 66 % / 85 % sur un jeu étendu de 100 questions (BM25 sur fichiers, ancien jeu de 40
-questions : 30 % / 57,5 % ; RAG dense : 25 % / 35 % ; grep : 7,5 % / 30 %). Sur 37 questions plus
-vagues jamais utilisées pour régler quoi que ce soit : 21,6 % / 51,4 % (0.3.0 : 18,9 % / 45,9 %) :
-la formulation vague reste son point faible. Sur 10 tâches de compréhension d'agent (impact, flux
+TypeScript, Rust et SQL), questions cachées écrites avant tout réglage. Cortex `main` :
+**70,3 % en top-1, 97,3 % en top-5** sur les 37 questions cachées (0.3.0 sur les mêmes : 59,5 % /
+78,4 %), et 69 % / 87 % sur un jeu étendu de 100 questions (0.3.0 : 55 % / 80 %). Sur 37 questions
+plus vagues : 29,7 % / 62,2 % (0.3.0 : 21,6 % / 45,9 %), et 22,5 % / 27,5 % sur un jeu aveugle de
+40 reformulations. Références plus anciennes sur l'ancien jeu de 40 questions : BM25 sur fichiers
+30 % / 57,5 %, RAG dense 25 % / 35 %, grep 7,5 % / 30 %.
+Sur 10 tâches de compréhension d'agent (impact, flux
 de données, vue d'un module, tests à relancer) : 86 % des faits couverts contre 89 % avec grep +
 lecture, pour **10,9 fois moins de tokens et 40 % d'appels en moins**. Latence : `find` 5–9 ms,
 `card` ~2 ms, `impact` ~2 ms, mise à jour d'un fichier modifié 7 ms, index complet ~5 s.
@@ -216,6 +222,18 @@ Cortex est un serveur [MCP](https://modelcontextprotocol.io) en stdio : `cortex 
 | `path` / `cortex_path` | Comment A arrive-t-il à B ? |
 | `changed` / `cortex_changed` | Qu'ai-je modifié, qui l'appelle, quels tests ? |
 | `grep`, `files`, `docs` | Texte exact avec la fonction englobante, fichiers par nom, docs hors ligne |
+
+## Personnaliser : le profil de projet (optionnel)
+
+Cortex ignore le vocabulaire de VOTRE projet tant que vous ne le lui dites pas. Déposez un
+`.cortex/profile.toml` à la racine du projet indexé (ou lancez `cortex profile init`, cinq secondes,
+généré depuis les noms de dossiers et le README) : `[synonyms]` (mots que le projet emploie l'un pour
+l'autre, ex. `facture = ["invoice"]`), `[penalty]` / `[boost]` (dossiers relégués ou favorisés,
+multiplicateur du score), `[ignore]` (mots de question trop génériques), `[entry]` (fichiers
+d'entrée). Il est relu à chaque `find` / `ask` (aucune réindexation), sans effet s'il est absent ;
+`cortex profile check` liste ce qui a été compris. Les synonymes déclarés comblent un écart de
+vocabulaire : ils s'appliquent aux mots de question rares dans le projet. Mesures honnêtes :
+[docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 3.
 
 ## Feuille de route
 

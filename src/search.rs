@@ -58,7 +58,8 @@ pub(crate) const TEST_WORDS: &[&str] =
 /// Poids de scoring. Valeurs par défaut réglées sur le banc privé `$CORTEX_BENCH_DIR/queries.json`
 /// (voir `cortex bench`) et vérifiées sur le banc caché `holdout.json` ;
 /// surchargeables par variables d'environnement pour re-régler sans recompiler :
-/// CORTEX_W_HEADER, CORTEX_W_DOC, CORTEX_TEST_PENALTY, CORTEX_W_BODY.
+/// CORTEX_W_HEADER, CORTEX_W_DOC, CORTEX_TEST_PENALTY, CORTEX_W_BODY, CORTEX_COV_ID, CORTEX_IDX_DIR,
+/// CORTEX_BODY_RR, CORTEX_BODY_N.
 pub(crate) struct Weights {
     /// Poids du score BM25 de l'en-tête de fichier (ajouté au meilleur symbole du fichier).
     pub(crate) header: f32,
@@ -70,6 +71,11 @@ pub(crate) struct Weights {
     pub(crate) body: f32,
     /// Poids de la couverture des termes de la question par l'identité d'un fichier.
     pub(crate) cov_id: f32,
+    /// Poids ajouté aux termes qui nomment le DOSSIER d'un `index.*` / `mod.rs` / `__init__.py`.
+    pub(crate) idx_dir: f32,
+    /// Bonus d'accord corps/identité (0 = désactivé) et nombre de fichiers du classement par corps concernés.
+    pub(crate) body_rr: f32,
+    pub(crate) body_n: usize,
 }
 
 impl Weights {
@@ -81,6 +87,9 @@ impl Weights {
             test_penalty: env("CORTEX_TEST_PENALTY", 0.8),
             body: env("CORTEX_W_BODY", 0.5),
             cov_id: env("CORTEX_COV_ID", 2.0),
+            idx_dir: env("CORTEX_IDX_DIR", 0.7),
+            body_rr: env("CORTEX_BODY_RR", 0.1),
+            body_n: env("CORTEX_BODY_N", 100.0) as usize,
         }
     }
 }
@@ -140,7 +149,13 @@ pub fn query_terms(question: &str) -> Vec<String> {
             }
         }
     }
-    let content: Vec<String> = terms.iter().filter(|t| !is_stopword(t) && !QUERY_STOPWORDS.contains(&t.as_str())).cloned().collect();
+    // Une lettre seule est presque toujours une élision (« l'utilisateur », « qu'on », « n'est »).
+    let content: Vec<String> = terms
+        .iter()
+        .filter(|t| !is_stopword(t) && !QUERY_STOPWORDS.contains(&t.as_str()) && !crate::generalisation::is_filler(t))
+        .filter(|t| !(t.len() == 1 && t.chars().all(|c| c.is_ascii_alphabetic())))
+        .cloned()
+        .collect();
     if content.is_empty() {
         terms
     } else {

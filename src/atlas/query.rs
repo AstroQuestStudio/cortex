@@ -76,7 +76,7 @@ struct TermQuery {
 
 impl TermQuery {
     fn new(term: &str) -> Self {
-        let lev = if term.len() >= 4 { Levenshtein::new(term, 1).ok() } else { None };
+        let lev = if term.len() >= crate::generalisation::lev_min_len() { Levenshtein::new(term, 1).ok() } else { None };
         TermQuery { term: term.to_string(), lev }
     }
 }
@@ -170,6 +170,29 @@ impl Handle {
         tp
     }
 
+    /// Nombre de documents (noms, doc-comments, corps) qui contiennent EXACTEMENT ce terme raciné.
+    fn term_df_exact(&self, term: &str) -> usize {
+        let mut n = 0usize;
+        for s in 0..self.nsegs() {
+            let seg = self.seg(s);
+            let inv = &seg.inverted;
+            if let Some(map) = seg_map(&seg.vocab_fst) {
+                if let Some(v) = map.get(term.as_bytes()) {
+                    let v = v as usize;
+                    n += (inv.name_postings_off[v + 1] - inv.name_postings_off[v]) as usize;
+                    n += (inv.com_postings_off[v + 1] - inv.com_postings_off[v]) as usize;
+                }
+            }
+            if let Some(map) = seg_map(&seg.body_fst) {
+                if let Some(b) = map.get(term.as_bytes()) {
+                    let b = b as usize;
+                    n += (inv.body_postings_off[b + 1] - inv.body_postings_off[b]) as usize;
+                }
+            }
+        }
+        n
+    }
+
     /// Fichiers vivants dont un token de chemin matche flou `term` (automates
     /// de chemins persistés, un par segment).
     fn files_matching_path_term(&self, q: &TermQuery) -> Vec<u32> {
@@ -231,17 +254,63 @@ impl Handle {
 
     /// Recherche BM25F — voir l'en-tête du fichier.
     pub fn search(&self, question: &str, limit: usize) -> Vec<Hit> {
-        let base_terms = query_terms(question);
+        let mut base_terms = query_terms(question);
         if base_terms.is_empty() {
             return Vec::new();
+        }
+        // Profil de projet optionnel (`.cortex/profile.toml`) : voir `profile.rs`.
+        let prof = crate::profile::for_root(&self.manifest.root);
+        if let Some(p) = prof.as_ref().filter(|p| !p.ignore.is_empty()) {
+            let kept: Vec<String> = base_terms.iter().filter(|t| !p.ignores(t)).cloned().collect();
+            if !kept.is_empty() {
+                base_terms = kept;
+            }
         }
         let w = Weights::load();
         let test_query = base_terms.iter().any(|t| TEST_WORDS.contains(&t.as_str()));
         let cov_on = w.cov_id > 0.0 && base_terms.len() > 1;
         // Expansion par terme (sert aussi à retrouver de quel terme vient un synonyme) ;
         // la liste complète est la concaténation dédoublonnée, dans l'ordre des termes.
-        let per_base: Vec<Vec<String>> =
+        let mut per_base: Vec<Vec<String>> =
             if cov_on { base_terms.iter().map(|b| expand_synonyms(std::slice::from_ref(b))).collect() } else { Vec::new() };
+        // Lexique FR/EN général (`generalisation.rs`), à poids réduit ; `g` : seulement pour un terme
+        // quasi absent du projet (écart de vocabulaire).
+        let mut lexique_only: Vec<String> = Vec::new();
+        if cov_on && crate::generalisation::on('v') {
+            let gate = crate::generalisation::on('g');
+            for (i, b) in base_terms.iter().enumerate() {
+                if gate && self.term_df_exact(&crate::stem::stem(b)) >= crate::generalisation::seuil_rare() {
+                    continue;
+                }
+                for syn in crate::generalisation::lexique_synonymes(b) {
+                    if !per_base[i].iter().any(|x| x == syn) {
+                        per_base[i].push(syn.to_string());
+                        lexique_only.push(syn.to_string());
+                    }
+                }
+            }
+        }
+        // Synonymes déclarés par le profil du projet (poids propre, au-dessus du glossaire général).
+        let mut prof_syn: Vec<String> = Vec::new();
+        if let Some(p) = prof.as_ref().filter(|p| !p.synonyms.is_empty()) {
+            // Par défaut un synonyme déclaré ne comble qu'un ÉCART de vocabulaire : il s'applique
+            // quand le mot de la question est rare dans le projet (comme le lexique général).
+            // `always = true` dans [synonyms] (ou CORTEX_PROFILE_GATE=0) l'applique partout.
+            let gated = p.synonyms_gated && std::env::var_os("CORTEX_PROFILE_GATE").is_none_or(|v| v != "0");
+            for (i, b) in base_terms.iter().enumerate() {
+                if gated && self.term_df_exact(&crate::stem::stem(b)) >= crate::generalisation::seuil_rare() {
+                    continue;
+                }
+                for syn in p.synonyms_of(b) {
+                    if cov_on && !per_base[i].iter().any(|x| x == syn) {
+                        per_base[i].push(syn.to_string());
+                    }
+                    if !prof_syn.iter().any(|x| x == syn) {
+                        prof_syn.push(syn.to_string());
+                    }
+                }
+            }
+        }
         let expanded: Vec<String> = if cov_on {
             let mut out: Vec<String> = base_terms.clone();
             for e in &per_base {
@@ -253,7 +322,13 @@ impl Handle {
             }
             out
         } else {
-            expand_synonyms(&base_terms)
+            let mut e = expand_synonyms(&base_terms);
+            for syn in &prof_syn {
+                if !e.iter().any(|x| x.eq_ignore_ascii_case(syn)) {
+                    e.push(syn.clone());
+                }
+            }
+            e
         };
         // Termes racinés (comme à l'indexation) ; deux mots de même radical
         // n'en font qu'un, au poids le plus fort. `raw` garde le mot saisi pour
@@ -264,7 +339,15 @@ impl Handle {
         // sert à mesurer combien de termes DISTINCTS de la question un fichier couvre.
         let mut origin: Vec<usize> = Vec::new();
         for t in &expanded {
-            let wt = if base_terms.contains(t) { 1.0 } else { SYNONYM_WEIGHT };
+            let wt = if base_terms.contains(t) {
+                1.0
+            } else if lexique_only.contains(t) {
+                crate::generalisation::poids_lexique()
+            } else if prof_syn.contains(t) {
+                crate::profile::synonym_weight()
+            } else {
+                SYNONYM_WEIGHT
+            };
             let st = crate::stem::stem(t);
             match weighted.iter().position(|(x, _)| *x == st) {
                 Some(i) => weighted[i].1 = weighted[i].1.max(wt),
@@ -390,6 +473,38 @@ impl Handle {
             }
         }
 
+        // Fichiers « d'entrée de dossier » (`foo/index.ts`, `foo/mod.rs`, `foo/__init__.py`…) : leur
+        // identité est le nom du dossier (`functions/health/index.ts`), pas « index ». Les termes de
+        // la question qui nomment ce dossier reçoivent le poids `idx_dir` (en plus du 0,3 du chemin).
+        if w.idx_dir > 0.0 && !file_path_bonus.is_empty() {
+            let keys: Vec<u32> = file_path_bonus.keys().copied().collect();
+            for f in keys {
+                let path = self.path_of(f);
+                let mut it = path.rsplit(['/', '\\']);
+                let (Some(file), Some(dir)) = (it.next(), it.next()) else { continue };
+                let stem = file.split('.').next().unwrap_or(file).to_ascii_lowercase();
+                if !matches!(stem.as_str(), "index" | "mod" | "main" | "__init__" | "lib" | "init") {
+                    continue;
+                }
+                // Dossier « porteur de sens » : on remonte au-dessus de src/lib/dist/app…
+                let mut dir = dir;
+                if matches!(dir.to_ascii_lowercase().as_str(), "src" | "lib" | "source" | "dist" | "app" | "pkg") {
+                    if let Some(d2) = it.next() {
+                        dir = d2;
+                    }
+                }
+                let toks = crate::symbol::tokenize_identifier(dir);
+                let mut add = 0.0f32;
+                for (ti, (wt, term_w)) in weighted.iter().enumerate() {
+                    if toks.iter().any(|t| t == wt || crate::stem::stem(t) == *wt) {
+                        add += term_w * term_idf_names[ti] * w.idx_dir;
+                    }
+                }
+                if add > 0.0 {
+                    *file_path_bonus.entry(f).or_insert(0.0) += add;
+                }
+            }
+        }
         // Multiplicateur de couverture par fichier (1.0 si le fichier ne couvre rien).
         let mut file_extra: Vec<f32> = if cov_on { vec![0.0f32; nglob] } else { Vec::new() };
         if cov_on {
@@ -598,6 +713,39 @@ impl Handle {
                 }
             }
         }
+        // Accord corps/identité : les fichiers en tête du classement par CORPS seul (BM25 du corps)
+        // reçoivent un bonus qui décroît avec leur rang (1 + body_rr / (1 + rang)). Un fichier que le
+        // contenu ET le nom désignent passe devant un voisin que seul son nom désigne.
+        if w.body_rr > 0.0 && !body_score.is_empty() {
+            let mut v: Vec<(u32, f32)> = body_score.iter().map(|(&g, &s)| (g, s)).collect();
+            // Départage canonique (chemin) : les identifiants globaux d'un tronc + deltas et d'une
+            // reconstruction complète diffèrent, le classement ne doit pas en dépendre.
+            let by_score = |a: &(u32, f32), b: &(u32, f32)| {
+                b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal).then_with(|| self.path_of(a.0).cmp(self.path_of(b.0)))
+            };
+            if v.len() > w.body_n && w.body_n > 0 {
+                v.select_nth_unstable_by(w.body_n - 1, by_score);
+                v.truncate(w.body_n);
+            }
+            v.sort_by(by_score);
+            let rank: FxHashMap<u32, usize> = v.iter().enumerate().map(|(i, (g, _))| (*g, i)).collect();
+            for c in cands.iter_mut() {
+                if let Some(&r) = rank.get(&c.file_g) {
+                    c.score *= 1.0 + w.body_rr / (1.0 + r as f32);
+                }
+            }
+        }
+        // Règles de chemin du profil de projet (dossiers favorisés / relégués, fichiers d'entrée),
+        // appliquées AVANT l'élagage ci-dessous pour que ses bornes les couvrent.
+        if let Some(p) = prof.as_ref().filter(|p| p.has_path_rules()) {
+            let mut memo: FxHashMap<&str, f32> = FxHashMap::default();
+            for c in cands.iter_mut() {
+                let m = *memo.entry(c.file).or_insert_with(|| p.path_multiplier(c.file));
+                if m != 1.0 {
+                    c.score *= m;
+                }
+            }
+        }
         if !test_query && w.test_penalty != 1.0 {
             // Élagage avant pénalité : le score final d'un candidat est dans
             // [score × min(1, p), score × max(1, p)] ; s'il y a au moins `limit` candidats dont
@@ -619,6 +767,27 @@ impl Handle {
                 }
                 if *e == 2 {
                     c.score *= w.test_penalty;
+                }
+            }
+        }
+        // Généralisation (voir `generalisation.rs`) : outillage pénalisé, rôle nommé favorisé.
+        {
+            let pen_tool = crate::generalisation::on('t') && !crate::generalisation::query_wants_tooling(&base_terms);
+            let roles = if crate::generalisation::on('r') { crate::generalisation::query_roles(&base_terms) } else { Vec::new() };
+            if pen_tool || !roles.is_empty() {
+                let mut memo: FxHashMap<&str, f32> = FxHashMap::default();
+                for c in cands.iter_mut() {
+                    let m = *memo.entry(c.file).or_insert_with(|| {
+                        let mut m = 1.0f32;
+                        if pen_tool && crate::generalisation::is_tooling_path(c.file) {
+                            m *= crate::generalisation::TOOLING_PENALTY;
+                        }
+                        if roles.iter().any(|&r| crate::generalisation::path_has_role(c.file, r)) {
+                            m *= crate::generalisation::ROLE_BONUS;
+                        }
+                        m
+                    });
+                    c.score *= m;
                 }
             }
         }

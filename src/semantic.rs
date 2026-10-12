@@ -217,7 +217,7 @@ pub fn fuzzy_match(query_term: &str, token: &str) -> f32 {
     }
     // Faute de frappe : edit-distance 1 (seulement pour des mots assez longs,
     // sinon trop de faux positifs sur les mots courts).
-    if query_term.len() >= 4 && within_edit_distance_1(query_term, token) {
+    if query_term.len() >= crate::generalisation::lev_min_len() && within_edit_distance_1(query_term, token) {
         return 0.5;
     }
     0.0

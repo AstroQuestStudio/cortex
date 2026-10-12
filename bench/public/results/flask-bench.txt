@@ -2,26 +2,23 @@
 [ 2] rank  1  how does Flask find the CLI auto-reload environment variables from a .env file expected src/flask/cli.py
 [ 3] rank  1  where is a blueprint's URL prefix combined with its routes when it gets registered on the app expected src/flask/sansio/blueprints.py | src/flask/sansio/app.py
 [ 4] rank  1  how does Flask decide which function handles an uncaught exception and turns it into a 500 response expected src/flask/app.py
-[ 5] rank  4  where does the test client keep cookies between requests so a login session persists across calls expected src/flask/testing.py
+[ 5] rank  6  where does the test client keep cookies between requests so a login session persists across calls expected src/flask/testing.py
         1. src/flask/app.py
         2. src/flask/sessions.py
         3. examples/tutorial/tests/conftest.py
 [ 6] rank  1  what code renders a Jinja template and fires the template_rendered signal expected src/flask/templating.py
 [ 7] rank  2  how are JSON responses serialized, e.g. what turns a dict returned from a view into a Response object expected src/flask/json/__init__.py | src/flask/json/provider.py
         1. src/flask/json/tag.py
-        2. src/flask/json/provider.py
-        3. src/flask/json/__init__.py
+        2. src/flask/json/__init__.py
+        3. src/flask/json/provider.py
 [ 8] rank  2  how does class-based dispatch work, the View class that as_view converts to a route function expected src/flask/views.py
         1. src/flask/app.py
         2. src/flask/views.py
-        3. src/flask/cli.py
+        3. src/flask/sansio/scaffold.py
 [ 9] rank  1  where does Flask load config values out of a Python file, like app.config.from_pyfile expected src/flask/config.py
 [10] rank  1  what happens when a Flask app receives a WSGI request, the top-level entry point that runs before/after hooks and error handling expected src/flask/app.py
 [11] rank  1  how does flash() store a message so it survives a redirect, and where does get_flashed_messages read it back expected src/flask/helpers.py
-[12] rank  2  how does Flask push and pop the application context, and what happens to the g object when it's popped expected src/flask/ctx.py
-        1. src/flask/app.py
-        2. src/flask/ctx.py
-        3. src/flask/cli.py
+[12] rank  1  how does Flask push and pop the application context, and what happens to the g object when it's popped expected src/flask/ctx.py
 [13] rank  1  où est chargée la configuration depuis un fichier ou une variable d'environnement dans Flask expected src/flask/config.py
 [14] rank  3  où Flask envoie-t-il un fichier statique au navigateur, comme send_file expected src/flask/helpers.py
         1. src/flask/app.py
@@ -31,10 +28,10 @@
         1. src/flask/app.py
         2. src/flask/cli.py
         3. tests/test_cli.py
-[16] rank  3  où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence expected src/flask/signals.py
+[16] rank  4  où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence expected src/flask/signals.py
         1. src/flask/app.py
         2. src/flask/wrappers.py
-        3. src/flask/signals.py
+        3. tests/test_signals.py
 [17] rank  2  SECRET_KEY_FALLBACKS                             expected src/flask/sessions.py | src/flask/app.py
         1. tests/test_basic.py
         2. src/flask/sessions.py
@@ -43,8 +40,8 @@
 [19] rank  1  BlueprintSetupState.add_url_rule                 expected src/flask/sansio/blueprints.py
 [20] rank  1  DefaultJSONProvider                              expected src/flask/json/provider.py
 
-== atlas engine · 20 questions · 75 ms ==
-top-1 60.0%  top-5 100.0%  MRR 0.771
-  [en] n=12 top-1 66.7%  top-5 100.0%  MRR 0.812
-  [fr] n=4 top-1 25.0%  top-5 100.0%  MRR 0.542
+== atlas engine · 20 questions · 83 ms ==
+top-1 65.0%  top-5 95.0%  MRR 0.788
+  [en] n=12 top-1 75.0%  top-5 91.7%  MRR 0.847
+  [fr] n=4 top-1 25.0%  top-5 100.0%  MRR 0.521
   [tech] n=4 top-1 75.0%  top-5 100.0%  MRR 0.875

@@ -3,32 +3,29 @@
         1. src/hono-base.ts
         2. src/client/types.ts
         3. src/hono.ts
-[ 3] rank  3  how does the trie-based router walk path segments to find a matching node expected src/router/trie-router/node.ts | src/router/trie-router/router.ts
+[ 3] rank  2  how does the trie-based router walk path segments to find a matching node expected src/router/trie-router/node.ts | src/router/trie-router/router.ts
         1. src/helper/route/index.ts
-        2. src/hono-base.ts
-        3. src/router/trie-router/router.ts
+        2. src/router/trie-router/router.ts
+        3. src/hono-base.ts
 [ 4] rank  1  where is a JWT checked for expiration and unsupported algorithms expected src/utils/jwt/jwt.ts | src/utils/jwt/types.ts
 [ 5] rank  1  how does the CSRF middleware decide whether a request's origin is allowed expected src/middleware/csrf/index.ts
 [ 6] rank  1  where does hono compute and compare the ETag header for caching responses expected src/middleware/etag/index.ts
 [ 7] rank  1  how does the compress middleware choose between gzip and deflate encoding expected src/middleware/compress/index.ts
-[ 8] rank  2  where does the streaming helper abort the stream when the client disconnects expected src/helper/streaming/stream.ts
+[ 8] rank  3  where does the streaming helper abort the stream when the client disconnects expected src/helper/streaming/stream.ts
         1. src/utils/stream.ts
-        2. src/helper/streaming/stream.ts
-        3. src/helper/testing/index.ts
+        2. src/helper/streaming/index.ts
+        3. src/helper/streaming/stream.ts
 [ 9] rank  1  how is the useState hook implemented for hono's own JSX runtime expected src/jsx/hooks/index.ts
-[10] rank  6  how does the type-safe RPC client build a fetch request from the app's route types expected src/client/client.ts
+[10] rank  3  how does the type-safe RPC client build a fetch request from the app's route types expected src/client/client.ts
         1. src/client/types.ts
         2. src/client/client.test.ts
-        3. src/hono-base.ts
-[11] rank  3  where does the static site generation helper turn app routes into files on disk expected src/helper/ssg/ssg.ts
-        1. src/helper/route/index.ts
+        3. src/client/client.ts
+[11] rank  4  where does the static site generation helper turn app routes into files on disk expected src/helper/ssg/ssg.ts
+        1. src/helper/websocket/index.ts
         2. src/helper/ssg/utils.ts
-        3. src/helper/ssg/ssg.ts
+        3. src/helper/route/index.ts
 [12] rank  1  where does basic auth compare the supplied username and password without timing leaks expected src/middleware/basic-auth/index.ts | src/utils/buffer.ts
-[13] rank  2  où est limitée la taille maximale du corps d'une requête expected src/middleware/body-limit/index.ts
-        1. src/middleware/cors/index.ts
-        2. src/middleware/body-limit/index.ts
-        3. src/middleware/request-id/request-id.ts
+[13] rank  1  où est limitée la taille maximale du corps d'une requête expected src/middleware/body-limit/index.ts
 [14] rank  1  où est construit l'en-tête Content-Security-Policy des réponses expected src/middleware/secure-headers/secure-headers.ts
 [15] rank  1  où est détectée la langue préférée du client à partir de l'en-tête Accept-Language expected src/middleware/language/language.ts
 [16] rank  1  où le helper de test simule-t-il des requêtes vers une app Hono sans lancer de serveur expected src/helper/testing/index.ts
@@ -40,8 +37,8 @@
 [19] rank  1  UnsupportedPathError                             expected src/router.ts
 [20] rank  1  defaultTimeoutException 504                      expected src/middleware/timeout/index.ts
 
-== atlas engine · 20 questions · 61 ms ==
-top-1 65.0%  top-5 85.0%  MRR 0.745
-  [en] n=12 top-1 58.3%  top-5 83.3%  MRR 0.694
-  [fr] n=4 top-1 75.0%  top-5 100.0%  MRR 0.875
+== atlas engine · 20 questions · 72 ms ==
+top-1 70.0%  top-5 90.0%  MRR 0.774
+  [en] n=12 top-1 58.3%  top-5 91.7%  MRR 0.701
+  [fr] n=4 top-1 100.0%  top-5 100.0%  MRR 1.000
   [tech] n=4 top-1 75.0%  top-5 75.0%  MRR 0.766

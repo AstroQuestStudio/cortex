@@ -95,7 +95,8 @@ approach. Anyone can rerun it: [`bench/public/run.sh`](bench/public/run.sh).
 | **graphify 0.8.38** (`graphify query`, best of 5 settings tried) | 13.3% | 35.0% | 0.238 | no ranked list: ~1,500 tokens of graph per question |
 | grep by keywords (`rg`, files ranked by distinct words) | 16.7% | 58.3% | 0.345 | 5,141 – 31,710 |
 | BM25 over whole files | 50.0% | 78.3% | 0.625 | 8 – 22 |
-| **Cortex 0.5.0** | **56.7%** | **86.7%** | **0.702** | **14 – 29** |
+| **Cortex** (`main`, after 0.5.0) | **63.3%** | **86.7%** | **0.737** | **14 – 29** |
+| Cortex 0.5.0 (released) | 56.7% | 86.7% | 0.702 | 14 – 29 |
 
 The dense and hybrid RAG baselines (38.3% / 68.3% and 41.7% / 81.7% with Cortex 0.3.0; they need a
 506 MiB model) are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
@@ -109,10 +110,10 @@ question or keywords only, breadth-first or depth-first, budget 2,000 or 10,000 
 the best: depth-first with keywords only. Its default (natural question, breadth-first) scores
 10.0% / 30.0% / 0.204. Rerun it: [`bench/public/graphify-bench.py`](bench/public/graphify-bench.py).
 
-| | graphify 0.8.38 | **Cortex 0.5.0** | |
+| | graphify 0.8.38 | **Cortex** (`main`) | |
 |---|---:|---:|---|
-| top-1 / top-5 (60 questions) | 13.3% / 35.0% | **56.7% / 86.7%** | **4.3× / 2.5×** |
-| MRR | 0.238 | **0.702** | 3.0× |
+| top-1 / top-5 (60 questions) | 13.3% / 35.0% | **63.3% / 86.7%** | **4.8× / 2.5×** |
+| MRR | 0.238 | **0.737** | 3.1× |
 | One question, whole process | ~570 ms | **~24 ms** | **~24× faster** |
 | Build the index (flask / hono / ripgrep) | 7 s / 14 s / 9 s | **under 0.4 s each** | 20× or more |
 | Answer size per question | ~1,500 tokens | **~415 tokens** | 3.6× smaller |
@@ -132,19 +133,22 @@ refreshes itself on every call.
 
 ### Where Cortex does **not** win
 
-Plain BM25 over whole files still beats Cortex on ripgrep top-1 (50% vs 45%). Against 0.3.0, the
-0.5.0 numbers on this public set move little: +1.7 points of top-1, −1.7 of top-5, +0.017 of
-MRR. Flask top-1 went from 70% to 60% and ripgrep top-5 from 85% to 75%, while hono and ripgrep
-top-1 went up (60% to 65%, 35% to 45%). That is within the noise of 20 questions per repository
-(one question is 5 points), so the gains of 0.5.0 show on the larger private monorepo below, not
-here. Everything, per repository: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+The `main` figures come from a pass that kept only changes lowering none of five private sets (see
+[docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 3); the released 0.5.0 scores 56.7% / 86.7% /
+0.702 on the same questions. Honest limits: public top-5 did not move (86.7%, ripgrep 75%); French
+questions are still weak on the public repositories (flask top-1 25%, ripgrep top-5 25%, with only
+4 questions per repository); and on **vague, paraphrased questions** that share no word with the
+code, Cortex is weak (22.5% top-1, 27.5% top-5 on a 40-question blind set): a lexical engine cannot
+close that, it needs semantics. With 20 questions per repository, one question is 5 points: a
+difference under two questions is noise.
 
 **Real-world showcase**: AstroQuest's proprietary monorepo (8,069 files, 1.7 M lines of
-TypeScript, Rust and SQL), held-out questions written before any tuning. Cortex 0.5.0:
-**67.6% top-1, 94.6% top-5** on the 37 held-out questions (0.3.0 on the same ones: 59.5% / 81.1%),
-and 66% / 85% on a 100-question extended set (BM25 over files on the former 40-question set:
-30% / 57.5%, dense RAG: 25% / 35%, grep: 7.5% / 30%). On 37 vaguer questions never used to tune
-anything, 0.5.0 scores 21.6% / 51.4% (0.3.0: 18.9% / 45.9%): vague wording is still its weak side.
+TypeScript, Rust and SQL), held-out questions written before any tuning. Cortex `main`:
+**70.3% top-1, 97.3% top-5** on the 37 held-out questions (0.3.0 on the same ones: 59.5% / 78.4%),
+and 69% / 87% on a 100-question extended set (0.3.0: 55% / 80%). On 37 vaguer questions
+29.7% / 62.2% (0.3.0: 21.6% / 45.9%), and 22.5% / 27.5% on a blind set of 40 paraphrases. Earlier
+baselines on the former 40-question set: BM25 over files 30% / 57.5%, dense RAG 25% / 35%, grep
+7.5% / 30%.
 On 10 agent comprehension tasks (impact, data flow, module overview, tests to rerun), Cortex
 covers 86% of the expected facts vs 89% for grep + read, with **10.9× fewer tokens and 40%
 fewer calls**. Latency: `find` 5–9 ms, `card` ~2 ms, `impact` ~2 ms, update of one modified
@@ -260,6 +264,34 @@ instruction block you can paste into `AGENTS.md`, `CLAUDE.md` or your rules file
 that name a symbol, two code targets or a folder to `impact`, `path` or `overview`. On the bundled
 agent benchmark it reads about a third fewer tokens than `find` then `card` then `read`, in one call
 instead of two or three, for the same facts covered (`cortex bench-agent`, `ask` arm).
+
+## Make it yours: the project profile (optional)
+
+Cortex knows nothing about YOUR vocabulary until you tell it. Drop a `.cortex/profile.toml` at the
+root of the indexed project (or run `cortex profile init`, five seconds, generated from your folder
+names and README):
+
+```toml
+[synonyms]                       # words this project uses for the same thing
+facture = ["invoice", "billing"] # a French word that never appears in the code
+[penalty]                        # folders that rarely answer a feature question
+"vendor/" = 0.4
+"examples/" = 0.6
+[boost]                          # folders that hold the product code
+"src/core/" = 1.2
+[ignore]
+terms = ["application"]          # question words that match everywhere here
+[entry]
+files = ["src/main.rs"]          # entry points, favoured by x1.05
+```
+
+It is read on every `find` / `ask` (no re-index), has no effect when absent, and `cortex profile
+check` lists what was understood. Declared synonyms fill a vocabulary gap: they apply to question
+words that are rare in the project (`always = true` in `[synonyms]` applies them everywhere). Folder
+rules are multipliers on the score. What it is worth, measured honestly, is in
+[docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 3: safe and neutral when written blind, with no measured
+gain on our benchmarks (their questions already use the words of the code). It is meant for the
+words your team says that the code does not contain. Format: [docs/SPEC.md](docs/SPEC.md) section 4.11.
 
 ## Why not grep, embeddings or a language server?
 

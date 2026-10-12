@@ -1,8 +1,5 @@
 [ 1] rank  1  Where is a file path actually tested against parsed .gitignore patterns to decide if it should be excluded? expected crates/ignore/src/gitignore.rs
-[ 2] rank  3  How does ripgrep decide during a search that a file's contents are binary and should be skipped or truncated? expected crates/searcher/src/searcher/mod.rs | crates/searcher/src/line_buffer.rs
-        1. crates/ignore/src/walk.rs
-        2. crates/core/flags/hiargs.rs
-        3. crates/searcher/src/searcher/mod.rs
+[ 2] rank  1  How does ripgrep decide during a search that a file's contents are binary and should be skipped or truncated? expected crates/searcher/src/searcher/mod.rs | crates/searcher/src/line_buffer.rs
 [ 3] rank  3  Where does ripgrep turn a shell-style glob pattern like *.rs or src/** into something it can match against paths? expected crates/globset/src/glob.rs
         1. crates/globset/src/lib.rs
         2. crates/ignore/src/gitignore.rs
@@ -12,29 +9,26 @@
         2. crates/regex/src/literal.rs
         3. crates/regex/src/matcher.rs
 [ 5] rank  1  How does ripgrep search inside a gzip or xz compressed file without the user manually decompressing it first? expected crates/cli/src/decompress.rs
-[ 6] rank 14  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file? expected crates/searcher/src/sink.rs
+[ 6] rank 16  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file? expected crates/searcher/src/sink.rs
         1. crates/matcher/src/lib.rs
-        2. crates/searcher/src/line_buffer.rs
-        3. crates/ignore/src/gitignore.rs
+        2. crates/searcher/src/lib.rs
+        3. crates/searcher/src/searcher/mod.rs
 [ 7] rank  1  Where is the code that formats matches as JSON objects for the --json output option? expected crates/printer/src/json.rs
-[ 8] rank 18  Where does ripgrep accumulate the match/line/byte counters that get printed with the --stats flag? expected crates/printer/src/stats.rs
+[ 8] rank 13  Where does ripgrep accumulate the match/line/byte counters that get printed with the --stats flag? expected crates/printer/src/stats.rs
         1. crates/core/flags/mod.rs
         2. crates/core/flags/defs.rs
         3. crates/core/main.rs
-[ 9] rank  2  How does ripgrep let a user override or re-include paths that .gitignore would otherwise exclude, via a command-line glob? expected crates/ignore/src/overrides.rs
-        1. crates/ignore/src/gitignore.rs
-        2. crates/ignore/src/overrides.rs
-        3. crates/ignore/src/dir.rs
+[ 9] rank  1  How does ripgrep let a user override or re-include paths that .gitignore would otherwise exclude, via a command-line glob? expected crates/ignore/src/overrides.rs
 [10] rank  1  Where does ripgrep transcode a file from a user-specified character encoding to UTF-8 before it gets searched? expected crates/searcher/src/searcher/mod.rs
 [11] rank  1  Where does ripgrep look for an rc/config file of default arguments (RIPGREP_CONFIG_PATH) and turn it into extra CLI args? expected crates/core/flags/config.rs
-[12] rank  7  How does ripgrep turn on PCRE2's just-in-time compiler for faster matching? expected crates/pcre2/src/matcher.rs
+[12] rank  5  How does ripgrep turn on PCRE2's just-in-time compiler for faster matching? expected crates/pcre2/src/matcher.rs
         1. crates/core/flags/hiargs.rs
         2. crates/core/flags/doc/version.rs
         3. crates/globset/src/glob.rs
-[13] rank  5  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ? expected crates/ignore/src/default_types.rs
+[13] rank  7  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ? expected crates/ignore/src/default_types.rs
         1. crates/ignore/src/types.rs
-        2. crates/core/flags/defs.rs
-        3. crates/core/flags/hiargs.rs
+        2. crates/core/flags/hiargs.rs
+        3. crates/core/flags/defs.rs
 [14] rank  7  Comment ripgrep convertit-il une taille lisible par un humain comme "10M" ou "2K" (pour --max-filesize) en nombre d'octets ? expected crates/cli/src/human.rs
         1. crates/core/flags/defs.rs
         2. crates/ignore/src/walk.rs
@@ -42,7 +36,7 @@
 [15] rank  -  Où ripgrep lit-il la liste de motifs de recherche fournie via un fichier avec l'option -f ? expected crates/cli/src/pattern.rs
         1. crates/core/flags/defs.rs
         2. crates/globset/src/glob.rs
-        3. crates/core/flags/mod.rs
+        3. crates/core/main.rs
 [16] rank  1  Comment ripgrep verrouille-t-il la sortie standard pour éviter que les messages d'erreur sur stderr ne s'entremêlent avec les résultats ? expected crates/core/messages.rs
 [17] rank  1  Matcher trait definition find_at is_match capture group semantics expected crates/matcher/src/lib.rs
 [18] rank  2  non_matching_bytes ByteSet Hir                   expected crates/regex/src/non_matching.rs
@@ -52,8 +46,8 @@
 [19] rank  1  WalkParallel struct run WalkState                expected crates/ignore/src/walk.rs
 [20] rank  1  JSONSink struct definition                       expected crates/printer/src/json.rs
 
-== atlas engine · 20 questions · 83 ms ==
-top-1 45.0%  top-5 75.0%  MRR 0.589
-  [en] n=12 top-1 41.7%  top-5 75.0%  MRR 0.578
-  [fr] n=4 top-1 25.0%  top-5 50.0%  MRR 0.336
+== atlas engine · 20 questions · 91 ms ==
+top-1 55.0%  top-5 75.0%  MRR 0.648
+  [en] n=12 top-1 58.3%  top-5 83.3%  MRR 0.681
+  [fr] n=4 top-1 25.0%  top-5 25.0%  MRR 0.321
   [tech] n=4 top-1 75.0%  top-5 100.0%  MRR 0.875

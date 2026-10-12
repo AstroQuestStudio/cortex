@@ -5,27 +5,27 @@ mesure de la construction d'un atlas Cortex complet…
 
 ── Global (20 questions) ─ tokens = caractères/4 ; « 1er bon » = médiane sur les trouvées ; « moy. » = échec compté comme la sortie complète
 approche              top-1  top-5    MRR  lat méd  lat p95  1er bon     moy.    top-5   sortie
-rg-compte             10.0%  30.0%  0.209   1.22ms   2.53ms    13269    49543    11666    42210
-rg-termes             10.0%  45.0%  0.271   1.13ms   3.08ms     6898    23692     6390    42210
-bm25-fich             40.0%  70.0%  0.517   0.02ms   0.04ms       22       33       40      168
-cortex                65.0%  85.0%  0.745   6.13ms   8.68ms       13       64       69      746
-exp:cortex+bm25       50.0%  90.0%  0.696   5.92ms   8.82ms       13       21       40      160
-exp:rerank20-bm25     65.0%  90.0%  0.769   6.17ms   8.36ms        9       20       38      154
+rg-compte             10.0%  30.0%  0.209   1.42ms   3.31ms    13269    49543    11666    42210
+rg-termes             10.0%  45.0%  0.271   1.40ms   2.82ms     6898    23692     6390    42210
+bm25-fich             40.0%  70.0%  0.517   0.03ms   0.04ms       22       33       40      168
+cortex                70.0%  90.0%  0.774   6.98ms  11.18ms       13       63       82      756
+exp:cortex+bm25       60.0%  90.0%  0.742   7.34ms   9.96ms       10       21       40      162
+exp:rerank20-bm25     70.0%  90.0%  0.790   7.46ms  10.74ms        9       20       39      156
 
 ── Par catégorie : top-1 / top-5 / MRR
 approche                           fr (n=4)              en (n=12)             tech (n=4)
 rg-compte                 25% / 25% / 0.292       0% / 17% / 0.102      25% / 75% / 0.448
 rg-termes                 25% / 25% / 0.286       0% / 42% / 0.207      25% / 75% / 0.448
 bm25-fich                 25% / 75% / 0.396      42% / 75% / 0.537      50% / 50% / 0.577
-cortex                   75% / 100% / 0.875      58% / 83% / 0.694      75% / 75% / 0.766
-exp:cortex+bm25          50% / 100% / 0.750      42% / 92% / 0.646      75% / 75% / 0.792
-exp:rerank20-bm25        75% / 100% / 0.875      58% / 92% / 0.729      75% / 75% / 0.781
+cortex                  100% / 100% / 1.000      58% / 92% / 0.701      75% / 75% / 0.766
+exp:cortex+bm25          75% / 100% / 0.875      50% / 92% / 0.681      75% / 75% / 0.792
+exp:rerank20-bm25       100% / 100% / 1.000      58% / 92% / 0.722      75% / 75% / 0.781
 
 ── Construction de l'index
 rg-compte                0.01s     5.5 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
 rg-termes                0.01s     5.5 Mio  aucun index : texte + minuscules en RAM (≈ cache disque chaud de rg)
 bm25-fich                0.02s     0.5 Mio  index inversé en RAM (taille estimée)
-cortex                   0.18s     2.0 Mio  atlas complet (rayon, 16 threads), segment rkyv
+cortex                   0.21s     2.0 Mio  atlas complet (rayon, 16 threads), segment rkyv
 exp:cortex+bm25              —           —  RRF k=60 : 100 fichiers Cortex + 100 fichiers BM25 (contenu)
 exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF(rang Cortex, rang BM25 contenu)
 
@@ -33,17 +33,17 @@ exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF
    # tag    a1  a2  a3  a4  a5  a6  question
    1 en      4   2   1   1   1   1  where are signed cookies verified against their HMAC signature
    2 en     20   -   -   -   -   -  how does Hono automatically pick the fastest router implementation at runtime
-   3 en     17  17   5   3   2   1  how does the trie-based router walk path segments to find a matching node
+   3 en     17  17   5   2   2   1  how does the trie-based router walk path segments to find a matching node
    4 en      3   3   1   1   1   1  where is a JWT checked for expiration and unsupported algorithms
    5 en     14   4   1   1   1   1  how does the CSRF middleware decide whether a request's origin is allowed
-   6 en      -  11   8   1   2   1  where does hono compute and compare the ETag header for caching responses
+   6 en      -  11   8   1   1   1  where does hono compute and compare the ETag header for caching responses
    7 en      7   2   2   1   2   2  how does the compress middleware choose between gzip and deflate encoding
-   8 en     20   -   4   2   2   2  where does the streaming helper abort the stream when the client disconnects
+   8 en     20   -   4   3   2   2  where does the streaming helper abort the stream when the client disconnects
    9 en     10   9   1   1   1   1  how is the useState hook implemented for hono's own JSX runtime
-  10 en      -  19   8   6   4   4  how does the type-safe RPC client build a fetch request from the app's route types
-  11 en      -  11   4   3   2   2  where does the static site generation helper turn app routes into files on disk
+  10 en      -  19   8   3   3   3  how does the type-safe RPC client build a fetch request from the app's route types
+  11 en      -  11   4   4   3   3  where does the static site generation helper turn app routes into files on disk
   12 en      6   2   1   1   1   1  where does basic auth compare the supplied username and password without timing leaks
-  13 fr      -   -   -   2   2   2  où est limitée la taille maximale du corps d'une requête
+  13 fr      -   -   -   1   1   1  où est limitée la taille maximale du corps d'une requête
   14 fr      1   1   1   1   1   1  où est construit l'en-tête Content-Security-Policy des réponses
   15 fr      6   7   4   1   2   1  où est détectée la langue préférée du client à partir de l'en-tête Accept-Language
   16 fr      -   -   3   1   1   1  où le helper de test simule-t-il des requêtes vers une app Hono sans lancer de serveur
@@ -53,4 +53,4 @@ exp:rerank20-bm25            —           —  top-20 Cortex re-classé par RRF
   20 tech    1   1   1   1   1   1  defaultTimeoutException 504
       a1=rg-compte  a2=rg-termes  a3=bm25-fich  a4=cortex  a5=exp:cortex+bm25  a6=exp:rerank20-bm25
 
-résultats : bench/public/results/comparatif-bench-hono-2026-10-12-e427dfa.json
+résultats : bench/public/results/comparatif-bench-hono-2026-10-12-dbb3d9f.json

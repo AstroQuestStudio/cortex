@@ -6,11 +6,37 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Project profile**: an optional `.cortex/profile.toml` at the project root, read on every
+  `find` / `ask` without re-indexing and without effect when absent: `[synonyms]` (project
+  vocabulary, applied to question words that are rare in the project), `[boost]` / `[penalty]`
+  (folder multipliers), `[ignore]` (generic question words), `[entry]` (entry files).
+  `cortex profile init` writes a skeleton from folder names, README and usual entry files;
+  `cortex profile check` lists what was understood.
+- Private benchmark `cache2.json` (40 vague questions written blind, never used to tune).
+
+### Changed
+- Relevance (merged from the unreleased generalisation branch, all measured not to lower the
+  private benchmarks): tooling folders (`.claude`, `.github`, fixtures, mocks) are penalised unless
+  the question is about tooling; a role named in the question (page, server, hook, store)
+  favours files of that role; a general FR/EN app lexicon expands question words that are rare in
+  the project; question filler words are ignored.
+- Relevance: for `foo/index.ts`, `foo/mod.rs`, `foo/__init__.py`, `foo/lib.rs`, the folder name is the
+  file's identity (path terms that name the folder weigh 0.7 x idf more); a file that is also at the
+  head of the body-only BM25 ranking gets a decaying bonus (`1 + 0.1 / rank`).
+- Single-letter question tokens (French elisions `l'`, `d'`, `qu'`) are ignored.
+- New environment overrides: `CORTEX_IDX_DIR`, `CORTEX_BODY_RR`, `CORTEX_BODY_N`,
+  `CORTEX_NO_PROFILE`, `CORTEX_PROFILE_SYN`, `CORTEX_PROFILE_GATE`.
+
 ### Benchmarks
+- Public benchmark with this branch, one measurement, not used for tuning: 63.3% / 86.7% /
+  MRR 0.737 on the 60 questions (0.5.0: 56.7 / 86.7 / 0.702). See docs/BENCHMARKS.md section 3
+  for the private benchmarks, the history by version and the profile measurements.
 - Public benchmark re-run with Cortex 0.5.0 (60 questions): 56.7% top-1, 86.7% top-5, MRR 0.702
   (0.3.0: 55.0% / 88.3% / 0.685). Head to head with graphify 0.8.38 on the same questions and judge:
-  best of five settings 13.3% / 35.0% / 0.238 (default 10.0% / 30.0% / 0.204), ~570 ms per question
-  against ~24 ms, and no fresh index after an edit. Rerun with `bench/public/graphify-bench.py`.
+  best of five settings 13.3% / 35.0% / 0.238 (default 10.0% / 30.0% / 0.204), against 63.3% / 86.7% /
+  0.737 for Cortex `main` (56.7% / 86.7% / 0.702 for the released 0.5.0); ~570 ms per question against
+  ~24 ms, and no fresh index after an edit. Rerun with `bench/public/graphify-bench.py`.
 
 ## [0.5.0] — 2026-10-08
 

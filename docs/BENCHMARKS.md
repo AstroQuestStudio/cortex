@@ -180,3 +180,132 @@ coverage.
 modified file 7 ms, full build ~5 s at 8–16 threads.
 
 Methods and history of every tuning decision: [ARCHITECTURE.md](ARCHITECTURE.md) §7, §11, §12.
+
+## 3. Closing the gaps (unreleased, 2026-10-12)
+
+Goal of this pass: fix the known weaknesses (French questions, vague questions, ripgrep top-1,
+top-5) under a stricter adoption rule, and add a per-project profile. Everything below was
+re-measured the same day, with binaries built the same way (no LTO, so absolute latencies are not
+the release ones), on a **frozen snapshot** of the private monorepo (9,867 files, `_disabled/`
+removed so that every version sees the same corpus) and the three pinned public repositories.
+
+### 3.1 Rules of this pass
+
+- A change is kept only if it lowers **none** of five private sets (tuning 50, held-out 37,
+  extended 100, vague 37, blind vague 40) and keeps the median `find` latency under 15 ms.
+- Nothing was tuned on the 60 public questions; they were run (a) to document the history by version
+  and (b) once at the end. Two uses are disclosed: the ripgrep top-5 drop between 0.4.0 and 0.5.0 was
+  **diagnosed** on the public set (bisect by version), and the profile ablation of section 3.4 was
+  run on it. Neither changed an engine weight; the profile defaults were changed after seeing that
+  ablation (3.4), so the "v2" profile figures are guided by the public set.
+- The *vague* set (37) was visible to the author of the generalisation branch (its lexicon contains
+  words from those questions): it is no longer blind for that branch. The **blind vague** set (40
+  questions, written by an agent that never ran Cortex, expected files verified on disk before any
+  run) is the unseen check. It is small: one question is 2.5 points.
+
+### 3.2 History by version, same corpus (top-1 / top-5 / MRR)
+
+| Version | tuning (50) | held-out (37) | extended (100) | vague (37) | blind vague (40) | flask | hono | ripgrep | public 60 |
+|---|---|---|---|---|---|---|---|---|---|
+| 0.3.0 / 0.4.0 (`64cf709`, `0ab381a`) | 82 / 94 / .871 | 59.5 / 78.4 / .676 | 55 / 80 / .665 | 21.6 / 45.9 / .330 | 20 / 32.5 / .237 | 70 / 95 / .789 | 60 / 85 / .718 | 35 / 85 / .549 | 55.0 / 88.3 / .685 |
+| 0.5.0 (`c0ad30a` coverage, `3a30397` latency, `9f62b54`) | 90 / 96 / .927 | 67.6 / 94.6 / .782 | 66 / 85 / .745 | 24.3 / 54.1 / .382 | 20 / 27.5 / .243 | 60 / 100 / .771 | 65 / 85 / .745 | 45 / 75 / .589 | 56.7 / 86.7 / .702 |
+| + generalisation branch (`029a15a`, not merged until now) | 90 / 96 / .927 | 67.6 / 94.6 / .782 | 66 / 86 / .751 | 27.0 / 59.5 / .414 | 22.5 / 27.5 / .256 | 65 / 95 / .792 | 65 / 90 / .757 | 45 / 75 / .586 | 58.3 / 86.7 / .712 |
+| **this pass** | **90 / 96 / .927** | **70.3 / 97.3 / .812** | **69 / 87 / .770** | **29.7 / 62.2 / .451** | **22.5 / 27.5 / .258** | **65 / 95 / .788** | **70 / 90 / .774** | **55 / 75 / .648** | **63.3 / 86.7 / .737** |
+
+Reading, and what the numbers do not say:
+
+- The best private figures were not lost: the tuning set has been at 90 / 96 / .927 since commit
+  `c0ad30a`. The 80 / 94 / .861 of section 2 is the same set before that commit.
+- **No bug regressed the public figure.** 0.3.0 to 0.5.0 trades top-5 for top-1: the per-file
+  coverage multiplier (`c0ad30a`) gains 10 points of ripgrep top-1 and loses 10 of its top-5
+  (85 to 75); flask goes 70 to 60 top-1 and 95 to 100 top-5. On the private sets the coverage
+  weight 2 is the optimum (0, 1 and 3 are lower), so it was left alone.
+- The fusion experiments quoted in section 1 (`cortex+bm25` 63.3 / 91.7 / .756 on 0.3.0;
+  `rerank20-bm25` 65.0 / 86.7 / .755 on 0.5.0) are the highest public figures ever measured and
+  they are **not** an engine: on the private held-out set the same fusion lowered the score. This
+  pass reaches 63.3 / 86.7 / .737 with a different mechanism and no private set lowered.
+- Public top-5 is unchanged at 86.7% and ripgrep top-5 is still 75%. Not fixed.
+- The blind vague set is where Cortex is weakest: 22.5% top-1, 27.5% top-5 (15 of 40 expected
+  files are not in the top 20). Those questions are paraphrases whose words do not occur in the
+  expected file ("a gauge showing how well my account is protected" for a security-score card).
+  A lexical engine cannot close that; it needs semantics (section 1: dense vectors only as a
+  re-ranker, never fused at equal weight).
+
+### 3.3 What was kept and what was refused
+
+Every row is a switch measured on the five private sets (the public sets were not consulted
+for these decisions).
+
+| Change | Result on the private sets | Decision |
+|---|---|---|
+| Merge the generalisation branch (tooling penalty, role bonus, general FR/EN lexicon gated to rare words, filler words) | no set lowered; vague +2.7 top-1 / +5.4 top-5, extended top-5 +1, blind vague top-1 +2.5 | **kept** |
+| Folder name as identity of `index.*`, `mod.rs`, `__init__.py`, `lib.rs` (x0.7 idf on matching terms) | held-out +2.7 top-1 and +2.7 top-5; extended +1 / +1; vague +2.7 top-1 | **kept** |
+| Same at weight 1.0 and 1.5 | held-out up to 78.4 / 97.3, but tuning set top-1 90 to 88 | refused (rule: no set lowered) |
+| Body/identity agreement bonus `1 + 0.1 / rank` over the top 100 body-only ranks | held-out MRR .804 to .812, extended top-1 67 to 69, vague top-5 +2.7; tuning unchanged | **kept** |
+| Same at 0.25 / 0.5 / 1.0 | tuning-set MRR .927 to .924 / .924 / .871 (top-1 90 to 80 at 1.0) | refused |
+| Single-letter tokens dropped (French elisions) | identical on all five sets | kept (neutral, principled) |
+| Body-term coverage added to the file multiplier (0.5, 1, 2) | held-out top-5 -2.7 at 0.5; extended top-1 66 to 64 at 1 and 2 | refused |
+| Coverage weight growing with question length | held-out top-5 -2.7, extended top-1 -2, vague top-5 -5.4 | refused |
+| File-stem coverage bonus | tuning top-1 90 to 86 at 0.6 and 1.0 | refused |
+| General lexicon without the rare-word gate (`CORTEX_GEN=tv`) | vague +2.7 / +8.1, blind vague +2.5 top-1, but held-out top-1 70.3 to 67.6 and extended top-5 87 to 84 | refused (gate kept) |
+| Typo tolerance only from 5 letters (`CORTEX_GEN=e`) | tuning 90 to 86, extended 66 to 64 | refused, stays opt-in |
+| 190 generic FR/EN software-development groups (`CORTEX_GEN=...d`) | identical on the five private sets; public, one run after the decision: flask top-5 95 to 90, ripgrep top-5 75 to 80, MRR .737 to .739 | neutral, **off by default**, opt-in |
+
+### 3.4 Project profile: normal against personalised
+
+Protocol, fixed before measuring: profiles are written from the README, the folder names and the
+documentation file names only, never from the questions; the three public repositories were
+copied and their question files were not opened before the profiles were written; each run uses
+`cortex bench` (frozen index, so a profile never triggers a re-index) with the same binary,
+profile on or off (`CORTEX_NO_PROFILE=1`).
+
+Time to write: `cortex profile init` takes about a second. A hand-written profile of 15 to 25
+lines took about one minute each in this run (reading the README and the tree, then writing; the
+file write alone was 16 s for the monorepo). That holds when you already know the vocabulary.
+
+Public repositories (top-1 / top-5 / MRR). `v1` is the profile as first written (synonyms
+ungated at weight 0.85, entry boost x1.15, project name ignored). `v2` is the same file after
+the profile design was corrected (synonyms applied only to rare question words, entry boost
+x1.05); that correction was decided after seeing the ablation below, i.e. guided by the public set.
+
+| | normal | `profile init` only | hand-written v1 | hand-written v2 |
+|---|---|---|---|---|
+| flask | 65 / 95 / .788 | 65 / 100 / .789 | 55 / 100 / .722 | 60 / 100 / .762 |
+| hono | 70 / 90 / .774 | 70 / 90 / .774 | 70 / 90 / .768 | 70 / 90 / .758 |
+| ripgrep | 55 / 75 / .648 | 55 / 75 / .648 | 35 / 80 / .532 | 50 / 80 / .634 |
+
+Ablation, one section at a time (MRR flask / hono / ripgrep; normal is .788 / .774 / .648; run with
+the gated synonyms and the entry boost still at x1.15): synonyms alone .788 / .767 / .648
+(neutral), penalties alone .789 / .774 / .648, boosts alone .800 / .774 / .648, **ignore alone
+.754 / .777 / .634 (ignoring the project's own name hurt two of three)**, entry alone .762 / .761
+/ .646. So folder penalties and gated synonyms are safe; ignoring words and boosting entry files
+are not, and `profile init` writes neither as an active rule.
+
+Monorepo, profile written from `CLAUDE.md`, the `docs/apps` file names and the `src/` tree (23
+synonym groups, 8 path rules; none of its words was copied from a question file, but the
+extended-set failures had been read earlier in the same session, so treat it as indicative).
+top-1 / top-5 / MRR:
+
+| | tuning (50) | held-out (37) | extended (100) | vague (37) | blind vague (40) |
+|---|---|---|---|---|---|
+| normal | 90 / 96 / .927 | 70.3 / 97.3 / .812 | 69 / 87 / .770 | 29.7 / 62.2 / .451 | 22.5 / 27.5 / .258 |
+| `profile init` only | 90 / 96 / .927 | 70.3 / 97.3 / .812 | 69 / 87 / .770 | 29.7 / 62.2 / .451 | 22.5 / 27.5 / .258 |
+| hand-written v1 | 90 / 96 / .930 | 67.6 / 97.3 / .790 | 66 / 86 / .751 | 29.7 / 56.8 / .453 | 22.5 / 30 / .266 |
+| hand-written v2 | 90 / 96 / .927 | 67.6 / 97.3 / .798 | 69 / 86 / .769 | 29.7 / 62.2 / .449 | 22.5 / 30 / .260 |
+| v2, synonyms only | 90 / 96 / .927 | 70.3 / 97.3 / .812 | 69 / 87 / .770 | 29.7 / 62.2 / .451 | 22.5 / 30 / .260 |
+
+Honest reading: **personalisation did not produce a measured gain here.** The synonym section is
+the only one that helps anywhere (one question of 40 in blind-vague top-5) and costs nothing; the
+broad `[boost]` rules (the whole of `src/`) lost one held-out question. The reason is
+structural: on the monorepo the built-in glossary already holds the project's vocabulary, and on
+the public repositories the questions already use the words of the code. A profile is worth
+something when you know words your team says that the code does not contain, and these sets cannot
+express that without being written from their questions. What is measured and guaranteed: the
+engine without a profile is unchanged, a conservative profile is neutral, and a careless one can
+cost 20 points of top-1 (ripgrep v1), which is why `profile init` only writes safe rules. The
+mechanism itself is covered by a unit test on a synthetic project (a declared synonym finds a
+symbol the question never names; a path penalty lowers its score; removing the file restores the
+default engine).
+
+Latency (monorepo, `find` median, same binary, machine shared so +-0.5 ms): 0.5.0 4.4 ms; this
+pass without a profile 4.6 to 5.0 ms; with the 23-group profile 5.7 to 6.2 ms.

@@ -17,6 +17,7 @@ mod engine;
 mod extract;
 mod fx;
 mod galaxy;
+mod generalisation;
 mod graph;
 mod ids;
 mod index;
@@ -26,6 +27,7 @@ mod latence;
 mod mcp;
 mod outils;
 mod par;
+mod profile;
 mod scrape;
 mod search;
 mod semantic;
@@ -327,6 +329,12 @@ enum Cmd {
     },
     /// Runs the MCP server (stdio): tools cortex_find/card/outline/read/overview/impact/path/changed/grep/files/docs/docs_list/list.
     Mcp,
+    /// Per-project profile (`.cortex/profile.toml`, optional): synonyms, ignored words, folder
+    /// boosts and penalties, entry files. Read on every query; no re-index.
+    Profile {
+        #[command(subcommand)]
+        action: ProfileAction,
+    },
     /// Offline documentation: scrapes a doc site and makes it searchable locally.
     Docs {
         #[command(subcommand)]
@@ -384,6 +392,33 @@ struct Commun {
     /// Skips the automatic freshness check (directory read) before answering.
     #[arg(long)]
     no_refresh: bool,
+}
+
+#[derive(Subcommand)]
+enum ProfileAction {
+    /// Writes a starter `.cortex/profile.toml` from the folder names, the README and the usual
+    /// entry files (nothing is invented: every active rule comes from the tree).
+    Init {
+        /// Project root (default: root of `-p`, else the current directory).
+        path: Option<PathBuf>,
+        /// Indexed project whose root is used.
+        #[arg(short, long)]
+        project: Option<String>,
+        /// Overwrites an existing profile.
+        #[arg(long)]
+        force: bool,
+        /// Prints the skeleton instead of writing it.
+        #[arg(long)]
+        print: bool,
+    },
+    /// Parses the profile and lists its rules and warnings.
+    Check {
+        /// Project root (default: root of `-p`, else the current directory).
+        path: Option<PathBuf>,
+        /// Indexed project whose root is used.
+        #[arg(short, long)]
+        project: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -531,6 +566,7 @@ fn main() {
         Cmd::Viewer { port, no_build } => cmd_viewer(port, no_build),
         Cmd::Config { action } => cmd_config(action),
         Cmd::Mcp => mcp::serve(),
+        Cmd::Profile { action } => cmd_profile(action),
         Cmd::Docs { action } => cmd_docs(action),
         Cmd::Infra { project, env } => cmd_infra(&project, env),
         Cmd::UpdateAll => cmd_update_all(),
@@ -984,6 +1020,68 @@ fn cmd_infra(project: &str, env: Option<PathBuf>) {
         Err(e) => {
             eprintln!("cortex infra: {}", e);
             std::process::exit(1);
+        }
+    }
+}
+
+/// Racine d'un projet pour `profile` : chemin donné, sinon racine inscrite dans l'index du projet
+/// `-p`, sinon dossier courant.
+fn profile_root(path: Option<PathBuf>, project: &Option<String>) -> (PathBuf, String) {
+    if let Some(p) = path {
+        let name = project.clone().unwrap_or_else(|| p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
+        return (p, name);
+    }
+    if let Some(name) = project {
+        match atlas::manifest::Manifest::load(name) {
+            Ok(m) => return (PathBuf::from(m.root), name.clone()),
+            Err(_) => {
+                eprintln!("cortex: project '{name}' is not indexed (cortex list)");
+                std::process::exit(1);
+            }
+        }
+    }
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let name = cwd.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    (cwd, name)
+}
+
+fn cmd_profile(action: ProfileAction) {
+    match action {
+        ProfileAction::Init { path, project, force, print } => {
+            let (root, name) = profile_root(path, &project);
+            let text = profile::skeleton(&root, &name);
+            if print {
+                print!("{text}");
+                return;
+            }
+            let file = profile::profile_path(&root.to_string_lossy());
+            if file.exists() && !force {
+                eprintln!("cortex: {} already exists (use --force to overwrite, or `cortex profile check`)", file.display());
+                std::process::exit(1);
+            }
+            if let Some(dir) = file.parent() {
+                if let Err(e) = std::fs::create_dir_all(dir) {
+                    eprintln!("cortex: cannot create {}: {e}", dir.display());
+                    std::process::exit(1);
+                }
+            }
+            if let Err(e) = std::fs::write(&file, text) {
+                eprintln!("cortex: cannot write {}: {e}", file.display());
+                std::process::exit(1);
+            }
+            println!("Wrote {}", file.display());
+            println!("Edit it (synonyms, boosts, penalties), then `cortex profile check`; `cortex find` uses it at once.");
+        }
+        ProfileAction::Check { path, project } => {
+            let (root, _) = profile_root(path, &project);
+            let file = profile::profile_path(&root.to_string_lossy());
+            match std::fs::read_to_string(&file) {
+                Ok(t) => {
+                    println!("{}", file.display());
+                    print!("{}", profile::report(&profile::parse(&t)));
+                }
+                Err(_) => println!("No profile at {} (optional: `cortex profile init`).", file.display()),
+            }
         }
     }
 }
