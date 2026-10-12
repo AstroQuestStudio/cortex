@@ -95,8 +95,8 @@ approach. Anyone can rerun it: [`bench/public/run.sh`](bench/public/run.sh).
 | **graphify 0.8.38** (`graphify query`, best of 5 settings tried) | 13.3% | 35.0% | 0.238 | no ranked list: ~1,500 tokens of graph per question |
 | grep by keywords (`rg`, files ranked by distinct words) | 16.7% | 58.3% | 0.345 | 5,141 – 31,710 |
 | BM25 over whole files | 50.0% | 78.3% | 0.625 | 8 – 22 |
-| **Cortex** (`main`, after 0.5.0) | **63.3%** | **86.7%** | **0.737** | **14 – 29** |
-| Cortex 0.5.0 (released) | 56.7% | 86.7% | 0.702 | 14 – 29 |
+| **Cortex 0.5.1** | **63.3%** | **86.7%** | **0.737** | **14 – 29** |
+| Cortex 0.5.0 | 56.7% | 86.7% | 0.702 | 14 – 29 |
 
 The dense and hybrid RAG baselines (38.3% / 68.3% and 41.7% / 81.7% with Cortex 0.3.0; they need a
 506 MiB model) are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
@@ -110,7 +110,7 @@ question or keywords only, breadth-first or depth-first, budget 2,000 or 10,000 
 the best: depth-first with keywords only. Its default (natural question, breadth-first) scores
 10.0% / 30.0% / 0.204. Rerun it: [`bench/public/graphify-bench.py`](bench/public/graphify-bench.py).
 
-| | graphify 0.8.38 | **Cortex** (`main`) | |
+| | graphify 0.8.38 | **Cortex 0.5.1** | |
 |---|---:|---:|---|
 | top-1 / top-5 (60 questions) | 13.3% / 35.0% | **63.3% / 86.7%** | **4.8× / 2.5×** |
 | MRR | 0.238 | **0.737** | 3.1× |
@@ -133,7 +133,7 @@ refreshes itself on every call.
 
 ### Where Cortex does **not** win
 
-The `main` figures come from a pass that kept only changes lowering none of five private sets (see
+The 0.5.1 figures come from a pass that kept only changes lowering none of five private sets (see
 [docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 3); the released 0.5.0 scores 56.7% / 86.7% /
 0.702 on the same questions. Honest limits: public top-5 did not move (86.7%, ripgrep 75%); French
 questions are still weak on the public repositories (flask top-1 25%, ripgrep top-5 25%, with only
@@ -143,7 +143,7 @@ close that, it needs semantics. With 20 questions per repository, one question i
 difference under two questions is noise.
 
 **Real-world showcase**: AstroQuest's proprietary monorepo (8,069 files, 1.7 M lines of
-TypeScript, Rust and SQL), held-out questions written before any tuning. Cortex `main`:
+TypeScript, Rust and SQL), held-out questions written before any tuning. Cortex 0.5.1:
 **70.3% top-1, 97.3% top-5** on the 37 held-out questions (0.3.0 on the same ones: 59.5% / 78.4%),
 and 69% / 87% on a 100-question extended set (0.3.0: 55% / 80%). On 37 vaguer questions
 29.7% / 62.2% (0.3.0: 21.6% / 45.9%), and 22.5% / 27.5% on a blind set of 40 paraphrases. Earlier

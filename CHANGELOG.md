@@ -6,6 +6,8 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-10-12
+
 ### Added
 - **Project profile**: an optional `.cortex/profile.toml` at the project root, read on every
   `find` / `ask` without re-indexing and without effect when absent: `[synonyms]` (project
@@ -143,7 +145,8 @@ First public release of **Cortex by AstroQuest**.
   `<P>_SSH_PORT`, `<P>_LOGIN`, `<P>_SSH_KEY_PATH`, `<P>_LABEL`) and never copies other keys.
 - `CORTEX_HOME` overrides the data directory (`~/.cortex`).
 
-[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.1
 [0.5.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.0
 [0.4.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.3.0

@@ -99,8 +99,8 @@ Même corpus, même juge pour chaque approche. Rejouable par tous :
 | **graphify 0.8.38** (`graphify query`, meilleur de 5 réglages essayés) | 13,3 % | 35,0 % | 0,238 | pas de liste classée : ~1 500 tokens de graphe par question |
 | grep par mots-clés (`rg`, fichiers classés par mots distincts) | 16,7 % | 58,3 % | 0,345 | 5 141 – 31 710 |
 | BM25 sur les fichiers entiers | 50,0 % | 78,3 % | 0,625 | 8 – 22 |
-| **Cortex** (`main`, après la 0.5.0) | **63,3 %** | **86,7 %** | **0,737** | **14 – 29** |
-| Cortex 0.5.0 (publié) | 56,7 % | 86,7 % | 0,702 | 14 – 29 |
+| **Cortex 0.5.1** | **63,3 %** | **86,7 %** | **0,737** | **14 – 29** |
+| Cortex 0.5.0 | 56,7 % | 86,7 % | 0,702 | 14 – 29 |
 
 Les références RAG dense (38,3 % / 68,3 %) et hybride (41,7 % / 81,7 %), mesurées avec Cortex 0.3.0
 (elles demandent un modèle de 506 Mio), sont dans [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
@@ -114,7 +114,7 @@ l'interroger (question naturelle ou mots-clés seuls, largeur ou profondeur, bud
 tokens) et retenu la meilleure : profondeur, mots-clés seuls. Son réglage par défaut (question
 naturelle, largeur) donne 10,0 % / 30,0 % / 0,204. Rejouable : [`bench/public/graphify-bench.py`](bench/public/graphify-bench.py).
 
-| | graphify 0.8.38 | **Cortex** (`main`) | |
+| | graphify 0.8.38 | **Cortex 0.5.1** | |
 |---|---:|---:|---|
 | top-1 / top-5 (60 questions) | 13,3 % / 35,0 % | **63,3 % / 86,7 %** | **4,8× / 2,5×** |
 | MRR | 0,238 | **0,737** | 3,1× |
@@ -136,7 +136,7 @@ affiché au code), les docs de bibliothèques hors ligne, un index qui se rafra�
 
 ### Là où Cortex ne gagne **pas**
 
-Les chiffres de `main` viennent d'une passe qui n'a gardé que les changements n'abaissant aucun de
+Les chiffres de la 0.5.1 viennent d'une passe qui n'a gardé que les changements n'abaissant aucun de
 cinq jeux privés (voir [docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 3) ; la 0.5.0 publiée fait
 56,7 % / 86,7 % / 0,702 sur les mêmes questions. Limites honnêtes : le top-5 public n'a pas bougé
 (86,7 %, ripgrep 75 %) ; les questions en français restent faibles sur les dépôts publics (flask
@@ -147,7 +147,7 @@ Avec 20 questions par dépôt, une question vaut 5 points : un écart de moins d
 bruit.
 
 **Vitrine réelle** : le monorepo propriétaire d'AstroQuest (8 069 fichiers, 1,7 M lignes de
-TypeScript, Rust et SQL), questions cachées écrites avant tout réglage. Cortex `main` :
+TypeScript, Rust et SQL), questions cachées écrites avant tout réglage. Cortex 0.5.1 :
 **70,3 % en top-1, 97,3 % en top-5** sur les 37 questions cachées (0.3.0 sur les mêmes : 59,5 % /
 78,4 %), et 69 % / 87 % sur un jeu étendu de 100 questions (0.3.0 : 55 % / 80 %). Sur 37 questions
 plus vagues : 29,7 % / 62,2 % (0.3.0 : 21,6 % / 45,9 %), et 22,5 % / 27,5 % sur un jeu aveugle de
