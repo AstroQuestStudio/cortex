@@ -6,6 +6,100 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.3] — 2026-11-08
+
+### Added
+- **Rust call graph** (`src/rust_refs.rs`, on the tree already parsed for symbols). Until now a Rust
+  file only contributed a line scan of its `use` lines: no call was recorded, `card` said "called by 0"
+  and `impact` "no resolved caller" for every Rust symbol. Recorded now: calls `f()`, `a::b::f()`,
+  methods `x.f()` (standard-library methods dropped unless called on `self`), `f::<T>()`, calls inside
+  macro arguments (`assert!(f(x))`); type references (signatures, fields, patterns, struct
+  expressions, `SimEvent::Hit` → `SimEvent`, `Type::new()` → `new` and `Type`), constants in capitals.
+  Enum variants (`Mode::Search(x)`) and standard types are not references.
+- **Complete `use`**: `pub use` and `pub(crate) use` (kept as re-exports), nested groups
+  `a::{b::{C, D}, E}`, `self`, `*`, `as` aliases, multi-line declarations; `mod x;` imports its file;
+  `self::`/`super::` inside an inline `mod tests { … }` are brought back to the file's module.
+- **Rust paths resolved to files**, from file paths only (no Cargo.toml): `crate::` (deepest `src`
+  folder of the file, else every parent folder), `self::`, `super::`, child modules (2018 paths) and
+  workspace crates (`rs:<crate>/<module>` key of `<dir>/src/<module>.rs`, crate = folder name with
+  `-` → `_`, also the part after the first `_`: `grep_searcher` → `searcher`); `a/b.rs`, `a/b/mod.rs`,
+  `lib.rs`; the longest existing prefix wins. **Re-exports are followed**: `use game_sim::SimEvent` goes
+  through the `pub use world::{SimEvent, …}` of `lib.rs` to `world.rs` (3 hops at most), and every file
+  crossed counts as imported.
+- Resolution rules for Rust files: an `impl Foo` block yields to the `struct`/`enum`/`type Foo` (for
+  every language, like a C++ prototype yields to its definition); case class (`Foo` never targets
+  `fn foo`); several homonyms in the caller's own file are ambiguous instead of "the first one".
+- Incremental update stays exact: when a file with re-exports changes, is re-resolved, or a Rust file
+  disappears, its Rust importers are re-resolved too (test `rust_reexport_chain_matches_full_rebuild`,
+  plus a two-crate workspace fixture in the tool tests).
+
+### Changed
+- Atlas format v6 (`reexports` persisted, `rs:` keys in the stem index): existing atlases are rebuilt
+  on first open; run `cortex update-all` once.
+- `site_appel` (call line shown by `card`/`impact`) prefers an exact-case match.
+- `overview` lists a Rust import under its crate name (`serde`), never `crate`/`self`/`super`.
+
+### Benchmarks (same machine, 0.5.2 binary then 0.5.3 binary, same commands, frozen source snapshots)
+- Public benchmark (`bench/public/run.sh`): flask 65.0 / 95.0 / 0.788, hono 70.0 / 90.0 / 0.774,
+  ripgrep 55.0 / 75.0 / 0.648 — unchanged, identical rank for every question. Private: `queries.json`
+  78.0 / 90.0 / 0.841, `holdout.json` 54.1 / 73.0 / 0.625 — unchanged, identical ranks.
+- Callers found (grep as ground truth): private Rust game workspace `apply_damage` 0 → 3 (3/3), `take_control` 0 → 2
+  (2/2), `SimEvent` 0 → 57 direct users in 24 files + `lib.rs` (every file that names it); ripgrep
+  `build_parallel` 0 → 4 (4/4), `search_parallel` 0 → 1 (1/1), `GlobSet` 0 → 14; Cortex `impact` 0 → 2
+  (2/2), `spec_base` 0 → 3 (3/3). Name-level false positives: 0 of 738 call sites over 240 random
+  symbols (ripgrep, Cortex, a private Rust game workspace).
+- `bench-latence --echelle` (16 threads, median of 5): full build ripgrep 253 → 268 ms, Cortex 136 →
+  159 ms, private game workspace 162 → 160 ms; query p50 / p95 unchanged within noise; update of one file 7–12 ms
+  before and after. `card` / `impact` on Rust symbols are now measured: 0.9–1.4 / 1.0–1.2 ms median.
+  Atlas: ripgrep 2.03 → 2.73 MB.
+
+### Known limits
+- Method calls are resolved by name, without type inference: `Regex::builder().build(p)` may point to
+  the project's only `build`. `Type::new()` keeps `new` and `Type` as two references (the model has
+  simple names only), so `new` is often ambiguous.
+- Crate names come from folder names; `#[path]`, `include!` and macro-generated items are not seen.
+- `impact` at depth ≥ 2 follows type references through struct fields and can be broad.
+
+## [0.5.2] — 2026-10-29
+
+### Added
+- **Lua support** (`.lua`, tree-sitter-lua 0.1, Lua 5.1 of Recoil / Beyond All Reason): `function
+  widget:DrawWorld()` is the method `widget:DrawWorld` (same for `gadget:GameFrame`...), `function
+  M.foo()`, `local function foo()`, `M.foo = function()` and `local M = { run = function() end }` are
+  functions (`M.foo`, `foo`, `M.run`), `return { armck = { ... } }` (definition tables of `units/*.lua`)
+  gives one `struct` per top-level key, a big top-level `local cfg = { ... }` is a `const`. Call graph:
+  `obj:foo()`, `M.foo()` and `foo()` all resolve on `foo`; `Spring.*`, `gl.*`, the standard library and
+  local aliases of engine functions (`local GetUnitPosition = Spring.GetUnitPosition`) are not recorded
+  as calls. `VFS.Include("a/b.lua")`, `include(...)`, `require(...)` are imports. `--` comments, `---@`
+  annotations and `--[[ ]]` blocks feed roles and file headers; for widgets and gadgets the `name` and
+  `desc` of `GetInfo()` stand for the missing header comment.
+- **GLSL support** (`.glsl .vert .frag .geom .comp .tesc .tese`, tree-sitter-glsl 0.1.9): functions
+  (with call graph), `struct`, `uniform` (text pass, robust to `#if` / `#line` / interface blocks) and
+  `#define` with a value. Shaders written in `[[ ... ]]` strings inside Lua are parsed too, at their real
+  line numbers in the Lua file.
+- **Go, Java and shell** (`.go`, `.java`, `.sh .bash .zsh`, tree-sitter-go / java / bash 0.21): symbols
+  only (functions, methods, types, structs, interfaces, constants; classes, interfaces, enums, records,
+  methods, constructors; shell functions), no call graph yet.
+- `graph::call_key` also cuts qualified names at `.` and `:` (names without spaces), so Lua names match
+  the calls that target them.
+
+### Notes
+- New `Lang` codes in the atlas (Lua 16, GLSL 17, Go 18, Java 19, shell 20): older atlases stay valid;
+  run `cortex update-all` once to index the newly supported files of existing projects.
+- Grammar constraint: tree-sitter stays at 0.22. The next series of these grammars (lua 0.2+, glsl 0.2,
+  go / java / bash 0.23+) go through `tree-sitter-language` and need tree-sitter >= 0.23.
+
+### Benchmarks
+- Private benchmark `queries.json` (AstroQuest, 50 questions): 78.0% / 90.0% / MRR 0.841 before and
+  after (0.5.1 binary then 0.5.2 binary, on the same index; also unchanged after re-indexing AstroQuest
+  with its new Lua, shell and Java files: 18,248 -> 18,376 files, 170,754 -> 170,963 symbols).
+- `bench-latence -p AstroQuest`, 0.5.1 then 0.5.2 binary on the same index, back to back (shared machine,
+  noise of about 1 ms): query median 11.06 -> 11.59 ms, p95 18.47 -> 19.25 ms, find 11.23 -> 12.14 ms,
+  card 4.26 -> 4.37 ms. Earlier run on the live index: 10.97 / 21.11 ms (0.5.1) against 10.60 / 20.79 ms (0.5.2).
+- Beyond All Reason (indexed from its game folder): 270 files, 3,077 symbols, 0.32 s before; 2,486 files
+  (2,143 Lua, 68 GLSL), 922,926 lines, 24,200 symbols, about 2.0 s after.
+- Binary: 22.1 MB -> 25.1 MB.
+
 ## [0.5.1] — 2026-10-12
 
 ### Added

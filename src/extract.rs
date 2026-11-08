@@ -28,6 +28,11 @@ enum Grammar {
     Rust,
     CSharp,
     Cpp,
+    Lua,
+    Glsl,
+    Go,
+    Java,
+    Bash,
 }
 
 impl Grammar {
@@ -40,6 +45,11 @@ impl Grammar {
             Lang::Rust => Some(Grammar::Rust),
             Lang::CSharp => Some(Grammar::CSharp),
             Lang::Cpp => Some(Grammar::Cpp),
+            Lang::Lua => Some(Grammar::Lua),
+            Lang::Glsl => Some(Grammar::Glsl),
+            Lang::Go => Some(Grammar::Go),
+            Lang::Java => Some(Grammar::Java),
+            Lang::Shell => Some(Grammar::Bash),
             _ => None,
         }
     }
@@ -53,6 +63,11 @@ impl Grammar {
             Grammar::Rust => tree_sitter_rust::language(),
             Grammar::CSharp => tree_sitter_c_sharp::language(),
             Grammar::Cpp => tree_sitter_cpp::language(),
+            Grammar::Lua => tree_sitter_lua::language(),
+            Grammar::Glsl => tree_sitter_glsl::language(),
+            Grammar::Go => tree_sitter_go::language(),
+            Grammar::Java => tree_sitter_java::language(),
+            Grammar::Bash => tree_sitter_bash::language(),
         }
     }
 
@@ -62,12 +77,16 @@ impl Grammar {
             Grammar::Py => PY_QUERY,
             Grammar::Rust => RUST_QUERY,
             Grammar::CSharp => CS_QUERY,
-            Grammar::Cpp => "", // C/C++ : parcours dédié, voir cpp.rs
+            Grammar::Cpp => "",                 // C/C++ : parcours dédié, voir cpp.rs
+            Grammar::Lua | Grammar::Glsl => "", // parcours dédiés, voir lua.rs et glsl.rs
+            Grammar::Go => GO_QUERY,
+            Grammar::Java => JAVA_QUERY,
+            Grammar::Bash => BASH_QUERY,
         }
     }
 }
 
-const N_GRAMMARS: usize = 7;
+const N_GRAMMARS: usize = 12;
 const QUERY_SLOT: OnceLock<Option<Query>> = OnceLock::new();
 /// Requêtes de symboles, une par grammaire.
 static SYMBOL_QUERIES: [OnceLock<Option<Query>>; N_GRAMMARS] = [QUERY_SLOT; N_GRAMMARS];
@@ -97,6 +116,11 @@ fn parse(g: Grammar, source: &[u8]) -> Option<Tree> {
     })
 }
 
+/// Arbre d'un shader GLSL en chaîne (Lua) : même analyseur par thread que les fichiers `.glsl`.
+pub fn parse_glsl(text: &str) -> Option<Tree> {
+    parse(Grammar::Glsl, text.as_bytes())
+}
+
 /// Extrait les symboles d'un fichier. Retourne vide si langage non supporté ou parse KO.
 #[cfg(test)]
 pub fn extract_symbols(lang: Lang, source: &str) -> Vec<Symbol> {
@@ -115,9 +139,14 @@ pub fn extract_symbols_and_refs(lang: Lang, source: &str) -> (Vec<Symbol>, FileR
         let tree = parse(g, &crate::cpp::blank_macros(source));
         return crate::cpp::extract(source, tree.as_ref());
     }
+    if g == Grammar::Lua || g == Grammar::Glsl {
+        let tree = parse(g, source.as_bytes());
+        return if g == Grammar::Lua { crate::lua::extract(source, tree.as_ref()) } else { crate::glsl::extract(source, tree.as_ref()) };
+    }
     let tree = parse(g, source.as_bytes());
+    let refine = matches!(g, Grammar::Ts | Grammar::Tsx | Grammar::Js | Grammar::Py | Grammar::Rust | Grammar::CSharp);
     let symbols = match (&tree, symbol_query(g)) {
-        (Some(t), Some(q)) => run(source.as_bytes(), t, q),
+        (Some(t), Some(q)) => run(source.as_bytes(), t, q, refine),
         _ => Vec::new(),
     };
     let refs = extract_refs_with(lang, source, tree.as_ref());
@@ -126,7 +155,7 @@ pub fn extract_symbols_and_refs(lang: Lang, source: &str) -> (Vec<Symbol>, FileR
 
 /// Exécute une requête tree-sitter et construit les symboles à partir des captures.
 /// Convention de la requête : capture `@name` = identifiant, `@kind.<x>` = type de symbole.
-fn run(source: &[u8], tree: &Tree, query: &Query) -> Vec<Symbol> {
+fn run(source: &[u8], tree: &Tree, query: &Query, refine: bool) -> Vec<Symbol> {
     let capture_names = query.capture_names();
     let mut cursor = QueryCursor::new();
     let mut symbols = Vec::new();
@@ -168,7 +197,7 @@ fn run(source: &[u8], tree: &Tree, query: &Query) -> Vec<Symbol> {
         }
         if let Some(n) = name {
             if !n.is_empty() && n.len() <= 120 {
-                let kind = refine_kind(&n, kind);
+                let kind = if refine { refine_kind(&n, kind) } else { kind };
                 let tokens = tokenize_identifier(&n);
                 let start =
                     decl_start.unwrap_or_else(|| source[..name_start].iter().rposition(|&b| b == b'\n').map(|i| i + 1).unwrap_or(0));
@@ -400,13 +429,39 @@ const CS_QUERY: &str = r#"
 (method_declaration name: (identifier) @name) @kind.method
 "#;
 
+/// Go : fonctions, méthodes, structures, interfaces, types, constantes (symboles seuls).
+const GO_QUERY: &str = r#"
+(function_declaration name: (identifier) @name) @kind.function
+(method_declaration name: (field_identifier) @name) @kind.method
+(type_spec name: (type_identifier) @name type: (struct_type)) @kind.struct
+(type_spec name: (type_identifier) @name type: (interface_type)) @kind.interface
+(type_spec name: (type_identifier) @name type: [(type_identifier) (qualified_type) (function_type) (map_type) (slice_type) (array_type) (pointer_type) (channel_type)]) @kind.type
+(type_alias name: (type_identifier) @name) @kind.type
+(const_spec name: (identifier) @name) @kind.const
+"#;
+
+/// Java : classes, interfaces, énumérations, enregistrements, méthodes, constructeurs.
+const JAVA_QUERY: &str = r#"
+(class_declaration name: (identifier) @name) @kind.class
+(record_declaration name: (identifier) @name) @kind.class
+(interface_declaration name: (identifier) @name) @kind.interface
+(enum_declaration name: (identifier) @name) @kind.enum
+(method_declaration name: (identifier) @name) @kind.method
+(constructor_declaration name: (identifier) @name) @kind.method
+"#;
+
+/// Shell (bash/sh/zsh) : fonctions.
+const BASH_QUERY: &str = r#"
+(function_definition name: (word) @name) @kind.function
+"#;
+
 // ─── Extraction des RÉFÉRENCES (graphe de relations) ──────────────────────────
 
 /// Extrait les références sortantes d'un fichier : imports, appels, refs DB.
 /// Hybride : tree-sitter (imports/calls structurés) + scan léger (patterns Supabase).
 #[cfg(test)]
 pub fn extract_refs(lang: Lang, source: &str) -> FileRefs {
-    let tree = Grammar::of(lang).filter(|_| is_js(lang)).and_then(|g| parse(g, source.as_bytes()));
+    let tree = Grammar::of(lang).filter(|_| is_js(lang) || lang == Lang::Rust).and_then(|g| parse(g, source.as_bytes()));
     extract_refs_with(lang, source, tree.as_ref())
 }
 
@@ -415,7 +470,7 @@ fn is_js(lang: Lang) -> bool {
     matches!(lang, Lang::TypeScript | Lang::Tsx | Lang::JavaScript | Lang::Jsx)
 }
 
-/// `extract_refs` avec l'arbre JS/TS déjà analysé (`None` : pas d'arbre, ou
+/// `extract_refs` avec l'arbre déjà analysé (JS/TS, Rust ; `None` : pas d'arbre, ou
 /// langage sans références tree-sitter).
 fn extract_refs_with(lang: Lang, source: &str, tree: Option<&Tree>) -> FileRefs {
     let mut refs = FileRefs::default();
@@ -427,13 +482,18 @@ fn extract_refs_with(lang: Lang, source: &str, tree: Option<&Tree>) -> FileRefs 
             extract_db_refs(source, &mut refs); // patterns Supabase
         }
         Lang::Python => extract_py_refs(source, &mut refs),
-        Lang::Rust => extract_rust_refs(source, &mut refs),
+        Lang::Rust => {
+            if let Some(t) = tree {
+                crate::rust_refs::extract(source, t, &mut refs);
+            }
+        }
         _ => {}
     }
     dedup(&mut refs.imports);
     dedup(&mut refs.imported_names);
     dedup_calls(&mut refs.calls);
     dedup(&mut refs.db_refs);
+    dedup(&mut refs.reexports);
     refs
 }
 
@@ -573,23 +633,6 @@ fn extract_py_refs(source: &str, refs: &mut FileRefs) {
     }
 }
 
-/// `use` Rust (scan léger).
-fn extract_rust_refs(source: &str, refs: &mut FileRefs) {
-    for line in source.lines() {
-        let l = line.trim_start();
-        if let Some(rest) = l.strip_prefix("use ") {
-            let path = rest.trim_end_matches(';').trim();
-            if let Some(last) = path.rsplit("::").next() {
-                let name = last.trim_matches(|c| c == '{' || c == '}' || c == ' ');
-                if !name.is_empty() {
-                    refs.imported_names.push(name.to_string());
-                }
-            }
-            refs.imports.push(path.to_string());
-        }
-    }
-}
-
 // ─── Commentaires : en-tête de fichier + doc-comments ─────────────────────────
 //
 // Beaucoup de modules expliquent leur rôle en prose (souvent en français) dans un
@@ -610,7 +653,8 @@ pub fn extract_comments(lang: Lang, source: &str, symbols: &mut [Symbol]) -> (Ve
         return (Vec::new(), markdown_summary(source));
     }
     let lines: Vec<&str> = source.lines().collect();
-    let hash_comments = matches!(lang, Lang::Python);
+    let hash_comments = matches!(lang, Lang::Python | Lang::Shell);
+    let dash = lang == Lang::Lua;
     // C/C++ : lignes de macros Unreal (UFUNCTION(...)) à enjamber au-dessus d'un symbole.
     let macro_lines: Vec<bool> = if lang == Lang::Cpp { crate::cpp::macro_only_lines(source) } else { Vec::new() };
 
@@ -619,7 +663,7 @@ pub fn extract_comments(lang: Lang, source: &str, symbols: &mut [Symbol]) -> (Ve
             continue;
         }
         let idx = s.line as usize - 1;
-        let mut text = doc_above(&lines, idx, hash_comments, &macro_lines);
+        let mut text = doc_above(&lines, idx, hash_comments, dash, &macro_lines);
         if matches!(lang, Lang::Python) {
             text.push_str(&python_docstring(&lines, idx));
         }
@@ -632,13 +676,21 @@ pub fn extract_comments(lang: Lang, source: &str, symbols: &mut [Symbol]) -> (Ve
             s.summary = crate::symbol::summary_of(&text);
         }
     }
-    let header = header_text(&lines, lang);
+    let mut header = header_text(&lines, lang);
+    if lang == Lang::Lua {
+        // Widgets/gadgets BAR : le rôle est dans `GetInfo()` (name, desc), pas dans un commentaire.
+        let info = crate::lua::getinfo_text(source);
+        if !info.is_empty() {
+            header = format!("{} {}", info, header);
+        }
+    }
     (crate::symbol::text_tokens(&header), crate::symbol::summary_of(&header))
 }
 
 /// Vrai si la ligne (trimmée) est une ligne de commentaire.
-fn is_comment_line(t: &str, hash_comments: bool) -> bool {
-    t.starts_with("//")
+fn is_comment_line(t: &str, hash_comments: bool, dash: bool) -> bool {
+    (dash && t.starts_with("--"))
+        || t.starts_with("//")
         || t.starts_with("/*")
         || t.starts_with('*')
         || t.starts_with("*/")
@@ -648,6 +700,8 @@ fn is_comment_line(t: &str, hash_comments: bool) -> bool {
 /// Retire les marqueurs de commentaire d'une ligne.
 fn strip_comment(t: &str) -> &str {
     let t = t.trim();
+    // Lua : `--`, `---@param`, `--[[ ... ]]`.
+    let t = if t.starts_with("--") { t.trim_start_matches('-').trim_start_matches("[[").trim_end_matches("]]") } else { t };
     let t = t
         .trim_start_matches("/**")
         .trim_start_matches("/*")
@@ -662,7 +716,7 @@ fn strip_comment(t: &str) -> &str {
 
 /// Commentaire contigu juste au-dessus de la ligne `idx` (en sautant les
 /// attributs/décorateurs et la ligne `export`/signature multi-ligne éventuelle).
-fn doc_above(lines: &[&str], idx: usize, hash_comments: bool, macro_lines: &[bool]) -> String {
+fn doc_above(lines: &[&str], idx: usize, hash_comments: bool, dash: bool, macro_lines: &[bool]) -> String {
     if idx == 0 || idx > lines.len() {
         return String::new();
     }
@@ -679,7 +733,7 @@ fn doc_above(lines: &[&str], idx: usize, hash_comments: bool, macro_lines: &[boo
     let mut collected: Vec<&str> = Vec::new();
     while i > 0 && collected.len() < MAX_DOC_LINES {
         let t = lines[i - 1].trim();
-        if t.is_empty() || !is_comment_line(t, hash_comments) {
+        if t.is_empty() || !is_comment_line(t, hash_comments, dash) {
             break;
         }
         collected.push(strip_comment(t));
@@ -719,9 +773,11 @@ fn python_docstring(lines: &[&str], idx: usize) -> String {
 /// de code "réelle" (imports, directives et lignes vides sont sautés, car beaucoup
 /// de fichiers placent leur explication juste après les imports).
 fn header_text(lines: &[&str], lang: Lang) -> String {
-    let hash_comments = matches!(lang, Lang::Python);
+    let hash_comments = matches!(lang, Lang::Python | Lang::Shell);
+    let dash = lang == Lang::Lua;
     let mut out: Vec<&str> = Vec::new();
     let mut in_block = false; // dans un /* ... */ multi-ligne
+    let mut in_lua_block = false; // dans un --[[ ... ]] multi-ligne
     let mut in_import = false; // dans un import { a, b } multi-ligne
     let mut in_docstring = false;
     for raw in lines.iter().take(MAX_HEADER_SCAN) {
@@ -737,6 +793,13 @@ fn header_text(lines: &[&str], lang: Lang) -> String {
             out.push(strip_comment(t));
             if t.contains("*/") {
                 in_block = false;
+            }
+            continue;
+        }
+        if in_lua_block {
+            out.push(t.trim_end_matches("]]").trim());
+            if t.contains("]]") {
+                in_lua_block = false;
             }
             continue;
         }
@@ -762,7 +825,14 @@ fn header_text(lines: &[&str], lang: Lang) -> String {
             }
             continue;
         }
-        if is_comment_line(t, hash_comments) {
+        if dash && t.starts_with("--[[") {
+            out.push(strip_comment(t));
+            if !t.contains("]]") {
+                in_lua_block = true;
+            }
+            continue;
+        }
+        if is_comment_line(t, hash_comments, dash) {
             out.push(strip_comment(t));
             continue;
         }
@@ -784,6 +854,7 @@ fn header_text(lines: &[&str], lang: Lang) -> String {
             || t.starts_with("mod ")
             || t.starts_with("extern crate")
             || t.starts_with("require(")
+            || (lang == Lang::Lua && (t.starts_with("VFS.Include") || t.starts_with("include(")))
             || (t.starts_with("const ") && t.contains("require("));
         if is_import {
             if t.starts_with("import") && !t.contains(" from ") && !t.ends_with(';') && !t.ends_with('\'') && !t.ends_with('"') {
@@ -896,5 +967,145 @@ function go() {
         assert!(refs.calls.iter().any(|c| c.name == "OfficeEditor"), "new X() est un appel de X");
         assert!(refs.db_refs.contains(&"office_documents".to_string()));
         assert!(refs.db_refs.contains(&"wallet_recharge".to_string()));
+    }
+
+    fn names(syms: &[crate::symbol::Symbol]) -> Vec<&str> {
+        syms.iter().map(|s| s.name.as_str()).collect()
+    }
+
+    const LUA_WIDGET: &str = r#"--- Barres de vie GL4
+function widget:GetInfo()
+	return {
+		name = "Health Bars GL4",
+		desc = "Draws health bars above units",
+		layer = 0,
+	}
+end
+
+local Utils = VFS.Include("luaui/Include/utils.lua")
+local GetUnitPosition = Spring.GetUnitPosition
+local M = {}
+
+-- Ajoute une barre à une unité
+local function addBarForUnit(unitID, barname)
+	local x = GetUnitPosition(unitID)
+	Utils.refresh(unitID)
+	Spring.Echo("bar")
+end
+
+function M.helper(a, b)
+	return addBarForUnit(a, b)
+end
+
+M.later = function(x) return x end
+
+function widget:DrawWorld()
+	addBarForUnit(1, "hp")
+	M:helper(1, 2)
+end
+
+function gadget:GameFrame(n)
+end
+
+local shaderSrc = [[
+#version 420
+uniform float iconDistance;
+float shade(vec3 c) { return c.x; }
+void main() {
+	gl_FragColor = vec4(shade(vec3(1.0)));
+}
+]]
+"#;
+
+    #[test]
+    fn lua_symbols_refs_and_header() {
+        let (syms, refs) = extract_symbols_and_refs(Lang::Lua, LUA_WIDGET);
+        let n = names(&syms);
+        for want in [
+            "widget:GetInfo",
+            "addBarForUnit",
+            "M.helper",
+            "M.later",
+            "widget:DrawWorld",
+            "gadget:GameFrame",
+            "shade",
+            "main",
+            "iconDistance",
+        ] {
+            assert!(n.contains(&want), "symbole manquant {want} dans {n:?}");
+        }
+        let draw = syms.iter().find(|s| s.name == "widget:DrawWorld").unwrap();
+        assert_eq!(draw.kind, SymbolKind::Method);
+        assert_eq!(draw.signature, "function widget:DrawWorld()");
+        assert!(draw.end_line > draw.line);
+        let add = syms.iter().find(|s| s.name == "addBarForUnit").unwrap();
+        assert_eq!(add.signature, "local function addBarForUnit(unitID, barname)");
+        // le shader inline porte les vraies lignes du fichier Lua
+        let shade = syms.iter().find(|s| s.name == "shade").unwrap();
+        assert_eq!(LUA_WIDGET.lines().nth(shade.line as usize - 1).unwrap().trim(), "float shade(vec3 c) { return c.x; }");
+        assert!(refs.imports.contains(&"/luaui/Include/utils.lua".to_string()));
+        // les appels du projet y sont, l'API moteur et l'alias local n'y sont pas
+        assert!(refs.calls.iter().any(|c| c.name == "addBarForUnit"));
+        assert!(refs.calls.iter().any(|c| c.name == "refresh"));
+        assert!(refs.calls.iter().any(|c| c.name == "helper"));
+        assert!(!refs.calls.iter().any(|c| c.name == "Echo" || c.name == "GetUnitPosition"), "{:?}", refs.calls);
+        // en-tête : name/desc de GetInfo
+        let mut syms = syms;
+        let (header, summary) = extract_comments(Lang::Lua, LUA_WIDGET, &mut syms);
+        assert!(header.contains(&"health".to_string()) && header.contains(&"bars".to_string()), "{header:?}");
+        assert!(summary.contains("Health Bars GL4"), "{summary}");
+        let add = syms.iter().find(|s| s.name == "addBarForUnit").unwrap();
+        assert!(add.doc.contains(&"barre".to_string()), "doc Lua `--` : {:?}", add.doc);
+    }
+
+    #[test]
+    fn lua_definition_tables() {
+        let src = "return {\n\tarmck = {\n\t\thealth = 760,\n\t\tspeed = 36,\n\t},\n\tarmflea = {\n\t\thealth = 55,\n\t},\n}\n";
+        let (syms, _) = extract_symbols_and_refs(Lang::Lua, src);
+        assert_eq!(names(&syms), vec!["armck", "armflea"]);
+        assert_eq!(syms[0].kind, SymbolKind::Struct);
+        assert_eq!((syms[0].line, syms[0].end_line), (2, 5));
+    }
+
+    #[test]
+    fn lua_call_key_matches_qualified_names() {
+        assert_eq!(crate::graph::call_key("widget:DrawWorld"), "drawworld");
+        assert_eq!(crate::graph::call_key("M.helper"), "helper");
+        assert_eq!(crate::graph::call_key("AFoxMissile::Launch"), "launch");
+        assert_eq!(crate::graph::call_key("Section 1.2 Intro"), "section 1.2 intro");
+    }
+
+    #[test]
+    fn glsl_file() {
+        let src = "#version 420\n#define PI 3.14159\nuniform sampler2D tex;\nlayout(std140) uniform Globals { vec4 a; };\nstruct Light { vec3 pos; };\nfloat sq(float x) {\n\treturn x * x;\n}\nvoid main() {\n\tfloat y = sq(PI);\n\tgl_FragColor = vec4(mix(y, 0.0, 0.5));\n}\n";
+        let (syms, refs) = extract_symbols_and_refs(Lang::Glsl, src);
+        let n = names(&syms);
+        for want in ["PI", "tex", "Globals", "Light", "sq", "main"] {
+            assert!(n.contains(&want), "symbole manquant {want} dans {n:?}");
+        }
+        assert!(refs.calls.iter().any(|c| c.name == "sq"));
+        assert!(!refs.calls.iter().any(|c| c.name == "mix" || c.name == "vec4"));
+        let sq = syms.iter().find(|s| s.name == "sq").unwrap();
+        assert_eq!((sq.line, sq.end_line, sq.signature.as_str()), (6, 8, "float sq(float x)"));
+    }
+
+    #[test]
+    fn go_java_shell_symbols() {
+        let go = "package main\n\ntype Server struct{ addr string }\ntype Handler interface{ Serve() }\nconst Max = 3\nfunc NewServer() *Server { return nil }\nfunc (s *Server) Start() error { return nil }\n";
+        let (syms, _) = extract_symbols_and_refs(Lang::Go, go);
+        let n = names(&syms);
+        for want in ["Server", "Handler", "Max", "NewServer", "Start"] {
+            assert!(n.contains(&want), "go : {want} dans {n:?}");
+        }
+        assert_eq!(syms.iter().find(|s| s.name == "NewServer").unwrap().kind, SymbolKind::Function, "pas de refine_kind en Go");
+        let java = "public class Foo extends Bar {\n  public Foo() {}\n  public int size() { return 1; }\n}\ninterface Baz { void run(); }\nenum Color { RED }\n";
+        let (syms, _) = extract_symbols_and_refs(Lang::Java, java);
+        let n = names(&syms);
+        for want in ["Foo", "size", "Baz", "Color", "run"] {
+            assert!(n.contains(&want), "java : {want} dans {n:?}");
+        }
+        let sh = "#!/bin/bash\n# Déploie\ndeploy() {\n  echo hi\n}\nfunction build_all {\n  make\n}\n";
+        let (syms, _) = extract_symbols_and_refs(Lang::Shell, sh);
+        assert_eq!(names(&syms), vec!["deploy", "build_all"]);
     }
 }

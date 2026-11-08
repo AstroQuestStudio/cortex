@@ -238,3 +238,78 @@ fn ask_un_appel_sous_budget() {
     drop(h);
     fin(&name, &dir);
 }
+
+/// Espace de travail Rust à deux crates : appels inter-fichiers et
+/// inter-crates, méthodes, `use` multi-lignes, ré-exportation `pub use` d'un
+/// `lib.rs` suivie jusqu'au fichier qui définit l'élément, homonymes départagés
+/// par la ré-exportation, `mod tests { use super::*; }`.
+fn projet_rust(tag: &str) -> (String, std::path::PathBuf, Handle) {
+    let name = format!("cortex-test-outils-rs-{}", tag);
+    clean(&name);
+    let dir = std::env::temp_dir().join(format!("cortex-outils-rs-{}-{}", tag, std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    for d in ["crates/game_sim/src", "crates/game-net/src/msg"] {
+        std::fs::create_dir_all(dir.join(d)).unwrap();
+    }
+    let w = |p: &str, c: &str| std::fs::write(dir.join(p), c).unwrap();
+    w(
+        "crates/game_sim/src/lib.rs",
+        "//! Simulation.\nmod combat;\nmod world;\npub mod settings;\n\npub use combat::apply_damage;\npub use world::{\n    SimEvent,\n    World,\n};\npub use settings::Config as SimConfig;\n",
+    );
+    w(
+        "crates/game_sim/src/combat.rs",
+        "use crate::world::{SimEvent, World};\n\n/// Applique des dégâts.\npub fn apply_damage(w: &mut World, d: f32) -> bool {\n    w.hp -= d;\n    w.hp <= 0.0\n}\n\npub fn fire(w: &mut World) -> SimEvent {\n    if apply_damage(w, 1.0) {\n        return SimEvent::Destroyed;\n    }\n    SimEvent::Hit { dmg: 1.0 }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n    fn tue() {\n        assert!(apply_damage(&mut World::default(), 9.0));\n    }\n}\n",
+    );
+    w(
+        "crates/game_sim/src/world.rs",
+        "/// Événements d'un tick.\npub enum SimEvent {\n    Hit { dmg: f32 },\n    Destroyed,\n}\n\n#[derive(Default)]\npub struct World {\n    pub hp: f32,\n}\n\nimpl World {\n    pub fn take_control(&mut self, id: u32) -> u32 {\n        id\n    }\n}\n",
+    );
+    // `fn world` (casse différente de `World`) : jamais confondue avec la structure.
+    w("crates/game_sim/src/settings.rs", "pub struct Config {\n    pub tick: u32,\n}\n\npub fn world() -> u32 {\n    0\n}\n");
+    w("crates/game-net/src/lib.rs", "pub mod msg;\nmod config;\n");
+    w("crates/game-net/src/config.rs", "pub struct Config {\n    pub port: u16,\n}\n");
+    w(
+        "crates/game-net/src/msg/mod.rs",
+        "use game_sim::{\n    SimConfig,\n    SimEvent,\n    World,\n};\n\npub fn relay(w: &mut World, c: &SimConfig) -> Option<SimEvent> {\n    let id = w.take_control(c.tick);\n    if game_sim::apply_damage(w, id as f32) {\n        return Some(SimEvent::Destroyed);\n    }\n    None\n}\n",
+    );
+    let (idx, tracked) = crate::index::build_index(&name, &dir).unwrap();
+    crate::atlas::rebuild_full(&name, &idx, tracked).unwrap();
+    let h = Handle::open(&name).unwrap();
+    (name, dir, h)
+}
+
+#[test]
+fn rust_appels_methodes_et_reexportations() {
+    let (name, dir, h) = projet_rust("graphe");
+    // Appels : même fichier, test en ligne, autre crate via la ré-exportation.
+    let c = run(&h, "card apply_damage");
+    assert!(c.contains("called by 3"), "{}", c);
+    for site in
+        ["S:crates/game_sim/src/combat.rs#fire L10", "S:crates/game_sim/src/combat.rs#tue L21", "S:crates/game-net/src/msg/mod.rs#relay L9"]
+    {
+        assert!(c.contains(site), "{} absent :\n{}", site, c);
+    }
+    // Méthode appelée depuis une autre crate.
+    let t = run(&h, "card take_control");
+    assert!(t.contains("S:crates/game-net/src/msg/mod.rs#relay L8"), "{}", t);
+    // Type ré-exporté par `pub use world::{…}` (multi-lignes) : ses utilisateurs.
+    let i = run(&h, "impact SimEvent");
+    for u in ["S:crates/game_sim/src/combat.rs#fire", "S:crates/game-net/src/msg/mod.rs#relay"] {
+        assert!(i.contains(u), "{} absent :\n{}", u, i);
+    }
+    // Homonyme `Config` dans les deux crates : l'alias ré-exporté `SimConfig`
+    // mène à `settings.rs`, jamais à `game-net/src/config.rs`.
+    let o = run(&h, "outline crates/game-net/src/msg/mod.rs");
+    assert!(o.contains("F:crates/game_sim/src/lib.rs"), "{}", o);
+    assert!(o.contains("F:crates/game_sim/src/world.rs"), "{}", o);
+    assert!(o.contains("F:crates/game_sim/src/settings.rs"), "{}", o);
+    assert!(!o.contains("F:crates/game-net/src/config.rs"), "{}", o);
+    // `mod x;` relie le fichier racine à ses modules.
+    let l = run(&h, "outline crates/game-net/src/lib.rs");
+    assert!(l.contains("F:crates/game-net/src/msg/mod.rs") && l.contains("F:crates/game-net/src/config.rs"), "{}", l);
+    // `impl World` ne capte pas les références au type.
+    let wcard = run(&h, "card S:crates/game_sim/src/world.rs#World");
+    assert!(wcard.contains("S:crates/game-net/src/msg/mod.rs#relay"), "{}", wcard);
+    drop(h);
+    fin(&name, &dir);
+}

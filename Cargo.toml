@@ -1,6 +1,6 @@
 [package]
 name = "astroquest-cortex"
-version = "0.5.1"
+version = "0.5.3"
 edition = "2021"
 authors = ["AstroQuest"]
 description = "Cortex by AstroQuest: the code-context engine for AI agents. Find, card, read, impact: understand a codebase in a few calls and ~10x fewer tokens than grep + read. CLI and MCP server."
@@ -63,6 +63,15 @@ tree-sitter-c-sharp = "0.21"
 # C/C++ : 0.22.x est la dernière série qui accepte tree-sitter 0.22 (>=0.21) sans migrer le reste.
 tree-sitter-cpp = "0.22"
 tree-sitter-md = "0.2"
+# 0.5.2 : Lua (Recoil / Beyond All Reason), GLSL, Go, Java, shell. Chaque grammaire doit
+# accepter tree-sitter 0.22 : lua 0.1.0 et go/java/bash 0.21 déclarent `tree-sitter >= 0.21`,
+# glsl 0.1.9 `^0.22.6`. Les séries suivantes (lua 0.2+, glsl 0.2, go/java 0.23+, bash 0.23+)
+# passent par `tree-sitter-language` et exigent tree-sitter >= 0.23 : ne pas les monter seules.
+tree-sitter-lua = "0.1"
+tree-sitter-glsl = "0.1.9"
+tree-sitter-go = "0.21"
+tree-sitter-java = "0.21"
+tree-sitter-bash = "0.21"
 
 # Scraper documentaire offline (Module B)
 ureq = { version = "2.10", features = ["tls"] }  # HTTP client léger blocking (pas de tokio)

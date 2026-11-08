@@ -503,6 +503,7 @@ impl Handle {
                     .map(|x| x.calls.iter().map(|c| CallRef { name: r.str(c.name).to_string(), line: c.line }).collect())
                     .unwrap_or_default(),
                 db_refs: owned(refs.map(|x| &x.db_refs)),
+                reexports: owned(refs.map(|x| &x.reexports)),
             },
             header: r.n.doc.iter().map(|&t| r.str(t).to_string()).collect(),
             summary: r.str(r.n.summary).to_string(),

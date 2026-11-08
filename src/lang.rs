@@ -12,6 +12,11 @@ pub enum Lang {
     CSharp,
     Rust,
     Cpp,
+    Lua,
+    Glsl,
+    Go,
+    Java,
+    Shell,
     Markdown,
     Sql,
     Json,
@@ -37,6 +42,11 @@ impl Lang {
             "rs" => Lang::Rust,
             // C et C++ : une seule grammaire (le C++ en est un sur-ensemble pour notre usage).
             "h" | "hpp" | "hh" | "hxx" | "inl" | "ipp" | "tpp" | "c" | "cc" | "cpp" | "cxx" | "c++" => Lang::Cpp,
+            "lua" => Lang::Lua,
+            "glsl" | "vert" | "frag" | "geom" | "comp" | "tesc" | "tese" => Lang::Glsl,
+            "go" => Lang::Go,
+            "java" => Lang::Java,
+            "sh" | "bash" | "zsh" => Lang::Shell,
             "md" | "mdx" | "markdown" => Lang::Markdown,
             "sql" => Lang::Sql,
             "json" => Lang::Json,
@@ -66,6 +76,11 @@ impl Lang {
                 | Lang::CSharp
                 | Lang::Rust
                 | Lang::Cpp
+                | Lang::Lua
+                | Lang::Glsl
+                | Lang::Go
+                | Lang::Java
+                | Lang::Shell
                 | Lang::Markdown
         )
     }
@@ -89,6 +104,11 @@ impl Lang {
             Lang::Css => 13,
             Lang::Other => 14,
             Lang::Cpp => 15,
+            Lang::Lua => 16,
+            Lang::Glsl => 17,
+            Lang::Go => 18,
+            Lang::Java => 19,
+            Lang::Shell => 20,
         }
     }
 
@@ -109,6 +129,11 @@ impl Lang {
             12 => Lang::Html,
             13 => Lang::Css,
             15 => Lang::Cpp,
+            16 => Lang::Lua,
+            17 => Lang::Glsl,
+            18 => Lang::Go,
+            19 => Lang::Java,
+            20 => Lang::Shell,
             _ => Lang::Other,
         }
     }
@@ -123,6 +148,11 @@ impl Lang {
             Lang::CSharp => "csharp",
             Lang::Rust => "rust",
             Lang::Cpp => "cpp",
+            Lang::Lua => "lua",
+            Lang::Glsl => "glsl",
+            Lang::Go => "go",
+            Lang::Java => "java",
+            Lang::Shell => "shell",
             Lang::Markdown => "markdown",
             Lang::Sql => "sql",
             Lang::Json => "json",

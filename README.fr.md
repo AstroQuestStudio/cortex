@@ -238,7 +238,7 @@ vocabulaire : ils s'appliquent aux mots de question rares dans le projet. Mesure
 ## Feuille de route
 
 Ingesteurs git (`why`), SQL (`schema`) et docs ; I1 `ask` sous budget ; I2 contexte
-différentiel ; I5 impact prédictif ; I8 faits vérifiables ; langages Go, Java, PHP,
+différentiel ; I5 impact prédictif ; I8 faits vérifiables ; langages PHP,
 Ruby, Kotlin, Swift ; libellés de sortie en anglais et spécification v1.0. Détail dans le
 [README anglais](README.md#roadmap).
 

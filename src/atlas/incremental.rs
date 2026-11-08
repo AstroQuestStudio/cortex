@@ -289,6 +289,18 @@ struct IncUniverse<'h> {
     added_path: HashMap<String, u32>,
     added_stem: HashMap<String, Vec<u32>>,
     defs: HashMap<String, Vec<Cand<u32, u32>>>,
+    /// Fichiers modifiés ou ajoutés : leur contenu EN ATTENTE (chemin, ré-exportations).
+    pending: HashMap<u32, &'h FileEntry>,
+}
+
+impl IncUniverse<'_> {
+    /// Ré-exportations dans l'état COURANT de l'atlas (avant ce changement).
+    fn old_reexports(&self, g: u32) -> Vec<String> {
+        self.h
+            .node(g)
+            .and_then(|r| r.refs().map(|refs| r.strs(&refs.reexports).into_iter().map(str::to_string).collect()))
+            .unwrap_or_default()
+    }
 }
 
 impl<'h> Universe for IncUniverse<'h> {
@@ -306,6 +318,19 @@ impl<'h> Universe for IncUniverse<'h> {
     }
     fn defs(&self, name_lower: &str) -> &[Cand<u32, u32>] {
         self.defs.get(name_lower).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+    fn path_of(&self, f: u32) -> String {
+        match self.pending.get(&f) {
+            Some(e) => e.path.clone(),
+            None => self.h.path_of(f).to_string(),
+        }
+    }
+    fn reexports(&self, f: u32) -> Vec<String> {
+        match self.pending.get(&f) {
+            Some(e) => e.refs.reexports.clone(),
+            None if self.removed.contains(&f) => Vec::new(),
+            None => self.old_reexports(f),
+        }
     }
 }
 
@@ -432,7 +457,9 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
     for pf in &pfiles {
         if pf.is_new {
             added_path.insert(pf.e.path.clone(), pf.gid);
-            added_stem.entry(graph::strip_known_ext(&pf.e.path).to_string()).or_default().push(pf.gid);
+            for k in graph::stem_keys(&pf.e.path) {
+                added_stem.entry(k).or_default().push(pf.gid);
+            }
         }
         let homonyms = crate::ids::ranks(pf.e.symbols.iter().map(|s| (s.name.as_str(), s.kind)));
         for (i, s) in pf.e.symbols.iter().enumerate() {
@@ -470,6 +497,41 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
             affected.extend(h.files_importing_base(&base).into_iter().filter(|f| !changed_files.contains(f)));
         }
     }
+    // Univers de résolution (les définitions sont ajoutées plus bas, une fois
+    // connus tous les fichiers à résoudre).
+    let pending: HashMap<u32, &FileEntry> = pfiles.iter().map(|p| (p.gid, &p.e)).collect();
+    let mut u = IncUniverse { h, removed: &removed, added_path, added_stem, defs: HashMap::new(), pending };
+
+    // ── Ré-exportations Rust ───────────────────────────────────────────────
+    // Un import Rust suit les `pub use` des fichiers atteints, et chaque fichier
+    // traversé est gardé comme importé : un fichier A dépend donc des
+    // ré-exportations (et de leur résolution) de fichiers dont il est, dans
+    // l'état courant, un IMPORTEUR. Quand un fichier qui a des ré-exportations
+    // (avant ou après) change ou doit être re-résolu, ou qu'un fichier Rust
+    // disparaît, ses importeurs Rust sont re-résolus aussi (de proche en proche).
+    let rust = crate::lang::Lang::Rust.as_u8();
+    let is_rust_file = |g: u32| h.node(g).is_some_and(|r| r.n.lang == rust);
+    let has_reexports = |g: u32| !u.old_reexports(g).is_empty() || u.pending.get(&g).is_some_and(|e| !e.refs.reexports.is_empty());
+    let mut frontier: Vec<u32> = Vec::new();
+    for pf in &pfiles {
+        if !pf.is_new && has_reexports(pf.gid) {
+            frontier.push(pf.gid);
+        }
+    }
+    frontier.extend(removed.iter().copied().filter(|&g| is_rust_file(g)));
+    frontier.extend(affected.iter().copied().filter(|&g| has_reexports(g)));
+    frontier.sort_unstable();
+    let mut seen: HashSet<u32> = changed_files.iter().chain(affected.iter()).copied().collect();
+    while let Some(f) = frontier.pop() {
+        for i in h.importers(f) {
+            if is_rust_file(i) && seen.insert(i) {
+                affected.insert(i);
+                if has_reexports(i) {
+                    frontier.push(i);
+                }
+            }
+        }
+    }
     lap!(format!("plan ({} changés, {} à re-résoudre)", pfiles.len() + removed.len(), affected.len()));
 
     // Vue de résolution des fichiers inchangés concernés (lue dans l'atlas).
@@ -489,7 +551,8 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
                 syms.iter().map(|s| s.name()),
                 refs.imported_names.iter().map(|&i| r.str(i)),
                 refs.calls.iter().map(|c| (r.str(c.name), c.line)).collect(),
-            );
+            )
+            .with_case_class(r.n.lang == crate::lang::Lang::Rust.as_u8());
             let specs = refs.imports.iter().map(|&i| r.str(i)).collect();
             Some(AFile { r, syms, fc, specs })
         })
@@ -503,10 +566,10 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
     }
     let cand_of = |g: u32| -> Option<Cand<u32, u32>> {
         if let Some(p) = pend.get(&g) {
-            return Some(Cand { file: p.file, sym: g, ord: p.ord, kind: p.kind });
+            return Some(Cand { file: p.file, sym: g, ord: p.ord, kind: p.kind, upper: graph::starts_upper(p.name) });
         }
         let r = h.node(g)?;
-        Some(Cand { file: r.n.owner_file, sym: g, ord: r.n.ord, kind: r.kind() })
+        Some(Cand { file: r.n.owner_file, sym: g, ord: r.n.ord, kind: r.kind(), upper: graph::starts_upper(r.name()) })
     };
     let mut defs: HashMap<String, Vec<Cand<u32, u32>>> = HashMap::with_capacity(needed.len());
     for n in needed {
@@ -518,7 +581,7 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
             defs.insert(n, v);
         }
     }
-    let u = IncUniverse { h, removed: &removed, added_path, added_stem, defs };
+    u.defs = defs;
     // Identifiant stable d'un symbole (en attente ou déjà dans l'atlas).
     let id_of = |g: u32| -> String {
         if let Some(p) = pend.get(&g) {
@@ -605,6 +668,7 @@ fn build_delta(h: &Handle, plan: Plan) -> (super::schema::AtlasSegment, Outcome)
                 imported_names: r.strs(&refs.imported_names),
                 calls: a.fc.calls.clone(),
                 db_refs: r.strs(&refs.db_refs),
+                reexports: r.strs(&refs.reexports),
                 body: h.body_of(&r),
             };
             b.sub_stats(stats_of(&r));
@@ -1207,6 +1271,66 @@ mod tests {
         drop(h_full);
         clean(name);
         clean(&full);
+    }
+
+    /// Fichier Rust passé par la vraie extraction (tree-sitter).
+    fn rs(path: &str, src: &str) -> FileEntry {
+        crate::index::process_bytes(path.into(), src.as_bytes(), 0, None).unwrap()
+    }
+
+    /// TEST-JUGE Rust : la résolution d'un import suit les `pub use` d'un AUTRE
+    /// fichier (et la chaîne de ré-exportations). Chaque changement qui touche
+    /// une ré-exportation ou un fichier traversé (sans toucher l'importeur) doit
+    /// re-résoudre l'importeur exactement comme une reconstruction complète.
+    #[test]
+    fn rust_reexport_chain_matches_full_rebuild() {
+        let name = "cortex-test-incr-rust-reexport";
+        clean(name);
+        let lib = |reexports: &str| rs("crates/game_sim/src/lib.rs", &format!("mod world;\nmod settings;\n{}", reexports));
+        let mut files = vec![
+            lib("pub use world::SimEvent;\npub use settings::*;\n"),
+            rs("crates/game_sim/src/world.rs", "pub enum SimEvent { Hit }\npub fn vider() {}\n"),
+            rs("crates/game_sim/src/settings.rs", "pub use crate::deep::Config;\n"),
+            rs("crates/game_sim/src/deep.rs", "pub struct Config { pub tick: u32 }\npub fn new() -> Config { Config { tick: 1 } }\n"),
+            rs("crates/game_net/src/config.rs", "pub struct Config { pub port: u16 }\npub fn new() -> Config { Config { port: 1 } }\n"),
+            rs(
+                "crates/game_net/src/msg.rs",
+                "use game_sim::{Config, SimEvent};\n\npub fn relay(c: &Config) -> SimEvent {\n    let _ = new();\n    vider();\n    SimEvent::Hit\n}\n",
+            ),
+        ];
+        crate::atlas::rebuild_full(name, &index_of(name, files.clone()), Default::default()).unwrap();
+        assert_equivalent(name, &index_of(name, files.clone()), "départ");
+        let h = Handle::open(name).unwrap();
+        let o = outil(&h, Appel::Outline { cible: "F:crates/game_net/src/msg.rs".into() });
+        assert!(o.contains("F:crates/game_sim/src/deep.rs"), "chaîne lib → settings → deep :\n{}", o);
+        drop(h);
+        let step = |files: &mut Vec<FileEntry>, label: &str, changes: Vec<Change>| {
+            let out = apply(name, changes, None).unwrap();
+            assert!(matches!(out, Outcome::Delta { .. } | Outcome::Unchanged), "{}: {:?}", label, out);
+            assert_equivalent(name, &index_of(name, files.clone()), label);
+        };
+        // 1. maillon intermédiaire : `settings.rs` ne ré-exporte plus `Config`.
+        let c = upsert(&mut files, rs("crates/game_sim/src/settings.rs", "pub struct Autre;\n"));
+        step(&mut files, "ré-exportation retirée au 2e maillon", vec![c]);
+        // 2. racine : `lib.rs` ré-exporte `Config` depuis un module qui n'existe pas encore.
+        let c = upsert(&mut files, lib("pub use world::SimEvent;\npub use extra::Config;\nmod extra;\n"));
+        step(&mut files, "ré-exportation vers un fichier absent", vec![c]);
+        // 3. le fichier apparaît.
+        let c = upsert(&mut files, rs("crates/game_sim/src/extra.rs", "pub struct Config;\npub fn new() -> Config { Config }\n"));
+        step(&mut files, "fichier ré-exporté ajouté", vec![c]);
+        // 4. il devient un module-dossier (suppression + ajout `extra/mod.rs`).
+        let moved = rs("crates/game_sim/src/extra/mod.rs", "pub struct Config;\npub fn new() -> Config { Config }\n");
+        let c1 = remove(&mut files, "crates/game_sim/src/extra.rs");
+        let c2 = upsert(&mut files, moved);
+        step(&mut files, "module déplacé en extra/mod.rs", vec![c1, c2]);
+        // 5. fichier traversé supprimé.
+        let c = remove(&mut files, "crates/game_sim/src/world.rs");
+        step(&mut files, "fichier traversé supprimé", vec![c]);
+        // 6. compaction : identique à la reconstruction.
+        merge_deltas(name).unwrap();
+        crate::atlas::compact(name).unwrap();
+        assert_equivalent(name, &index_of(name, files.clone()), "compaction");
+        clean(name);
     }
 
     /// Équivalence à l'échelle d'un VRAI projet (manuel) :

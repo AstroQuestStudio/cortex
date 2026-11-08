@@ -372,7 +372,14 @@ pub fn site_appel(h: &Handle, appelant: u32, nom: &str) -> Option<u32> {
     let (a, b) = (r.n.line, if r.n.end_line == 0 { u32::MAX } else { r.n.end_line });
     // Nom qualifié C++ (`AFoo::Bar`) : l'appel ne porte que `Bar`.
     let simple = nom.rsplit("::").next().unwrap_or(nom);
-    refs.calls.iter().filter(|c| c.line >= a && c.line <= b && f.str(c.name).eq_ignore_ascii_case(simple)).map(|c| c.line).min()
+    let dans = |l: u32| l >= a && l <= b;
+    // La casse exacte d'abord (Rust : `Intention::X` et `intention()` dans la même fonction).
+    refs.calls
+        .iter()
+        .filter(|c| dans(c.line) && f.str(c.name) == simple)
+        .map(|c| c.line)
+        .min()
+        .or_else(|| refs.calls.iter().filter(|c| dans(c.line) && f.str(c.name).eq_ignore_ascii_case(simple)).map(|c| c.line).min())
 }
 
 /// Appelants d'un symbole avec leur site d'appel, sans doublon d'imbrication :

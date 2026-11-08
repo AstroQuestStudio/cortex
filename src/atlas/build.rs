@@ -54,6 +54,7 @@ pub struct FileData<'a> {
     pub imported_names: Vec<&'a str>,
     pub calls: Vec<(&'a str, u32)>,
     pub db_refs: Vec<&'a str>,
+    pub reexports: Vec<&'a str>,
     /// Champ « corps » : (terme déjà raciné, occurrences), trié par terme.
     pub body: Vec<(&'a str, u32)>,
 }
@@ -83,7 +84,7 @@ pub struct FilePre {
     pub header_stems: Vec<String>,
     /// Noms appelés distincts (minuscules ASCII), ordre de première apparition.
     pub call_keys: Vec<String>,
-    /// Bases d'import distinctes (`graph::spec_base`), ordre de première apparition.
+    /// Bases d'import distinctes (`graph::spec_bases`), ordre de première apparition.
     pub import_bases: Vec<String>,
 }
 
@@ -98,11 +99,11 @@ impl FilePre {
                 call_keys.push(k);
             }
         }
-        let dir = graph::dir_of(f.path);
         let mut import_bases: Vec<String> = Vec::new();
+        let mut seen_bases: FxHashSet<String> = FxHashSet::default();
         for spec in &f.imports {
-            if let Some(b) = graph::spec_base(dir, spec) {
-                if !import_bases.contains(&b) {
+            for b in graph::spec_bases(f.path, spec) {
+                if seen_bases.insert(b.clone()) {
                     import_bases.push(b);
                 }
             }
@@ -318,6 +319,7 @@ impl SegBuilder {
             imported_names: self.st.intern_many(&f.imported_names),
             calls: f.calls.iter().map(|&(n, line)| CallRefA { name: self.st.intern(n), line }).collect(),
             db_refs: self.st.intern_many(&f.db_refs),
+            reexports: self.st.intern_many(&f.reexports),
         };
         let refs_idx = self.refs.len() as u32;
         self.refs.push(refs);
@@ -361,8 +363,10 @@ impl SegBuilder {
         if is_new {
             let p = self.st.intern(f.path);
             self.paths.push((p, gid));
-            let stem = self.st.intern(graph::strip_known_ext(f.path));
-            self.stems.push((stem, gid));
+            for k in graph::stem_keys(f.path) {
+                let stem = self.st.intern(&k);
+                self.stems.push((stem, gid));
+            }
         }
         // Index de re-résolution : noms appelés et bases d'import de CETTE version.
         for k in &pre.call_keys {
@@ -655,6 +659,7 @@ pub fn file_data(f: &crate::index::FileEntry) -> FileData<'_> {
         imported_names: f.refs.imported_names.iter().map(|s| s.as_str()).collect(),
         calls: f.refs.calls.iter().map(|c| (c.name.as_str(), c.line)).collect(),
         db_refs: f.refs.db_refs.iter().map(|s| s.as_str()).collect(),
+        reexports: f.refs.reexports.iter().map(|s| s.as_str()).collect(),
         body: f.body.iter().map(|(t, n)| (t.as_str(), *n)).collect(),
     }
 }
@@ -666,6 +671,7 @@ pub fn file_calls(f: &crate::index::FileEntry) -> FileCalls<'_> {
         f.refs.imported_names.iter().map(|s| s.as_str()),
         f.refs.calls.iter().map(|c| (c.name.as_str(), c.line)).collect(),
     )
+    .with_case_class(f.lang == crate::lang::Lang::Rust)
 }
 
 /// Construit un segment TRONC complet à partir de l'index déjà extrait.

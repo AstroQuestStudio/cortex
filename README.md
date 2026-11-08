@@ -310,8 +310,11 @@ words your team says that the code does not contain. Format: [docs/SPEC.md](docs
   needed) and re-indexes only what changed, as a small delta segment. No daemon, no watcher to
   configure, no external service: everything stays on your machine.
 
-Languages: TypeScript/TSX, JavaScript, Python, Rust, C#, C and C++ (`.h .hpp .hh .hxx .inl .c .cc .cpp .cxx`,
-Unreal Engine macros included), Markdown (tree-sitter).
+Languages: TypeScript/TSX, JavaScript, Python, Rust (calls, methods and type references; `use` and
+`pub use` resolved across the crates of a workspace), C#, C and C++ (`.h .hpp .hh .hxx .inl .c .cc .cpp .cxx`,
+Unreal Engine macros included), Lua (`.lua`: Recoil / Beyond All Reason widgets and gadgets, definition
+tables, GLSL embedded in strings), GLSL (`.glsl .vert .frag .geom .comp`), Go, Java, shell scripts
+(symbols only for the last three), Markdown (tree-sitter).
 
 ## More
 
@@ -337,7 +340,7 @@ Public, in the order we expect to build it. Every item ships with a benchmark th
 - **I5 — predictive impact**: call graph × co-change history, ranked by risk.
 - **I8 — verifiable facts**: each fact carries a content hash so an agent can check it is still
   true without re-reading the file.
-- **Languages**: Go, Java, PHP, Ruby, Kotlin, Swift.
+- **Languages**: PHP, Ruby, Kotlin, Swift; call graph for Go, Java and shell.
 - **English output labels** and a stable v1.0 of the [specification](docs/SPEC.md).
 
 ## The specification

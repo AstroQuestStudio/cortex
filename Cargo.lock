@@ -112,7 +112,7 @@ checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
 
 [[package]]
 name = "astroquest-cortex"
-version = "0.5.1"
+version = "0.5.3"
 dependencies = [
  "blake3",
  "clap",
@@ -130,9 +130,14 @@ dependencies = [
  "serde",
  "serde_json",
  "tree-sitter",
+ "tree-sitter-bash",
  "tree-sitter-c-sharp",
  "tree-sitter-cpp",
+ "tree-sitter-glsl",
+ "tree-sitter-go",
+ "tree-sitter-java",
  "tree-sitter-javascript",
+ "tree-sitter-lua",
  "tree-sitter-md",
  "tree-sitter-python",
  "tree-sitter-rust",
@@ -2025,6 +2030,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-bash"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5244703ad2e08a616d859a0557d7aa290adcd5e0990188a692e628ffe9dce40"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
 name = "tree-sitter-c-sharp"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2045,10 +2060,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-glsl"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb350415404d476edbc4a6bea6543d72c59dab6e917fa63abf7b0d45f0a9a0b8"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-go"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8d702a98d3c7e70e466456e58ff2b1ac550bf1e29b97e5770676d2fdabec00d"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-java"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33bc21adf831a773c075d9d00107ab43965e6a6ea7607b47fd9ec6f3db4b481b"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
 name = "tree-sitter-javascript"
 version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8710a71bc6779e33811a8067bdda3ed08bed1733296ff915e44faf60f8c533d7"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-lua"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b9fe6fc87bd480e1943fc1fcb02453fb2da050e4e8ce0daa67d801544046856"
 dependencies = [
  "cc",
  "tree-sitter",

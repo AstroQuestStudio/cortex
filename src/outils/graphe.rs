@@ -288,6 +288,11 @@ fn paquet(spec: &str) -> Option<String> {
     if spec.starts_with('.') || spec.starts_with('/') || spec.starts_with("@/") || spec.is_empty() {
         return None;
     }
+    // Rust : la crate (`serde::Deserialize` → `serde`) ; jamais `crate`/`self`/`super`.
+    if crate::rust_refs::is_rust_spec(spec) {
+        let first = spec.split("::").find(|s| !s.is_empty())?;
+        return (!matches!(first, "crate" | "self" | "super")).then(|| first.to_string());
+    }
     let mut it = spec.split('/');
     let first = it.next()?;
     Some(if first.starts_with('@') { format!("{}/{}", first, it.next().unwrap_or("")) } else { first.to_string() })

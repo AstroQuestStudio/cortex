@@ -39,6 +39,13 @@ Add `-p <Project>` (MCP: `project`) when several projects are indexed, and `-b <
   (`S:Source/Weapons/FoxMissiles.cpp#FoxFM::MissileSystem::Launch`; a bare `Launch` also works),
   `decl` is a prototype without a body (`card` and `impact` say `defined in:` / `declared in:`;
   `find` already shows the definition), data members are not symbols (use `grep`).
+- Lua (Recoil / Beyond All Reason): `function widget:DrawWorld()` is the symbol `widget:DrawWorld`
+  (a method); `M.foo`, `local function foo`, `M.foo = function` are functions; `return { armck = {...} }`
+  (definition tables) gives one `struct` per top-level key; a big top-level `local cfg = {...}` is a
+  `const`. A call `obj:foo()` / `M.foo()` resolves on its last segment (`foo`); `Spring.*`, `gl.*` and
+  the standard library are not recorded as calls. `VFS.Include("a/b.lua")` and `require` are imports.
+  GLSL (`.glsl .vert .frag .geom .comp`, and shaders written in `[[ ... ]]` strings inside Lua):
+  functions, `struct`, `uniform` and `#define` with value. Go, Java and shell: symbols only.
 - Line ranges are `L<start>-<end>`; in `card` and `impact`, callers carry the line of the call.
 - `✎` marks code that is not committed yet.
 - The last line, `next : <call>`, is the most useful next call (formerly "suite"). Follow it

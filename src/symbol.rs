@@ -277,6 +277,11 @@ pub struct FileRefs {
     /// Tables/RPC Supabase référencées (.from('x') / .rpc('y')) — lien code↔DB.
     #[serde(default)]
     pub db_refs: Vec<String>,
+    /// Ré-exportations (Rust `pub use a::X [as Y]`) : spécificateurs, aussi présents
+    /// dans `imports`. Suivies quand un autre fichier importe celui-ci
+    /// (`use ma_crate::X` → fichier qui définit `X`, voir `graph::resolve_imports`).
+    #[serde(default)]
+    pub reexports: Vec<String>,
 }
 
 /// Un appel/référence à un identifiant, avec sa ligne dans le fichier — la brique

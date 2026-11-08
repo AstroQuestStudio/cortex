@@ -9,12 +9,24 @@
 //!   ou absolu-projet (`/x`) est résolu vers les fichiers RÉELLEMENT présents
 //!   (chemin exact, chemin + extension connue, `<chemin>/index.<ext>`). Un
 //!   package externe n'est jamais résolu (pas de faux lien vers un homonyme).
+//!   Rust (`use`, `mod`) : tiges candidates ordonnées (`rust_refs::candidates`),
+//!   la première qui existe gagne ; si l'élément importé est ré-exporté par le
+//!   fichier atteint (`pub use`), la ré-exportation est suivie (profondeur
+//!   bornée) et chaque fichier traversé compte comme importé.
 //! - APPELS (granularité fonction : seuls les appels dans la plage de lignes du
 //!   symbole) : (1) même fichier, (2) fichier réellement importé par
 //!   l'appelant, (3) globalement seulement si le nom est UNIQUE dans le projet.
-//!   Sinon : ambigu — compté, jamais choisi au hasard.
+//!   Sinon : ambigu — compté, jamais choisi au hasard. Un bloc `impl Foo` cède
+//!   la place à la définition du type `Foo`, comme un prototype C++ à sa
+//!   définition. Fichiers Rust : règle de casse (`Foo` ne vise jamais `fn foo`)
+//!   et, dans le fichier même, un homonyme UNIQUE (sinon ambigu).
+//!
+//! La résolution d'un fichier ne dépend donc que de ses références, des CHEMINS
+//! du projet, des définitions des noms qu'il appelle et — pour Rust — des
+//! ré-exportations des fichiers qu'il importe (voir `atlas::incremental`).
 
 use crate::fx::{FxHashMap, FxHashSet};
+use crate::rust_refs;
 use crate::symbol::SymbolKind;
 
 /// Méthodes JS/TS trop génériques pour être résolues comme des appels du projet.
@@ -24,8 +36,10 @@ pub const GENERIC_CALLS: &[&str] = &[
 ];
 
 /// Extensions essayées pour résoudre un spécificateur d'import sans extension.
-const RESOLVE_EXTS: &[&str] =
-    &["ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "rs", "h", "hpp", "hh", "hxx", "inl", "ipp", "tpp", "c", "cc", "cpp", "cxx"];
+const RESOLVE_EXTS: &[&str] = &[
+    "ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "rs", "lua", "glsl", "h", "hpp", "hh", "hxx", "inl", "ipp", "tpp", "c", "cc", "cpp",
+    "cxx",
+];
 
 /// Clé de résolution d'un nom de symbole : minuscules ASCII du DERNIER segment
 /// d'un nom qualifié (`AFoxMissile::Launch` → `launch`). Un appel (`Launch()`,
@@ -33,6 +47,13 @@ const RESOLVE_EXTS: &[&str] =
 /// langages hors C/C++) ne changent pas.
 pub fn call_key(name: &str) -> String {
     let simple = name.rsplit("::").next().unwrap_or(name);
+    // Lua : `widget:DrawWorld`, `M.foo` → dernier segment (`drawworld`, `foo`), comme un appel
+    // `obj:DrawWorld()` / `M.foo()`. Les noms à espaces (titres markdown) restent entiers.
+    let simple = if simple.contains(['.', ':']) && !simple.contains(char::is_whitespace) {
+        simple.rsplit(['.', ':']).next().filter(|s| !s.is_empty()).unwrap_or(simple)
+    } else {
+        simple
+    };
     simple.to_ascii_lowercase()
 }
 
@@ -79,8 +100,38 @@ pub fn spec_base(from_dir: &str, spec: &str) -> Option<String> {
     }
 }
 
+/// Toutes les BASES candidates d'un spécificateur écrit dans le fichier
+/// `from_path` (persistées dans `import_bases`) : une seule pour un chemin
+/// JS/TS relatif ou aliasé, la liste ordonnée des tiges candidates pour un
+/// chemin Rust (`rust_refs::candidates`), aucune pour un package externe.
+pub fn spec_bases(from_path: &str, spec: &str) -> Vec<String> {
+    if is_rust(from_path, spec) {
+        let mut v: Vec<String> = Vec::new();
+        for (s, _) in rust_refs::candidates(from_path, spec) {
+            if !v.contains(&s) {
+                v.push(s);
+            }
+        }
+        v
+    } else {
+        spec_base(dir_of(from_path), spec).into_iter().collect()
+    }
+}
+
+/// Tiges sous lesquelles un fichier est indexé (`files_by_stem`) : son chemin
+/// sans extension connue et, pour un fichier Rust d'une crate, sa clé
+/// `rs:<crate>/<module>` (`rust_refs::crate_key`).
+pub fn stem_keys(path: &str) -> Vec<String> {
+    let mut v = vec![strip_known_ext(path).to_string()];
+    if let Some(k) = rust_refs::crate_key(path) {
+        v.push(k);
+    }
+    v
+}
+
 /// Bases d'import qu'un fichier de chemin `path` SATISFAIT (inverse de la
-/// résolution : `base == path`, `base == stem(path)`, `base/index == stem(path)`).
+/// résolution : `base == path`, `base == stem(path)`, `base/index == stem(path)`,
+/// clé de crate Rust).
 pub fn bases_satisfied_by(path: &str) -> Vec<String> {
     let stem = strip_known_ext(path);
     let mut out = vec![path.to_string()];
@@ -89,6 +140,9 @@ pub fn bases_satisfied_by(path: &str) -> Vec<String> {
     }
     if let Some(dir) = stem.strip_suffix("/index") {
         out.push(dir.to_string());
+    }
+    if let Some(k) = rust_refs::crate_key(path) {
+        out.push(k);
     }
     out
 }
@@ -105,6 +159,16 @@ pub struct Cand<F, S> {
     /// Rang du symbole dans son fichier (départage "même fichier" : le premier).
     pub ord: u32,
     pub kind: SymbolKind,
+    /// Nom (dernier segment) à initiale majuscule : règle de casse des
+    /// fichiers Rust (`FileCalls::case_class`).
+    pub upper: bool,
+}
+
+/// Initiale majuscule du nom simple (`a::Foo` → vrai, `M.foo` → faux).
+pub fn starts_upper(name: &str) -> bool {
+    let simple = name.rsplit("::").next().unwrap_or(name);
+    let simple = simple.rsplit(['.', ':']).next().filter(|s| !s.is_empty()).unwrap_or(simple);
+    simple.chars().next().is_some_and(|c| c.is_uppercase())
 }
 
 /// Ce que la résolution a besoin de savoir du projet.
@@ -115,6 +179,47 @@ pub trait Universe {
     fn files_by_stem(&self, stem: &str) -> Vec<Self::F>;
     /// Toutes les définitions d'un nom (minuscules ASCII), tous fichiers vivants.
     fn defs(&self, name_lower: &str) -> &[Cand<Self::F, Self::S>];
+    /// Chemin d'un fichier vivant.
+    fn path_of(&self, f: Self::F) -> String;
+    /// Ré-exportations d'un fichier vivant (`FileRefs::reexports`).
+    fn reexports(&self, f: Self::F) -> Vec<String>;
+}
+
+/// Spécificateur Rust (`use`/`mod` d'un fichier `.rs`) ?
+fn is_rust(from_path: &str, spec: &str) -> bool {
+    from_path.ends_with(".rs") && rust_refs::is_rust_spec(spec)
+}
+
+/// Résout un spécificateur Rust : première tige candidate qui existe, puis
+/// suivi des ré-exportations de l'élément importé (`pub use`) dans chaque
+/// fichier atteint, jusqu'à `MAX_REEXPORT_DEPTH` sauts.
+fn resolve_rust<U: Universe>(u: &U, from: U::F, from_path: &str, spec: &str, depth: u32, out: &mut Vec<U::F>) {
+    for (stem, item) in rust_refs::candidates(from_path, spec) {
+        let hits = u.files_by_stem(&stem);
+        if hits.is_empty() {
+            continue;
+        }
+        for t in hits {
+            if t == from {
+                continue;
+            }
+            if !out.contains(&t) {
+                out.push(t);
+            }
+            // Suivi même si `t` est déjà importé (par un autre `use` du même
+            // fichier) : l'élément, lui, peut être ré-exporté d'ailleurs.
+            if let (true, Some(item)) = (depth < rust_refs::MAX_REEXPORT_DEPTH, item.as_deref()) {
+                let tp = u.path_of(t);
+                for r in u.reexports(t) {
+                    let (rspec, exported, _) = rust_refs::parse_reexport(&r);
+                    if item == "*" || exported == "*" || exported == item {
+                        resolve_rust(u, from, &tp, rspec, depth + 1, out);
+                    }
+                }
+            }
+        }
+        return;
+    }
 }
 
 /// Fichiers RÉELLEMENT importés par `from` (chemin `from_path`).
@@ -122,6 +227,10 @@ pub fn resolve_imports<'s, U: Universe>(u: &U, from: U::F, from_path: &str, spec
     let dir = dir_of(from_path);
     let mut out: Vec<U::F> = Vec::new();
     for spec in specs {
+        if is_rust(from_path, spec) {
+            resolve_rust(u, from, from_path, spec, 0, &mut out);
+            continue;
+        }
         let Some(base) = spec_base(dir, spec) else { continue };
         let mut push = |t: U::F| {
             if t != from && !out.contains(&t) {
@@ -147,21 +256,53 @@ enum Resolution<F, S> {
 }
 
 /// Résolution d'un appel `name_lower` fait DEPUIS `from` (voir l'en-tête).
-fn resolve_call<U: Universe>(u: &U, name_lower: &str, from: U::F, imported: &[U::F]) -> Option<Resolution<U::F, U::S>> {
-    let all = u.defs(name_lower);
+fn resolve_call<U: Universe>(
+    u: &U,
+    name_lower: &str,
+    upper: Option<bool>,
+    from: U::F,
+    imported: &[U::F],
+) -> Option<Resolution<U::F, U::S>> {
+    let cased: Vec<Cand<U::F, U::S>>;
+    let all = match upper {
+        // Règle de casse (Rust) : `Foo` (type, variante, constante) ne vise
+        // jamais `fn foo`, ni l'inverse — les clés de résolution sont en minuscules.
+        Some(up) => {
+            cased = u.defs(name_lower).iter().filter(|c| c.upper == up).copied().collect();
+            &cased[..]
+        }
+        None => u.defs(name_lower),
+    };
     if all.is_empty() {
         return None;
     }
     // Un prototype d'en-tête (`Decl`) cède la place à la définition (.cpp) quand
     // elle existe ; seul, il reste une cible valable.
     let defined: Vec<Cand<U::F, U::S>>;
-    let cands: &[Cand<U::F, U::S>] = if all.iter().any(|c| c.kind == SymbolKind::Decl) && all.iter().any(|c| c.kind != SymbolKind::Decl) {
-        defined = all.iter().filter(|c| c.kind != SymbolKind::Decl).copied().collect();
+    // De même, un bloc `impl Foo` (genre `Class` en Rust, qui porte le nom du
+    // type) cède la place à la définition du type (`struct`/`enum`/`type`) :
+    // une référence à `Foo` vise la structure, pas l'un de ses `impl`.
+    let is_type_def = |k: SymbolKind| matches!(k, SymbolKind::Struct | SymbolKind::Enum | SymbolKind::Type);
+    let has_decl = all.iter().any(|c| c.kind == SymbolKind::Decl) && all.iter().any(|c| c.kind != SymbolKind::Decl);
+    let has_impl = all.iter().any(|c| c.kind == SymbolKind::Class) && all.iter().any(|c| is_type_def(c.kind));
+    let cands: &[Cand<U::F, U::S>] = if has_decl || has_impl {
+        defined = all
+            .iter()
+            .filter(|c| !(has_decl && c.kind == SymbolKind::Decl) && !(has_impl && c.kind == SymbolKind::Class))
+            .copied()
+            .collect();
         &defined
     } else {
         all
     };
-    if let Some(c) = cands.iter().filter(|c| c.file == from).min_by_key(|c| c.ord) {
+    if upper.is_some() {
+        // Rust : plusieurs homonymes dans le fichier même (`build` de deux
+        // `impl` voisins) — ambigu, jamais le premier venu.
+        let mut local = cands.iter().filter(|c| c.file == from);
+        if let Some(first) = local.next() {
+            return Some(if local.next().is_none() { Resolution::Found(*first) } else { Resolution::Ambiguous });
+        }
+    } else if let Some(c) = cands.iter().filter(|c| c.file == from).min_by_key(|c| c.ord) {
         return Some(Resolution::Found(*c));
     }
     let mut in_imports = cands.iter().filter(|c| imported.contains(&c.file));
@@ -185,6 +326,9 @@ pub struct FileCalls<'a> {
     pub calls: Vec<(&'a str, u32)>,
     /// Noms appelés en minuscules (parallèle à `calls`).
     calls_lower: Vec<String>,
+    /// Règle de casse (fichiers Rust) : un appel à initiale majuscule ne vise
+    /// qu'une définition à initiale majuscule, et inversement.
+    pub case_class: bool,
 }
 
 impl<'a> FileCalls<'a> {
@@ -199,7 +343,14 @@ impl<'a> FileCalls<'a> {
             imported_lower: imported_names.map(|n| n.to_ascii_lowercase()).collect(),
             calls,
             calls_lower,
+            case_class: false,
         }
+    }
+
+    /// Active la règle de casse (fichiers Rust, voir `rust_refs`).
+    pub fn with_case_class(mut self, on: bool) -> Self {
+        self.case_class = on;
+        self
     }
 
     /// Noms appelés (minuscules) — clés dont `Universe::defs` aura besoin.
@@ -224,22 +375,30 @@ pub fn resolve_symbol_calls<U: Universe>(
 ) -> (Vec<Cand<U::F, U::S>>, usize) {
     let mut out: Vec<Cand<U::F, U::S>> = Vec::new();
     let mut ambiguous = 0usize;
-    for (i, &(_, cl_line)) in fc.calls.iter().enumerate() {
+    for (i, &(name, cl_line)) in fc.calls.iter().enumerate() {
         if end_line > 0 && !(cl_line >= line && cl_line <= end_line) {
             continue;
         }
         let cl = fc.calls_lower[i].as_str();
-        // (ambigu ?, trouvé ?) — mis en cache par nom : la résolution ne dépend
-        // que du nom et du fichier appelant.
-        let res = match cache.get(cl) {
+        let upper = fc.case_class.then(|| starts_upper(name));
+        // (ambigu ?, trouvé ?) — mis en cache par nom (et classe de casse) : la
+        // résolution ne dépend que du nom et du fichier appelant.
+        let key_upper;
+        let key: &str = if upper == Some(true) {
+            key_upper = format!("^{}", cl);
+            &key_upper
+        } else {
+            cl
+        };
+        let res = match cache.get(key) {
             Some(r) => *r,
             None => {
-                let r = match resolve_call(u, cl, from, imported_files) {
+                let r = match resolve_call(u, cl, upper, from, imported_files) {
                     None => None,
                     Some(Resolution::Ambiguous) => Some((true, None)),
                     Some(Resolution::Found(c)) => Some((false, Some(c))),
                 };
-                cache.insert(cl.to_string(), r);
+                cache.insert(key.to_string(), r);
                 r
             }
         };
@@ -269,24 +428,33 @@ use crate::index::ProjectIndex;
 /// Univers de résolution sur un `ProjectIndex` complet : fichiers = index dans
 /// `idx.files`, symboles = (fichier, rang).
 pub struct IndexUniverse<'a> {
+    idx: &'a ProjectIndex,
     path_index: FxHashMap<&'a str, usize>,
-    stem_index: FxHashMap<&'a str, Vec<usize>>,
+    stem_index: FxHashMap<String, Vec<usize>>,
     defs: FxHashMap<String, Vec<Cand<usize, (usize, usize)>>>,
 }
 
 impl<'a> IndexUniverse<'a> {
     pub fn new(idx: &'a ProjectIndex) -> Self {
         let mut path_index = FxHashMap::default();
-        let mut stem_index: FxHashMap<&str, Vec<usize>> = FxHashMap::default();
+        let mut stem_index: FxHashMap<String, Vec<usize>> = FxHashMap::default();
         let mut defs: FxHashMap<String, Vec<Cand<usize, (usize, usize)>>> = FxHashMap::default();
         for (fi, f) in idx.files.iter().enumerate() {
             path_index.insert(f.path.as_str(), fi);
-            stem_index.entry(strip_known_ext(&f.path)).or_default().push(fi);
+            for k in stem_keys(&f.path) {
+                stem_index.entry(k).or_default().push(fi);
+            }
             for (si, s) in f.symbols.iter().enumerate() {
-                defs.entry(call_key(&s.name)).or_default().push(Cand { file: fi, sym: (fi, si), ord: si as u32, kind: s.kind });
+                defs.entry(call_key(&s.name)).or_default().push(Cand {
+                    file: fi,
+                    sym: (fi, si),
+                    ord: si as u32,
+                    kind: s.kind,
+                    upper: starts_upper(&s.name),
+                });
             }
         }
-        IndexUniverse { path_index, stem_index, defs }
+        IndexUniverse { idx, path_index, stem_index, defs }
     }
 }
 
@@ -301,6 +469,12 @@ impl<'a> Universe for IndexUniverse<'a> {
     }
     fn defs(&self, name_lower: &str) -> &[Cand<usize, (usize, usize)>] {
         self.defs.get(name_lower).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+    fn path_of(&self, f: usize) -> String {
+        self.idx.files[f].path.clone()
+    }
+    fn reexports(&self, f: usize) -> Vec<String> {
+        self.idx.files[f].refs.reexports.clone()
     }
 }
 
@@ -476,6 +650,51 @@ mod tests {
         assert_eq!(callees(&idx(vec![h, c, caller]), "Use::Run").0, vec!["src/a/Foo.cpp".to_string()]);
         assert_eq!(call_key("AFoo::Bar"), "bar");
         assert_eq!(call_key("useThing"), "usething");
+    }
+
+    /// Rust : `impl World` cède la place à `struct World` ; `World` ne vise pas
+    /// `fn world` (règle de casse) ; deux `build` dans le fichier même : ambigu.
+    #[test]
+    fn regles_rust_impl_casse_homonymes_locaux() {
+        let mut refs = FileRefs::default();
+        for (n, l) in [("World", 21), ("world", 22), ("build", 23)] {
+            refs.calls.push(CallRef { name: n.to_string(), line: l });
+            refs.imported_names.push(n.to_string());
+        }
+        let f = file(
+            "src/a.rs",
+            vec![
+                sym("World", SymbolKind::Struct, 1, 3),
+                sym("World", SymbolKind::Class, 5, 10),
+                sym("build", SymbolKind::Function, 6, 7),
+                sym("build", SymbolKind::Function, 8, 9),
+                sym("world", SymbolKind::Function, 11, 12),
+                sym("f", SymbolKind::Function, 20, 30),
+            ],
+            refs,
+        );
+        let p = idx(vec![f]);
+        let u = IndexUniverse::new(&p);
+        let e = &p.files[0];
+        let fc = FileCalls::new(
+            e.symbols.iter().map(|s| s.name.as_str()),
+            e.refs.imported_names.iter().map(|s| s.as_str()),
+            e.refs.calls.iter().map(|c| (c.name.as_str(), c.line)).collect(),
+        )
+        .with_case_class(true);
+        let (out, amb) = resolve_symbol_calls(&u, 0, &[], &fc, 20, 30, &mut FxHashMap::default());
+        let got: Vec<(usize, SymbolKind)> = out.iter().map(|c| (c.sym.1, c.kind)).collect();
+        assert_eq!(got, vec![(0, SymbolKind::Struct), (4, SymbolKind::Function)]);
+        assert_eq!(amb, 1);
+        // Sans la règle (autres langages) : `World` et `world` partagent la clé, le
+        // premier homonyme du fichier gagne — comportement inchangé.
+        let fc2 = FileCalls::new(
+            e.symbols.iter().map(|s| s.name.as_str()),
+            e.refs.imported_names.iter().map(|s| s.as_str()),
+            e.refs.calls.iter().map(|c| (c.name.as_str(), c.line)).collect(),
+        );
+        let (out2, _) = resolve_symbol_calls(&u, 0, &[], &fc2, 20, 30, &mut FxHashMap::default());
+        assert_eq!(out2.iter().map(|c| c.sym.1).collect::<Vec<_>>(), vec![0, 2]);
     }
 
     #[test]

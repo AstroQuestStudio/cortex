@@ -36,7 +36,8 @@ use rkyv::{Archive, Deserialize, Serialize};
 /// statistiques propres) ; termes des champs noms/commentaires racinés.
 /// v5 : rôle en une phrase (`summary`) des symboles et fichiers, signatures,
 /// cartes I7 avec identifiants stables (`S:chemin#nom`).
-pub const FORMAT_VERSION: u32 = 5;
+/// v6 : ré-exportations brutes (`reexports`, Rust `pub use`) ; tiges `rs:<crate>/…`.
+pub const FORMAT_VERSION: u32 = 6;
 
 /// Aucune valeur (id de chaîne absent, pas de fichier propriétaire…).
 pub const NONE: u32 = u32::MAX;
@@ -114,6 +115,7 @@ pub struct FileRefsA {
     pub imported_names: Vec<u32>,
     pub calls: Vec<CallRefA>,
     pub db_refs: Vec<u32>,
+    pub reexports: Vec<u32>,
 }
 
 /// Listes d'adjacence compressées. Deux formes :
