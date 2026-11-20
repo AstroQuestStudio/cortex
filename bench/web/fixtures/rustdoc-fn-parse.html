@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="rustdoc">
+<meta name="description" content="Parses a configuration string into a typed value.">
+<title>parse_config in tomlish - Rust</title>
+<meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="tomlish" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-1234.js" data-settings-js="settings-5678.js" data-crate-version="0.21.3">
+<link rel="canonical" href="https://docs.rs/tomlish/0.21.3/tomlish/fn.parse_config.html">
+<script src="../static.files/storage-abc.js"></script>
+</head>
+<body class="rustdoc fn">
+<!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]-->
+<nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../tomlish/index.html">logo</a></nav>
+<nav class="sidebar"><div class="sidebar-crate"><h2><a href="../tomlish/index.html">tomlish</a><span class="version">0.21.3</span></h2></div><div class="sidebar-elems"><h2><a href="index.html">In crate tomlish</a></h2></div></nav>
+<div class="sidebar-resizer"></div>
+<main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Function <a href="index.html">tomlish</a>::<wbr><a class="fn" href="#">parse_config</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../src/tomlish/lib.rs.html#42-58">source</a> &#183; <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub fn parse_config&lt;T: <a class="trait" href="https://doc.rust-lang.org/1.81.0/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.str.html">str</a>&gt;&gt;(
+    input: T,
+    opts: &amp;<a class="struct" href="struct.Options.html" title="struct tomlish::Options">Options</a>,
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.81.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="struct.Config.html" title="struct tomlish::Config">Config</a>, <a class="enum" href="enum.ParseError.html" title="enum tomlish::ParseError">ParseError</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Parses a configuration string into a typed <a href="struct.Config.html" title="struct tomlish::Config"><code>Config</code></a>.</p>
+<p>The input may be anything that implements <code>AsRef&lt;str&gt;</code>. Comments starting with <code>#</code> are ignored.</p>
+<h2 id="errors"><a class="doc-anchor" href="#errors">§</a>Errors</h2>
+<p>Returns <a href="enum.ParseError.html" title="enum tomlish::ParseError"><code>ParseError::Syntax</code></a> if the input is not valid, with the line and column of the first problem.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>tomlish::{parse_config, Options};
+
+<span class="kw">let </span>cfg = parse_config(<span class="string">"name = \"demo\""</span>, <span class="kw-2">&amp;</span>Options::default()).unwrap();
+<span class="macro">assert_eq!</span>(cfg.get_str(<span class="string">"name"</span>), <span class="prelude-val">Some</span>(<span class="string">"demo"</span>));</code></pre></div>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="boring">fn main() {
+</span><span class="kw">let </span>bad = tomlish::parse_config(<span class="string">"= 1"</span>, <span class="kw-2">&amp;</span>Default::default());
+<span class="macro">assert!</span>(bad.is_err());
+<span class="boring">}</span></code></pre></div>
+<div class="stab deprecated"><span class="emoji">&#128078;</span> Deprecated since 0.20.0: use <code>parse_config_with</code> instead.</div>
+</div></details></section></div></main>
+<script src="../static.files/main-abc.js"></script>
+<div id="rustdoc-footer-hidden" style="display:none">internal navigation state to ignore</div>
+</body>
+</html>

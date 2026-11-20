@@ -99,11 +99,23 @@ Même corpus, même juge pour chaque approche. Rejouable par tous :
 | **graphify 0.8.38** (`graphify query`, meilleur de 5 réglages essayés) | 13,3 % | 35,0 % | 0,238 | pas de liste classée : ~1 500 tokens de graphe par question |
 | grep par mots-clés (`rg`, fichiers classés par mots distincts) | 16,7 % | 58,3 % | 0,345 | 5 141 – 31 710 |
 | BM25 sur les fichiers entiers | 50,0 % | 78,3 % | 0,625 | 8 – 22 |
-| **Cortex 0.5.1** | **63,3 %** | **86,7 %** | **0,737** | **14 – 29** |
+| **Cortex 0.6.0** | **65,0 %** | **88,3 %** | **0,750** | non remesuré (14 – 29 avec la 0.5.1) |
+| Cortex 0.5.1 | 63,3 % | 86,7 % | 0,737 | 14 – 29 |
 | Cortex 0.5.0 | 56,7 % | 86,7 % | 0,702 | 14 – 29 |
 
 Les références RAG dense (38,3 % / 68,3 %) et hybride (41,7 % / 81,7 %), mesurées avec Cortex 0.3.0
 (elles demandent un modèle de 506 Mio), sont dans [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+
+**Ce qui change en 0.6.0.** Le lot des questions françaises, les symboles SQL / YAML / TOML / JSON et
+Kotlin donnent, sur les mêmes 60 questions, une moyenne de **65,0 % top-1 / 88,3 % top-5 / MRR 0,750**
+(0.5.1 : 63,3 % / 86,7 % / 0,737). La hausse vient du lot français (65,0 / 88,3 / 0,751 à lui seul) ;
+les symboles de configuration arrivés après ont déplacé le MRR moyen de 0,001 (hono 0,774 → 0,770,
+top-1 et top-5 inchangés), du bruit à 20 questions par dépôt. Par dépôt le gain est inégal : flask
+perd une question en top-5 (95 % → 90 %), ripgrep en gagne deux (75 % → 85 %). Banc français de 100
+questions (`bench/public-fr`, écrit à l'aveugle) : dev 65,0 % → 73,3 % de top-1 (l'ensemble sur
+lequel on a réglé), test 47,5 % → 55,0 % (top-5 inchangé à 82,5 % ; le test a été exécuté deux fois,
+voir [docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 4.2). Détail : [docs/BENCHMARKS.md](docs/BENCHMARKS.md)
+section 4.
 
 ### Cortex contre graphify, face à face
 
@@ -215,13 +227,30 @@ Cortex est un serveur [MCP](https://modelcontextprotocol.io) en stdio : `cortex 
 |---|---|
 | `find` / `cortex_find` | Où est X ? (langage naturel FR ou EN, ou mots-clés) |
 | `card` / `cortex_card` | C'est quoi : signature, rôle, appelés, appelants avec la ligne de l'appel, tests ? |
-| `read` / `cortex_read` | Montre exactement cette fonction (ou section de doc, ou plage) |
+| `read` / `cortex_read` | Montre exactement cette fonction (ou section de doc, ou plage) ; pour un gros symbole, `--autour "<question>"` (MCP `around`, `max_lines`) ne rend que les lignes qui répondent |
 | `outline` / `cortex_outline` | Que contient ce fichier ? |
 | `overview` / `cortex_overview` | Comment marche ce dossier ? |
 | `impact` / `cortex_impact` | Qu'est-ce qui casse si je change ça, quels tests relancer ? |
 | `path` / `cortex_path` | Comment A arrive-t-il à B ? |
 | `changed` / `cortex_changed` | Qu'ai-je modifié, qui l'appelle, quels tests ? |
 | `grep`, `files`, `docs` | Texte exact avec la fonction englobante, fichiers par nom, docs hors ligne |
+| `peek` / `cortex_peek` | Le bon endroit de N'IMPORTE QUEL gros texte (log de tests, sortie cargo, log serveur, JSON), indexé ou non : `cortex peek <fichier> "<question>"`, `--erreurs` pour les seuls blocs d'échec, sans question un résumé. Lit pareil le texte accentué ou non et la sortie de vitest, cargo, pytest, jest, `go test` et eslint ; `ask` lui passe les fichiers de log dont on parle |
+
+Nouveautés de la 0.6.0 :
+
+- **Questions en français** : table français → code (168 entrées), formes de base, locutions,
+  négation (« sans X »). `CORTEX_FR=` (vide) les désactive pour comparer.
+- **Langages** : Kotlin (`.kt .kts`, +4 Mo de binaire) ; symboles pour les fichiers SQL (tables,
+  colonnes, policies RLS, fonctions, triggers, index, vues), YAML (CI, compose, OpenAPI,
+  Kubernetes), TOML et JSON de configuration, classés à moitié poids sauf si la question les nomme.
+  Banc SQL privé d'AstroQuest (20 questions) : top-1 30 % → 90 % ; surcoût d'index : environ
+  +10,7 Mo pour 8 242 symboles SQL. tree-sitter 0.22 bloque encore Swift, PHP, Dart, Scala, Ruby,
+  Zig et Svelte.
+- **Cortex Web (expérimental, désactivé par défaut)** : `cargo build --release --features web`
+  ajoute `cortex web …` et cinq outils MCP `cortex_web_*` (la doc de la version exacte de votre
+  lockfile, reliée à votre code ; recherche web). Pas prêt pour la production : top-1 au niveau
+  section de 36,1 % sur notre banc, pages JavaScript non lues, DuckDuckGo répond par une page de
+  vérification. Voir [docs/WEB.md](docs/WEB.md).
 
 ## Personnaliser : le profil de projet (optionnel)
 
@@ -239,7 +268,7 @@ vocabulaire : ils s'appliquent aux mots de question rares dans le projet. Mesure
 
 Ingesteurs git (`why`), SQL (`schema`) et docs ; I1 `ask` sous budget ; I2 contexte
 différentiel ; I5 impact prédictif ; I8 faits vérifiables ; langages PHP,
-Ruby, Kotlin, Swift ; libellés de sortie en anglais et spécification v1.0. Détail dans le
+Ruby, Swift (Kotlin est livré en 0.6.0) ; libellés de sortie en anglais et spécification v1.0. Détail dans le
 [README anglais](README.md#roadmap).
 
 ## Contribuer, licence

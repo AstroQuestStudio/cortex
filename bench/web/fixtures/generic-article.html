@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Handling retries in HTTP clients - Tinkerbook Blog</title>
+<meta name="description" content="A practical guide to retry policies.">
+<link rel="canonical" href="https://blog.tinkerbook.example/2024/handling-retries">
+<style>.cookie{position:fixed}</style>
+<script>window.dataLayer = [];</script>
+</head>
+<body>
+<div class="cookie-banner" id="cookie-consent">We use cookies to improve your experience. <button>Accept all</button></div>
+<header class="site-header"><a class="brand" href="/">Tinkerbook</a><nav class="site-nav"><a href="/archive">Archive</a><a href="/about">About</a><a href="/subscribe">Subscribe</a></nav></header>
+<div class="layout">
+<article class="post">
+<header class="post-header"><h1>Handling retries in HTTP clients</h1><p class="meta">By Dana &middot; March 2024</p></header>
+<p>Retries make clients resilient, but a naive loop can turn a small outage into a big one. This article walks through a safe policy.</p>
+<h2>Why back off</h2>
+<p>When a server is overloaded, immediate retries add load. Exponential backoff spreads the load over time.</p>
+<ol>
+<li>Wait <code>base * 2^attempt</code> milliseconds.</li>
+<li>Add random <em>jitter</em> to avoid thundering herds.</li>
+<li>Stop after a fixed number of attempts.</li>
+</ol>
+<h2>A minimal implementation</h2>
+<pre><code class="language-python">import random, time
+
+def retry(fn, attempts=5, base=0.1):
+    for i in range(attempts):
+        try:
+            return fn()
+        except IOError:
+            time.sleep(base * 2 ** i + random.random() * 0.05)
+    raise RuntimeError("giving up")</code></pre>
+<blockquote><p>Retry only idempotent requests, or make the operation idempotent with a key.</p></blockquote>
+<h3>Which errors to retry</h3>
+<table><tr><th>Status</th><th>Retry?</th></tr><tr><td>429</td><td>yes, honour <code>Retry-After</code></td></tr><tr><td>503</td><td>yes</td></tr><tr><td>400</td><td>no</td></tr></table>
+<h2>Conclusion</h2>
+<p>Keep the policy simple and observable.</p>
+</article>
+<aside class="sidebar"><h3>Popular posts</h3><ul><li><a href="/p1">Ten tips for logging</a></li></ul></aside>
+</div>
+<section class="newsletter"><h2>Subscribe to our newsletter</h2><form><input type="email"><button>Sign up</button></form></section>
+<footer class="site-footer"><p>&copy; 2024 Tinkerbook. All rights reserved.</p><a href="/privacy">Privacy policy</a></footer>
+</body>
+</html>

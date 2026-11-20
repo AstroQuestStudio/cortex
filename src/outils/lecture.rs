@@ -439,6 +439,17 @@ fn fin_section(h: &Handle, f: u32, g: u32, n_lignes: u32) -> u32 {
 /// fichier, d'une plage), numérotées ; `contexte` lignes de plus de part et
 /// d'autre.
 pub fn read(handles: &[Handle], entree: &str, contexte: u32, budget: usize) -> String {
+    lire(handles, entree, contexte, budget, None)
+}
+
+/// `read <id> --autour "<question>"` : comme `read`, mais si la plage dépasse
+/// `SEUIL_AUTOUR` lignes, seules les lignes pertinentes pour la question sont rendues
+/// (voir `rendre_autour`). `max_lignes` : plafond explicite (sinon `min(60, max(12, n/4))`).
+pub fn read_autour(handles: &[Handle], entree: &str, contexte: u32, budget: usize, question: &str, max_lignes: Option<usize>) -> String {
+    lire(handles, entree, contexte, budget, Some((question, max_lignes)))
+}
+
+fn lire(handles: &[Handle], entree: &str, contexte: u32, budget: usize, autour: Option<(&str, Option<usize>)>) -> String {
     let (h, cible) = match resoudre(handles, entree) {
         Resolu::Trouve { h, cible, .. } => (h, cible),
         r => return echec(r, entree),
@@ -475,6 +486,16 @@ pub fn read(handles: &[Handle], entree: &str, contexte: u32, budget: usize) -> S
         None => format!("{} L{}-{}{}", ids::file_id(&path), a, b, marque(&ov, &path)),
     };
     out.ligne(&tete);
+    if let Some((question, max)) = autour {
+        if !question.trim().is_empty() && b - a + 1 > SEUIL_AUTOUR {
+            let tete_n = match g.and_then(|g| h.node(g)) {
+                Some(r) if r.kind() == SymbolKind::Heading => 1,
+                Some(r) if r.n.kind == 1 => lignes_signature(&src[a as usize - 1..b as usize]),
+                _ => 0,
+            };
+            return rendre_autour(out, &src, &path, (a, b), tete_n, question.trim(), max);
+        }
+    }
     let mut premiere_coupee: Option<u32> = None;
     for i in a..=b {
         let txt = src.get(i as usize - 1).map(|s| s.as_str()).unwrap_or("");
@@ -492,4 +513,246 @@ pub fn read(handles: &[Handle], entree: &str, contexte: u32, budget: usize) -> S
         (None, None) => format!("outline {}", ids::file_id(&path)),
     };
     out.fin(Some(suite))
+}
+
+// ─── read --autour : les lignes pertinentes d'un GROS symbole ───────────────
+
+/// Au-delà de ce nombre de lignes, `--autour` filtre ; en deçà, `read` est inchangé.
+pub const SEUIL_AUTOUR: u32 = 80;
+/// Plafond par défaut de lignes rendues (hors en-tête de provenance).
+pub const AUTOUR_LIGNES_DEFAUT: usize = 60;
+/// Contexte autour de chaque ligne retenue : 1 avant, 3 après.
+const AUTOUR_AVANT: usize = 1;
+const AUTOUR_APRES: usize = 3;
+/// Largeur max (caractères) d'une ligne rendue.
+const AUTOUR_LARGEUR: usize = 240;
+
+/// Nombre de lignes de l'en-tête d'un symbole (signature qui peut courir sur plusieurs
+/// lignes) : jusqu'à la première ligne qui ouvre le corps (`{`, `:`, `=>`, `;`), 4 au plus.
+fn lignes_signature(corps: &[String]) -> usize {
+    for (i, l) in corps.iter().take(4).enumerate() {
+        let t = l.trim_end();
+        if t.contains('{') || t.ends_with(':') || t.ends_with("=>") || t.ends_with(';') {
+            return i + 1;
+        }
+    }
+    corps.len().min(1)
+}
+
+/// Choisit les lignes à rendre : l'en-tête (`tete_n` premières), puis les fenêtres autour des
+/// lignes les mieux classées, jusqu'à `cap` lignes. Rend le masque et la meilleure fenêtre.
+fn choisir_lignes(scores: &[f32], tete_n: usize, cap: usize) -> (Vec<bool>, Option<(usize, usize)>) {
+    let n = scores.len();
+    let mut pris = vec![false; n];
+    let mut total = 0usize;
+    for p in pris.iter_mut().take(tete_n.min(cap)) {
+        *p = true;
+        total += 1;
+    }
+    // Même lissage que peek : une ligne vaut son score + 0,25 x ses voisines.
+    let s = |i: usize| scores.get(i).copied().unwrap_or(0.0);
+    let mut cand: Vec<(f32, usize)> =
+        (0..n).filter(|&i| s(i) > 0.0).map(|i| (s(i) + 0.25 * (if i > 0 { s(i - 1) } else { 0.0 } + s(i + 1)), i)).collect();
+    cand.sort_by(|x, y| y.0.total_cmp(&x.0).then(x.1.cmp(&y.1)));
+    let mut meilleure: Option<(usize, usize)> = None;
+    for &(_, i) in &cand {
+        if pris[i] {
+            continue;
+        }
+        let (mut lo, mut hi) = (i.saturating_sub(AUTOUR_AVANT), (i + AUTOUR_APRES).min(n - 1));
+        let mut cout = (lo..=hi).filter(|&k| !pris[k]).count();
+        if total + cout > cap {
+            let reste = cap.saturating_sub(total);
+            if reste < 2 {
+                continue;
+            }
+            lo = i;
+            hi = (i + reste - 1).min(hi);
+            cout = (lo..=hi).filter(|&k| !pris[k]).count();
+            if total + cout > cap {
+                continue;
+            }
+        }
+        for p in pris.iter_mut().take(hi + 1).skip(lo) {
+            *p = true;
+        }
+        total += cout;
+        meilleure.get_or_insert((lo, hi));
+    }
+    // Un trou d'UNE ligne entre deux fenêtres se comble (« 1 ligne omise » coûte plus qu'elle).
+    for i in 1..n.saturating_sub(1) {
+        if !pris[i] && pris[i - 1] && pris[i + 1] && total < cap {
+            pris[i] = true;
+            total += 1;
+        }
+    }
+    (pris, meilleure)
+}
+
+/// Rend la plage `(a, b)` (numéros absolus, 1-based) de `src` réduite aux lignes pertinentes.
+fn rendre_autour(
+    mut out: Out,
+    src: &[String],
+    path: &str,
+    (a, b): (u32, u32),
+    tete_n: usize,
+    question: &str,
+    max: Option<usize>,
+) -> String {
+    let corps: Vec<&str> = (a..=b).map(|i| src.get(i as usize - 1).map(|s| s.as_str()).unwrap_or("")).collect();
+    let n = corps.len();
+    let cap = match max {
+        Some(m) => m.clamp(4, 2000),
+        None => AUTOUR_LIGNES_DEFAUT.min((n / 4).max(12)),
+    };
+    let scores = crate::peek::scores_lignes(&corps, question);
+    let (pris, meilleure) = choisir_lignes(&scores, tete_n, cap);
+    let montrees = pris.iter().filter(|&&p| p).count();
+    let hors_tete = scores.iter().enumerate().any(|(i, &s)| s > 0.0 && i >= tete_n);
+    if !hors_tete {
+        out.ligne(&format!(
+            "(no line of these {} matches \"{}\": signature only; try other words, or read {}:{}-{})",
+            n, question, path, a, b
+        ));
+    } else {
+        out.ligne(&format!("(around \"{}\": {} of {} lines, absolute line numbers)", question, montrees, n));
+    }
+    let mut i = 0usize;
+    while i < n {
+        if pris[i] {
+            let ln = a as usize + i;
+            let txt = corps[i];
+            let txt = if txt.chars().count() > AUTOUR_LARGEUR {
+                format!("{}…", txt.chars().take(AUTOUR_LARGEUR).collect::<String>())
+            } else {
+                txt.to_string()
+            };
+            out.ligne(&format!("{}│{}", ln, txt));
+            i += 1;
+        } else {
+            let j = (i..n).find(|&k| pris[k]).unwrap_or(n);
+            out.ligne(&format!("… {} lines omitted (L{}-{})", j - i, a as usize + i, a as usize + j - 1));
+            i = j;
+        }
+    }
+    let suite = match meilleure {
+        Some((lo, hi)) => format!("read {}:{}-{}", path, a as usize + lo, a as usize + hi),
+        None => format!("read {}:{}-{}", path, a, b),
+    };
+    out.fin(Some(suite))
+}
+
+#[cfg(test)]
+mod tests_autour {
+    use super::*;
+    use crate::atlas::tests::clean;
+
+    /// Gros symbole (200 lignes de corps) avec trois endroits distinctifs, plus un petit symbole.
+    fn projet(tag: &str) -> (String, std::path::PathBuf, Handle) {
+        let name = format!("cortex-test-autour-{}", tag);
+        clean(&name);
+        let dir = std::env::temp_dir().join(format!("cortex-autour-{}-{}", tag, std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("src")).unwrap();
+        let mut s = String::from("export function petit(x: number) {\n  return x + 1\n}\n\nexport function gros(x: number, y: string) {\n");
+        for k in 0..200 {
+            match k {
+                60 => s.push_str("  const backoffMs = retryConnection(x) * 2 // exponential backoff before the next attempt\n"),
+                120 => s.push_str("  const jeton = rafraichirJetonSession(y) // session token renewal\n"),
+                170 => s.push_str("  logger.warn('quota exceeded for tenant', y)\n"),
+                _ => s.push_str(&format!("  const v{} = x + {} // filler line number {}\n", k, k, k)),
+            }
+        }
+        s.push_str("  return x\n}\n");
+        std::fs::write(dir.join("src/mod.ts"), s).unwrap();
+        let (idx, tracked) = crate::index::build_index(&name, &dir).unwrap();
+        crate::atlas::rebuild_full(&name, &idx, tracked).unwrap();
+        let h = Handle::open(&name).unwrap();
+        (name, dir, h)
+    }
+
+    fn nombre_lignes(sortie: &str) -> usize {
+        sortie.lines().filter(|l| l.split_once('│').is_some_and(|(n, _)| n.parse::<u32>().is_ok())).count()
+    }
+
+    #[test]
+    fn autour_gros_symbole_lignes_pertinentes_numeros_absolus() {
+        let (name, dir, h) = projet("gros");
+        let hs = std::slice::from_ref(&h);
+        let plein = read(hs, "S:src/mod.ts#gros", 0, 4000);
+        let total = nombre_lignes(&plein);
+        assert_eq!(total, 203, "{}", plein.lines().take(3).collect::<Vec<_>>().join("|"));
+        let r = read_autour(hs, "S:src/mod.ts#gros", 0, 4000, "retry connection backoff", None);
+        // Provenance, signature toujours, ligne attendue au numéro ABSOLU du fichier.
+        assert!(r.starts_with("S:src/mod.ts#gros fn L5-"), "{}", r);
+        assert!(r.contains("5│export function gros(x: number, y: string) {"), "{}", r);
+        assert!(r.contains("66│  const backoffMs = retryConnection(x) * 2"), "{}", r);
+        assert!(r.contains("lines omitted"), "{}", r);
+        assert!(nombre_lignes(&r) * 4 <= total, "{} lignes sur {}\n{}", nombre_lignes(&r), total, r);
+        assert!(!r.contains("session token"), "{}", r);
+        // Autre question, autre partie du corps.
+        let r = read_autour(hs, "S:src/mod.ts#gros", 0, 4000, "session token renewal", None);
+        assert!(r.contains("126│  const jeton = rafraichirJetonSession(y)"), "{}", r);
+        assert!(!r.contains("backoffMs"), "{}", r);
+        // Suite proposée : relire la meilleure fenêtre avec les numéros absolus.
+        assert!(r.contains("next : read src/mod.ts:"), "{}", r);
+        drop(h);
+        clean(&name);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn autour_plafond_explicite_et_aucune_ligne_ne_correspond() {
+        let (name, dir, h) = projet("plafond");
+        let hs = std::slice::from_ref(&h);
+        let r = read_autour(hs, "S:src/mod.ts#gros", 0, 4000, "filler line number", Some(10));
+        assert!(nombre_lignes(&r) <= 10, "{}", r);
+        let r = read_autour(hs, "S:src/mod.ts#gros", 0, 4000, "zorglub introuvable", None);
+        assert!(r.contains("no line of these") && r.contains("5│export function gros"), "{}", r);
+        assert_eq!(nombre_lignes(&r), 1, "signature seule : {}", r);
+        drop(h);
+        clean(&name);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Non-régression : sans `--autour`, ou sous le seuil, la sortie est celle de `read`.
+    #[test]
+    fn autour_sans_effet_sous_le_seuil_et_read_inchange() {
+        let (name, dir, h) = projet("seuil");
+        let hs = std::slice::from_ref(&h);
+        let normal = read(hs, "S:src/mod.ts#petit", 0, 4000);
+        assert_eq!(
+            normal,
+            "S:src/mod.ts#petit fn L1-3\n1│export function petit(x: number) {\n2│  return x + 1\n3│}\nnext : card S:src/mod.ts#petit\n"
+        );
+        assert_eq!(read_autour(hs, "S:src/mod.ts#petit", 0, 4000, "return", None), normal);
+        // Question vide : pas de filtrage.
+        assert_eq!(read_autour(hs, "S:src/mod.ts#gros", 0, 4000, "  ", None), read(hs, "S:src/mod.ts#gros", 0, 4000));
+        // Plage de fichier > seuil : filtrée aussi, numéros absolus.
+        let r = read_autour(hs, "src/mod.ts:1-203", 0, 4000, "quota exceeded tenant", None);
+        assert!(r.contains("176│  logger.warn('quota exceeded for tenant', y)"), "{}", r);
+        drop(h);
+        clean(&name);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn choisir_lignes_respecte_le_plafond_et_comble_les_trous_d_une_ligne() {
+        let mut sc = vec![0.0f32; 100];
+        for i in [10, 30, 50, 70, 90] {
+            sc[i] = 5.0;
+        }
+        let (pris, meilleure) = choisir_lignes(&sc, 1, 12);
+        assert!(pris.iter().filter(|&&p| p).count() <= 12);
+        assert!(pris[0], "l'en-tête est toujours pris");
+        assert!(meilleure.is_some());
+        // Deux fenêtres séparées d'une seule ligne se rejoignent.
+        let mut sc = vec![0.0f32; 40];
+        sc[10] = 5.0;
+        sc[15] = 4.0;
+        let (pris, _) = choisir_lignes(&sc, 1, 30);
+        assert!((9..=18).all(|i| pris[i]), "{:?}", pris);
+        assert_eq!(lignes_signature(&["fn a(".into(), "  x: u32,".into(), ") -> u32 {".into(), "  1".into()]), 3);
+        assert_eq!(lignes_signature(&["export const X = {".into()]), 1);
+    }
 }

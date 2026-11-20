@@ -159,7 +159,7 @@ pub fn apply(project: &str, changes: Vec<Change>, tracked: Option<Tracked>) -> s
         let mut idx = h.materialize();
         apply_plan_to_index(&h, &mut idx, plan);
         drop(h);
-        super::rebuild_full_locked(project, &idx, tracked)?;
+        super::rebuild_derived_locked(project, &idx, tracked)?;
         return Ok(Outcome::Rebuilt);
     }
 

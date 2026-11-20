@@ -1,0 +1,15 @@
+{
+  "title": "Pagination",
+  "version": "2024-06",
+  "description": "Cursor based pagination for list endpoints.",
+  "sections": [
+    {
+      "title": "Cursors",
+      "content": "<p>Pass the <code>cursor</code> value from the previous response to get the next page.</p><pre><code class=\"language-bash\">curl 'https://api.example.org/v1/items?cursor=abc123&amp;limit=50'</code></pre>"
+    },
+    {
+      "title": "Limits",
+      "content": "The default page size is 25 and the maximum is 100. Larger values are clamped silently."
+    }
+  ]
+}

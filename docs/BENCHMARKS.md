@@ -309,3 +309,198 @@ default engine).
 
 Latency (monorepo, `find` median, same binary, machine shared so +-0.5 ms): 0.5.0 4.4 ms; this
 pass without a profile 4.6 to 5.0 ms; with the 23-group profile 5.7 to 6.2 ms.
+
+## 4. Cortex 0.6.0 (2026-11-20)
+
+Everything in this section was measured on the working tree that became 0.6.0, with binaries built
+from it. Sections 1 to 3 describe the earlier published versions and are not re-measured.
+
+### 4.1 Public benchmark after the French, configuration-symbol and Kotlin passes
+
+Mean of the three repositories (20 questions each), `bench/public/run.sh`:
+
+| | top-1 | top-5 | MRR |
+|---|---:|---:|---:|
+| Cortex 0.5.1, published (replayed 2026-11-19) | 63.3% | 86.7% | 0.737 |
+| `main`, after the French-question lot | 65.0% | 88.3% | 0.751 |
+| `main`, plus SQL / YAML / TOML / JSON symbols and Kotlin | 65.0% | 88.3% | 0.750 |
+
+Per repository (0.5.1 → `main`, top-1 / top-5 / MRR): flask 65 / 95 / 0.788 → 70 / 90 / 0.805;
+hono 70 / 90 / 0.774 → 70 / 90 / 0.770; ripgrep 55 / 75 / 0.648 → 55 / 85 / 0.676.
+
+Reading:
+- The rise comes from the French-question lot (section 4.2): the table was measured on its own at
+  65.0 / 88.3 / 0.751.
+- It is not uniform: flask lost one top-5 question (95% → 90%) while ripgrep gained two (75% → 85%).
+- The configuration-symbol step (section 4.3) moved the mean MRR by 0.001 (hono 0.774 → 0.770, flask
+  and ripgrep within 0.001) and no top-1 or top-5 value. At 20 questions per repository we treat a
+  move of 0.004 MRR as noise, not as a measured loss.
+- The penalty on configuration files (×0.5) was chosen among 0.3, 0.5, 0.7 and 0.85: 0.3 and 0.5
+  give the same public results, 0.7 and 0.85 lower the flask MRR (0.805 → 0.797).
+- The Kotlin step leaves the public benchmark and the French dev benchmark identical.
+
+### 4.2 French questions
+
+`bench/public-fr/`: 100 questions written blind, in French, on the same pinned flask, hono and
+ripgrep commits as the public benchmark. Dev: 60 questions (20 per repository), the only set used to
+tune. Test: 40 questions (14 flask, 13 hono, 13 ripgrep), run twice (see below). Replay: `cortex bench
+bench/public-fr/<file>.json --project bench-<repo>`.
+
+| Set | Before | After |
+|---|---|---|
+| Dev, 60 questions | 65.0 / 88.3 / 0.746 | 73.3 / 95.0 / 0.820 (0.822 right after the lot) |
+| Test, 40 questions, first run (end of the French lot) | 47.5 / 82.5 / 0.624 | 55.0 / 80.0 / 0.656 |
+| Test, 40 questions, second run (0.6.0 release binary) | 47.5 / 82.5 / 0.624 | 55.0 / 82.5 / 0.661 |
+
+(top-1 / top-5 / MRR, mean of the three repositories.) Dev per repository: flask 55 / 85 / 0.673 →
+70 / 95 / 0.809; hono 65 / 85 / 0.740 → 70 / 95 / 0.799; ripgrep 75 / 95 / 0.824 → 80 / 95 / 0.853.
+Test per repository (first run): flask 85.7 / 92.9 / 0.885 → 78.6 / 92.9 / 0.841; hono 15.4 / 69.2 /
+0.418 → 38.5 / 61.5 / 0.510; ripgrep 38.5 / 84.6 / 0.548 → 46.2 / 84.6 / 0.603. Second run (release
+binary): flask 78.6 / 92.9 / 0.853, hono 38.5 / 69.2 / 0.512, ripgrep 46.2 / 84.6 / 0.603. The test
+set was therefore run twice, with two different binaries; the French tables were not touched between
+the two runs (the difference, one hono question back in the top 5, comes from later changes such as
+the configuration symbols, which we did not isolate). Both runs are reported; the test set is no
+longer an untouched control. The gain on test is real but smaller than on dev, which is where it was
+tuned: top-1 +3 questions out of 40, top-5 unchanged on the second run.
+
+What was changed: a one-way French → code table (168 entries, at most 3 code words each, an English
+question is never widened), base forms for conjugated and plural words, locutions, French question
+stop words, negation (« sans X »), location verbs (« où est défini »). Each entry was kept or
+dropped by measurement on dev (ablation per component, leave-one-out, adding candidates one at a
+time). Rejected by the same measurements: base forms without a guard (noise), removing the generic
+words function / method / class / file from questions (worse), the whole French lexicon of the
+generalisation module (neutral to negative), a pass through the rare-term lexicon (identical).
+
+Honest limits:
+- The table was tuned on dev; the gain on test is smaller and not uniform: top-1 +3 questions out of
+  40 (hono +3, ripgrep +1, flask −1) but **top-5 −1 question** (hono).
+- The test set was run once, by the same author as dev. 40 questions: one question is 2.5 points.
+- Questions that describe a mechanism without naming it remain out of reach of a lexicon.
+- `CORTEX_FR=` (empty) switches the French handling off to compare on the same binary.
+
+### 4.3 SQL, YAML, TOML and JSON symbols
+
+Before, such a file yielded no symbol. `src/confsym.rs` reads them with hand-written scanners (no
+grammar, no dependency, no change of index format).
+
+Private AstroQuest SQL benchmark: 20 questions (French and English: table, columns, policy, function,
+trigger, index, view, enum, extension, who added a column) on 919 migration files (99,595 lines,
+8,242 symbols). The repository and the questions cannot be published, so nobody else can replay it.
+
+| | top-1 | top-5 | MRR |
+|---|---:|---:|---:|
+| before (no SQL symbol) | 30.0% | 45.0% | 0.369 |
+| after | 90.0% | 100.0% | 0.942 |
+
+The two questions not ranked first: a « who added the column » question (rank 3) and one of the two
+trigger questions. Costs and rules:
+- Index: about +10.7 MB for the 8,242 SQL symbols.
+- These symbols are ranked at ×0.5 unless the question contains a word such as `table`, `policy`,
+  `rls`, `migration`, `workflow`, `yaml`, `column`, `trigger`, `schema`: reachable, but they do not
+  push code out of the results on a code question (public benchmark, section 4.1).
+- `EXTRACT_VERSION` (now 2) is stored in the manifest: an index built by an older extractor is rebuilt
+  once from its sources, automatically, on the next call. That first call after the upgrade is
+  slower, once per project.
+
+### 4.4 `peek` on the agent benchmark
+
+`cortex bench-agent --tache peek` (no index, no network; tokens = characters / 4): the task « why
+does this test fail? » answered by a full `Read` of the log (2,000 lines per call) against
+`cortex peek <log> "<question>"`.
+
+| Task | Log lines | Read, tokens | `peek`, tokens | Facts found |
+|---|---:|---:|---:|---:|
+| vitest | 64 | 635 | 414 | 3/3 |
+| cargo | 86 | 1,027 | 649 | 4/4 |
+| pytest | 42 | 450 | 430 | 4/4 |
+| eslint | 19 | 224 | 228 | 3/3 |
+| go test | 35 | 400 | 306 | 3/3 |
+| French log | 58 | 1,170 | 752 | 3/3 |
+| cargo, 20,000 lines | 20,000 | 363,516 (10 calls) | 409 | 4/4 |
+| cargo errors only, 20,000 lines | 20,000 | 363,516 (10 calls) | 173 | 3/3 |
+| vitest, 20,000 lines | 20,000 | 327,189 (10 calls) | 976 | 3/3 |
+| vitest, passing run | 1,219 | 17,708 | 860 | 2/2 |
+| **Total** | | **1,075,835** (37 calls) | **5,197** (10 calls) | **32/32** |
+
+Overall ×207, ×677 on the three 20,000-line tasks. Reading only the first page (2,000 lines) finds the
+answer on 7 tasks out of 10 (never on the three big logs). Honest reading: the three 20,000-line logs
+are generated with a fixed seed (`bench/agent-peek/gen.mjs`), not collected from real projects; on
+real short logs the saving is small (×1.0 to ×1.6, and on the 19-line eslint log `peek` costs 4 tokens
+more than the whole file); the large ratios exist only when the log is large. The first version of
+`peek` on these tasks: 8/10 tasks, 27/32 facts, 6,537 tokens (×165); it missed the panic message of
+the cargo task and returned passing test lines for a failure question, both fixed since.
+Real-output fixtures: pytest 9.1.0 and eslint 9.39; jest and `go test` fixtures were written from the
+documented format. Measured on generated logs: a 20,443-line pytest log (678,732 bytes) becomes 35
+lines (1,986 bytes), a 20,806-line eslint log (1,383,437 bytes) becomes 68 lines (4,513 bytes).
+
+### 4.5 `read --autour` and the MCP freshness probe
+
+`read <id> --autour "<question>"`: the signature plus the windows of a big symbol that answer the
+question. Six questions about symbols of this repository (expected line present in 6 of 6):
+
+| Symbol (this repository) | Lines returned | Share of the symbol | Tokens with `--autour` | Tokens, whole symbol |
+|---|---:|---:|---:|---:|
+| `peek.rs#peek_texte` | 6 | 2.6% | 144 | 2,568 |
+| `incremental.rs#build_delta` (question 1) | 60 | 17.1% | 988 | 4,073 |
+| `incremental.rs#build_delta` (question 2) | 60 | 17.1% | 794 | 4,073 |
+| `build.rs#finish` | 35 | 24.6% | 613 | 1,693 |
+| `main.rs#main` | 6 | 5.5% | 127 | 1,518 |
+| `build.rs#build_full` | 18 | 15.0% | 356 | 1,563 |
+| **Total** | | | **3,022** | **15,488** (×5.1) |
+
+Six questions is a small sample; the symbols are from the code of Cortex itself.
+
+Freshness probe: the MCP server `stat`s the file a call names and re-checks the project if it changed.
+50 `cortex_find` calls on the 8,000-file private monorepo, median: 36.9 ms (probe, release build)
+against 36.3 and 38.3 ms (previous binary); with a file named in the question, 61.0 ms against 66.8
+and 65.4 ms. The first release-build run read 39.6 and 70.8 ms: the machine is shared, so we read
+the difference as noise, not as a measured gain.
+
+### 4.6 Kotlin, and the languages tree-sitter 0.22 still blocks
+
+Kotlin (`tree-sitter-kotlin` 0.3.8, MIT): release binary 25,609,728 → 29,649,920 bytes (+4,040,192,
++15.8%; the grammar's `parser.o` is 4,048,847 bytes). Full test suite at that point: 240 passed, 0
+failed, 2 ignored. Clikt (Apache-2.0, 146 `.kt` files), 8 questions written before the run: top-1
+4/8 (50.0%), top-5 7/8 (87.5%), MRR 0.682, ranks 2, 3, 1, 1, 1, 2, 8, 1. The miss: « where is help
+text wrapped to the terminal width » finds `wrapText` (an `internal` function) at rank 8.
+
+Still blocked without a compatibility shim, measured on crates.io on 2026-11-20 (latest tree-sitter
+core: 0.27.2): Swift, PHP, Dart, Scala and SQL (grammars at ABI 15); Ruby, Zig, YAML, JSON, TOML,
+Svelte and Kotlin-ng (they need `tree-sitter-language`, hence tree-sitter ≥ 0.23); Vue and WGSL
+(grammars for tree-sitter 0.20). YAML, JSON, TOML and SQL are already covered by the scanners of
+section 4.3. Moving to tree-sitter 0.25 would touch the 13 `language()` calls, 2 query loops (a
+streaming iterator since 0.24, one more MIT/Apache dependency) and, mainly, the node names of every
+query (Lua 0.1 → 0.5 and Bash 0.21 → 0.25 are the most exposed; Kotlin-ng names its fields
+differently, so `kotlin.rs` would be rewritten); the binary would grow (ABI 15 grammars). Estimate,
+**not measured**: 0.5 to 1 day for the mechanical migration and 1 to 2 days for queries and replaying
+the benchmarks. Proposed: decide after a trial on tree-sitter 0.25 with three witness grammars.
+
+### 4.7 Cortex Web (experimental)
+
+Documentation search for agents, behind the `web` Cargo feature (off by default); design and security
+in [WEB.md](WEB.md). Benchmark: 10 real documentation sites, 100 questions written blind (French 42,
+English 58; dev 60 / test 40; 10 questions have no answer in the collected pages), test run once,
+CPU shared with a development server. Page level, questions with an answer, top-1 / top-5 / MRR:
+
+| | dev | test |
+|---|---|---|
+| `cortex docs` today (base A) | 11.1 / 48.1 / 0.249 | 22.2 / 61.1 / 0.385 |
+| Cortex Web, first measure | 38.9 / 83.3 / 0.585 | 55.6 / 86.1 / 0.690 |
+| Cortex Web, after the tuning lot | 66.7 / 92.6 / 0.790 | 72.2 / 86.1 / 0.787 |
+
+Section level (the anchor, not just the page), first measure → after tuning: top-1 24.1 → 38.9% on
+dev and 25.0 → 36.1% on test. This is the known weak point. Median answer: about 535 tokens (base A:
+786), 6.8 ms per question (base A: 35 ms). Choosing the library version automatically brings the dev
+page top-1 from 51.9% to 66.7% (19 questions concern several versions). Abstention (« nothing
+reliable »): 5 of 6 unanswerable dev questions refused, 3 of 4 on test; 2 of 54 answerable dev
+questions refused by mistake and 2 of 36 on test (both are docsify, a JavaScript page). Real
+network: about 0.95 page per second per host with 1 request per second imposed; peak RAM 40 to 96 MB.
+
+General web search, one real request per provider (2026-11-20): crates.io, npm, GitHub, Stack
+Exchange, Hacker News and Wikipedia answer (240 to 740 ms); DuckDuckGo answered HTTP 202 (a
+verification page), so it is not reliable; Brave, Mojeek and SearXNG were not tested (no key).
+
+Honest limits: tuned on dev only but by a single question author (several questions almost repeat a
+section title, so lexical leakage is possible); the abstention threshold rests on 6 negative
+questions; pages that need JavaScript are not read; base A was not replayed after the tuning lot;
+trying to merge very short sections gained nothing and was dropped (A/B on the same pages).

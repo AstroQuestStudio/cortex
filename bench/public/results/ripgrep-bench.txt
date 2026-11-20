@@ -9,7 +9,7 @@
         2. crates/regex/src/literal.rs
         3. crates/regex/src/matcher.rs
 [ 5] rank  1  How does ripgrep search inside a gzip or xz compressed file without the user manually decompressing it first? expected crates/cli/src/decompress.rs
-[ 6] rank 16  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file? expected crates/searcher/src/sink.rs
+[ 6] rank 15  What interface does a consumer implement to receive each matched line (or context line) as the searcher scans a file? expected crates/searcher/src/sink.rs
         1. crates/matcher/src/lib.rs
         2. crates/searcher/src/lib.rs
         3. crates/searcher/src/searcher/mod.rs
@@ -25,14 +25,14 @@
         1. crates/core/flags/hiargs.rs
         2. crates/core/flags/doc/version.rs
         3. crates/globset/src/glob.rs
-[13] rank  7  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ? expected crates/ignore/src/default_types.rs
+[13] rank  3  Où sont définis les types de fichiers prédéfinis (rust, python, js, etc.) utilisés par l'option --type ? expected crates/ignore/src/default_types.rs
         1. crates/ignore/src/types.rs
-        2. crates/core/flags/hiargs.rs
-        3. crates/core/flags/defs.rs
-[14] rank  7  Comment ripgrep convertit-il une taille lisible par un humain comme "10M" ou "2K" (pour --max-filesize) en nombre d'octets ? expected crates/cli/src/human.rs
+        2. crates/ignore/src/lib.rs
+        3. crates/ignore/src/default_types.rs
+[14] rank  2  Comment ripgrep convertit-il une taille lisible par un humain comme "10M" ou "2K" (pour --max-filesize) en nombre d'octets ? expected crates/cli/src/human.rs
         1. crates/core/flags/defs.rs
-        2. crates/ignore/src/walk.rs
-        3. crates/core/main.rs
+        2. crates/cli/src/human.rs
+        3. crates/ignore/src/walk.rs
 [15] rank  -  Où ripgrep lit-il la liste de motifs de recherche fournie via un fichier avec l'option -f ? expected crates/cli/src/pattern.rs
         1. crates/core/flags/defs.rs
         2. crates/globset/src/glob.rs
@@ -46,8 +46,8 @@
 [19] rank  1  WalkParallel struct run WalkState                expected crates/ignore/src/walk.rs
 [20] rank  1  JSONSink struct definition                       expected crates/printer/src/json.rs
 
-== atlas engine · 20 questions · 91 ms ==
-top-1 55.0%  top-5 75.0%  MRR 0.648
+== atlas engine · 20 questions · 75 ms ==
+top-1 55.0%  top-5 85.0%  MRR 0.676
   [en] n=12 top-1 58.3%  top-5 83.3%  MRR 0.681
-  [fr] n=4 top-1 25.0%  top-5 25.0%  MRR 0.321
+  [fr] n=4 top-1 25.0%  top-5 75.0%  MRR 0.458
   [tech] n=4 top-1 75.0%  top-5 100.0%  MRR 0.875

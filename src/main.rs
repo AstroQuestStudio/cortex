@@ -11,6 +11,7 @@ mod batch;
 mod bench;
 mod comparatif;
 mod config;
+mod confsym;
 mod cpp;
 mod dash;
 mod engine;
@@ -23,12 +24,14 @@ mod graph;
 mod ids;
 mod index;
 mod infra;
+mod kotlin;
 mod lang;
 mod latence;
 mod lua;
 mod mcp;
 mod outils;
 mod par;
+mod peek;
 mod profile;
 mod rust_refs;
 mod scrape;
@@ -40,6 +43,8 @@ mod textsearch;
 #[cfg(feature = "ui")]
 mod ui_locate;
 mod walk;
+#[cfg(feature = "web")]
+mod web;
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -156,6 +161,13 @@ enum Cmd {
         /// Context lines on each side.
         #[arg(short = 'C', long = "contexte", default_value_t = 0)]
         contexte: u32,
+        /// BIG symbol (> 80 lines): only the lines relevant to this question (signature always,
+        /// then ranked line windows with ABSOLUTE line numbers, "… N lines omitted" between).
+        #[arg(long = "autour")]
+        autour: Option<String>,
+        /// With --autour: cap on the lines shown (default min(60, a quarter of the symbol)).
+        #[arg(long = "max-lignes")]
+        max_lignes: Option<usize>,
         #[command(flatten)]
         c: Commun,
     },
@@ -202,7 +214,8 @@ enum Cmd {
         /// Prints the output of each call.
         #[arg(short, long)]
         verbose: bool,
-        /// Only plays tasks whose id contains this text.
+        /// Only plays tasks whose id contains this text. `peek` = the test-log bench
+        /// (`bench/agent-peek/taches.json`: full Read vs `cortex peek`, no project needed).
         #[arg(long)]
         tache: Option<String>,
         /// Token budget of the `ask` arm (default 600).
@@ -263,6 +276,26 @@ enum Cmd {
         /// Skips the automatic freshness check (directory read) before answering.
         #[arg(long)]
         no_refresh: bool,
+    },
+    /// READ THE RIGHT SPOT of a big text file (test log, cargo output, server log, big JSON,
+    /// big source) WITHOUT reading it all: the best-ranked numbered line windows for a question
+    /// (BM25 per line + failure signals), grouped, deduplicated, capped. No question: summary
+    /// (header, totals, first failures, end). `--erreurs`: failure blocks only (name, assertion,
+    /// file:line). Works on ANY text file, indexed or not.
+    Peek {
+        /// File to read (any text file, absolute or relative to the current folder).
+        fichier: PathBuf,
+        /// What you look for (FR or EN; identifiers, paths and codes are searched as written).
+        question: Vec<String>,
+        /// Only the failure blocks (FAIL, error[E…], panic, AssertionError, ×/✗…) with context.
+        #[arg(short = 'e', long)]
+        erreurs: bool,
+        /// Cap on the lines shown.
+        #[arg(long = "max-lignes", default_value_t = peek::MAX_LIGNES_DEFAUT)]
+        max_lignes: usize,
+        /// Lines of context on each side (default: 2 before, 3 after; failure blocks: up to 20).
+        #[arg(short = 'C', long = "contexte")]
+        contexte: Option<usize>,
     },
     /// WHERE IS THIS UI? From what you SEE (button text, test id, aria-label, id, React
     /// component name) to the code that renders it: resolves i18n keys and their usages,
@@ -330,7 +363,7 @@ enum Cmd {
         #[command(subcommand)]
         action: Option<ConfigAction>,
     },
-    /// Runs the MCP server (stdio): tools cortex_find/card/outline/read/overview/impact/path/changed/grep/files/docs/docs_list/list.
+    /// Runs the MCP server (stdio): tools cortex_find/card/outline/read/overview/impact/path/changed/grep/peek/files/docs/docs_list/list.
     Mcp,
     /// Per-project profile (`.cortex/profile.toml`, optional): synonyms, ignored words, folder
     /// boosts and penalties, entry files. Read on every query; no re-index.
@@ -342,6 +375,14 @@ enum Cmd {
     Docs {
         #[command(subcommand)]
         action: DocsAction,
+    },
+    /// EXPERIMENTAL (feature `web`): versioned library docs and web research. Subcommands: lib
+    /// (docs state of a library at the installed version), find, read, fetch, search, add,
+    /// update, list, ingest. All web text is printed inside `<cortex-web-data>` (untrusted data).
+    #[cfg(feature = "web")]
+    Web {
+        #[command(subcommand)]
+        action: web::cli::WebAction,
     },
     /// Snapshot of a project's server architecture (read-only SSH, else static
     /// topology). Servers read from a .env: each prefix `<P>` that has a key
@@ -509,13 +550,18 @@ fn main() {
         Cmd::Explain { symbol, depth: _, level: _, c } => cmd_outil("card", outils::Appel::Card { cible: symbol }, c),
         Cmd::Context { symbol, c } => cmd_outil("context", outils::Appel::Context { cible: symbol }, c),
         Cmd::Outline { cible, c } => cmd_outil("outline", outils::Appel::Outline { cible }, c),
-        Cmd::Read { cible, contexte, c } => cmd_outil("read", outils::Appel::Read { cible, contexte }, c),
+        Cmd::Read { cible, contexte, autour: Some(question), max_lignes, c } => {
+            cmd_outil("read", outils::Appel::ReadAutour { cible, contexte, question, max_lignes }, c)
+        }
+        Cmd::Read { cible, contexte, c, .. } => cmd_outil("read", outils::Appel::Read { cible, contexte }, c),
         Cmd::Overview { dossier, c } => cmd_outil("overview", outils::Appel::Overview { dossier }, c),
         Cmd::Impact { cible, depth, c } => cmd_outil("impact", outils::Appel::Impact { cible, profondeur: depth }, c),
         Cmd::Path { de, vers, c } => cmd_outil("path", outils::Appel::Path { de, vers }, c),
         Cmd::Changed { c } => cmd_outil("changed", outils::Appel::Changed, c),
         Cmd::BenchAgent { file, project, verbose, tache, budget_ask } => {
-            let file = file.unwrap_or_else(|| bench::bench_file("agent_tasks.json"));
+            // `--tache peek` : le banc des logs de tests (bench/agent-peek, fixtures figées, sans projet).
+            let peek = tache.as_deref() == Some("peek");
+            let file = file.unwrap_or_else(|| bench::bench_file(if peek { "agent-peek/taches.json" } else { "agent_tasks.json" }));
             banc_agent::run(&file, project, verbose, tache, budget_ask)
         }
         Cmd::Bench { file, project, verbose, moteur } => cmd_bench(&file, project, verbose, &moteur),
@@ -524,6 +570,20 @@ fn main() {
         }
         Cmd::Grep { needle, project, case_sensitive, max, budget, no_refresh } => {
             cmd_grep(&needle, project, case_sensitive, max, budget, no_refresh)
+        }
+        Cmd::Peek { fichier, question, erreurs, max_lignes, contexte } => {
+            let t0 = Instant::now();
+            let opt = peek::Options { question: question.join(" "), erreurs, max_lignes, contexte };
+            match peek::peek_fichier(&fichier.to_string_lossy(), &opt) {
+                Ok(s) => {
+                    print!("{}", s);
+                    eprintln!("[cortex peek] {:.1}ms", t0.elapsed().as_secs_f64() * 1000.0);
+                }
+                Err(e) => {
+                    eprintln!("cortex peek: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         #[cfg(not(feature = "ui"))]
         Cmd::Ui { text, testid, aria, id, component, project, max, no_refresh } => {
@@ -571,6 +631,8 @@ fn main() {
         Cmd::Mcp => mcp::serve(),
         Cmd::Profile { action } => cmd_profile(action),
         Cmd::Docs { action } => cmd_docs(action),
+        #[cfg(feature = "web")]
+        Cmd::Web { action } => web::cli::run(action),
         Cmd::Infra { project, env } => cmd_infra(&project, env),
         Cmd::UpdateAll => cmd_update_all(),
         Cmd::BenchLatence { project, questions, echelle, passes, sans_construction, threads_liste } => {

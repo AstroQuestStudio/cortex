@@ -134,14 +134,202 @@ const QUERY_STOPWORDS: &[&str] = &[
     "uniquement",
 ];
 
+/// Échafaudage d'une question française : verbes auxiliaires et modaux conjugués, temps, lieu.
+const QUERY_STOPWORDS_FR: &[&str] = &[
+    "ont",
+    "etait",
+    "etaient",
+    "sera",
+    "seront",
+    "serait",
+    "soit",
+    "doit",
+    "doivent",
+    "sait",
+    "savoir",
+    "va",
+    "vont",
+    "fois",
+    "cote",
+    "moment",
+    "partir",
+    "lors",
+    "grace",
+    "selon",
+    "durant",
+    "parmi",
+    "autour",
+    "dessus",
+    "dessous",
+    "contre",
+    "sous",
+    "tant",
+    "bien",
+    "ensuite",
+    "toujours",
+    "jamais",
+    "rien",
+    "chacun",
+    "chacune",
+    "lequel",
+    "laquelle",
+    "lesquels",
+    "lesquelles",
+    "auquel",
+    "duquel",
+    "celles",
+    "autant",
+    "peu",
+    "beaucoup",
+    "trop",
+    "assez",
+    "parfois",
+    "souvent",
+    "deux",
+    "trois",
+];
+
+/// Verbes de LOCALISATION d'une question (« où est défini / géré / situé / implémenté X ») : ils
+/// disent où chercher, pas quoi chercher.
+const QUERY_VERBES_LIEU: &[&str] = &[
+    "defini",
+    "definis",
+    "definie",
+    "definies",
+    "gere",
+    "geree",
+    "geres",
+    "gerees",
+    "situe",
+    "situee",
+    "situes",
+    "situees",
+    "implemente",
+    "implementee",
+    "implementes",
+    "implementees",
+    "realise",
+    "realisee",
+    "realises",
+    "realisees",
+];
+
+/// Marqueurs d'une question FRANÇAISE (mots grammaticaux, accents repliés). Une question sans
+/// aucun d'eux ni lettre accentuée est traitée comme anglaise ou technique : aucune des
+/// normalisations françaises (locutions, formes de base) ne lui est appliquée.
+const MARQUEURS_FR: &[&str] = &[
+    "le", "la", "les", "des", "du", "une", "est", "sont", "dans", "pour", "avec", "comment", "quelle", "quel", "quels", "quelles",
+    "pourquoi", "quand", "que", "qui", "sur", "par", "au", "aux", "ses", "ces", "cette", "leur", "leurs", "nous", "peut", "lors", "ou",
+    "ete", "sans", "chaque", "apres", "avant", "entre", "vers",
+];
+
+/// Locutions françaises courantes du développement, ramenées à UN mot du code (écrites sans
+/// accent, tirets compris). Remplacement sans tenir compte de la casse.
+const LOCUTIONS: &[(&str, &str)] = &[
+    ("en-tetes", "entetes"),
+    ("en-tete", "entete"),
+    ("mises a jour", "update"),
+    ("mise a jour", "update"),
+    ("mettre a jour", "update"),
+    ("mettent a jour", "update"),
+    ("met a jour", "update"),
+    ("mis a jour", "update"),
+    ("mots de passe", "password"),
+    ("mot de passe", "password"),
+    ("mots-cles", "keyword"),
+    ("mot-cle", "keyword"),
+    ("mots cles", "keyword"),
+    ("mot cle", "keyword"),
+    ("base de donnees", "database"),
+    ("file d'attente", "queue"),
+    ("files d'attente", "queue"),
+    ("ligne de commande", "cli"),
+    ("lignes de commande", "cli"),
+    ("expressions regulieres", "regex"),
+    ("expression reguliere", "regex"),
+    ("variables d'environnement", "env"),
+    ("variable d'environnement", "env"),
+    ("temps reel", "realtime"),
+    ("par defaut", "default"),
+    ("nom d'utilisateur", "username"),
+    ("mise en cache", "cache"),
+    ("mettre en cache", "cache"),
+    ("mis en cache", "cache"),
+    ("hors ligne", "offline"),
+    ("arriere-plan", "background"),
+    ("arriere plan", "background"),
+    ("premier plan", "foreground"),
+];
+
+/// Vrai si la question est rédigée en français (voir `MARQUEURS_FR`).
+/// Traitements des questions FRANÇAISES, désactivables pour comparer sans recompiler :
+/// `CORTEX_FR` absent = `lpstnw` ; une liste de lettres sinon (`CORTEX_FR=` vide = rien).
+/// `l` formes de base (conjugaison, pluriel), `p` locutions (« en-tête », « mise à jour »),
+/// `s` mots vides français de question, `t` table français → code (`semantic::FR_VERS_CODE`),
+/// `n` négation (« sans X » : X n'est pas cherché), `w` verbes de localisation (« où est défini »).
+pub(crate) fn fr_on(c: char) -> bool {
+    static F: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    F.get_or_init(|| std::env::var("CORTEX_FR").unwrap_or_else(|_| "lpstnw".to_string())).contains(c)
+}
+
+pub(crate) fn est_francais(question: &str) -> bool {
+    if question.chars().any(|c| c.is_alphabetic() && !c.is_ascii()) {
+        return true;
+    }
+    question.split(|c: char| !c.is_alphanumeric()).any(|w| !w.is_empty() && MARQUEURS_FR.contains(&w.to_ascii_lowercase().as_str()))
+}
+
+/// Remplace les locutions de `LOCUTIONS` (texte aux accents déjà repliés), casse ignorée,
+/// mots entiers seulement.
+fn normaliser_locutions(texte: &str) -> String {
+    let mut cur = texte.to_string();
+    for &(loc, rempl) in LOCUTIONS {
+        let mut depuis = 0;
+        loop {
+            let bas = cur.to_ascii_lowercase();
+            let Some(rel) = bas[depuis..].find(loc) else { break };
+            let i = depuis + rel;
+            let apres = i + loc.len();
+            let avant_ok = i == 0 || !bas.as_bytes()[i - 1].is_ascii_alphanumeric();
+            let apres_ok = apres >= bas.len() || !bas.as_bytes()[apres].is_ascii_alphanumeric();
+            if avant_ok && apres_ok {
+                cur.replace_range(i..apres, rempl);
+                depuis = i + rempl.len();
+            } else {
+                depuis = i + 1;
+            }
+        }
+    }
+    cur
+}
+
 /// Décompose la question en tokens de recherche (même transform que les symboles),
 /// accents repliés et mots vides retirés (sauf si la question n'est faite que de ça).
 pub fn query_terms(question: &str) -> Vec<String> {
-    let folded = fold_accents(question);
+    let mut folded = fold_accents(question);
+    let francais = est_francais(question);
+    if francais && fr_on('p') {
+        folded = normaliser_locutions(&folded.replace('\u{2019}', "'"));
+    }
     let mut terms: Vec<String> = Vec::new();
+    // « sans X » : X est ce que le code NE fait PAS ; le terme qui suit « sans » n'est pas cherché.
+    let mut apres_sans = false;
     for raw in folded.split(|c: char| !c.is_alphanumeric()) {
         if raw.is_empty() {
             continue;
+        }
+        if francais && fr_on('n') {
+            if raw.eq_ignore_ascii_case("sans") {
+                apres_sans = true;
+                continue;
+            }
+            if apres_sans {
+                if is_stopword(&raw.to_ascii_lowercase()) || raw.len() == 1 {
+                    continue;
+                }
+                apres_sans = false;
+                continue;
+            }
         }
         for t in tokenize_identifier(raw) {
             if !terms.contains(&t) {
@@ -152,13 +340,72 @@ pub fn query_terms(question: &str) -> Vec<String> {
     // Une lettre seule est presque toujours une élision (« l'utilisateur », « qu'on », « n'est »).
     let content: Vec<String> = terms
         .iter()
-        .filter(|t| !is_stopword(t) && !QUERY_STOPWORDS.contains(&t.as_str()) && !crate::generalisation::is_filler(t))
+        .filter(|t| {
+            !is_stopword(t)
+                && !QUERY_STOPWORDS.contains(&t.as_str())
+                && !(fr_on('s') && QUERY_STOPWORDS_FR.contains(&t.as_str()))
+                && !(fr_on('w') && QUERY_VERBES_LIEU.contains(&t.as_str()))
+                && !crate::generalisation::is_filler(t)
+        })
         .filter(|t| !(t.len() == 1 && t.chars().all(|c| c.is_ascii_alphabetic())))
-        .cloned()
-        .collect();
+        .map(|t| if francais && fr_on('l') { crate::semantic::lemme_fr(t).unwrap_or_else(|| t.clone()) } else { t.clone() })
+        .fold(Vec::<String>::new(), |mut acc, t| {
+            if !acc.contains(&t) {
+                acc.push(t);
+            }
+            acc
+        });
     if content.is_empty() {
         terms
     } else {
         content
+    }
+}
+
+#[cfg(test)]
+mod tests_fr {
+    use super::*;
+
+    #[test]
+    fn question_francaise_detectee() {
+        assert!(est_francais("Où est vérifiée la signature ?"));
+        assert!(est_francais("comment est gere le cache"));
+        assert!(!est_francais("WalkParallel struct run WalkState"));
+        assert!(!est_francais("Matcher trait definition find_at"));
+    }
+
+    #[test]
+    fn locutions_normalisees() {
+        assert_eq!(normaliser_locutions("les en-tetes de la reponse"), "les entetes de la reponse");
+        assert_eq!(normaliser_locutions("la Mise a jour du mot de passe"), "la update du password");
+        assert_eq!(normaliser_locutions("la file d'attente"), "la queue");
+        // Pas de remplacement au milieu d'un mot.
+        assert_eq!(normaliser_locutions("promis a jour"), "promis a jour");
+    }
+
+    #[test]
+    fn formes_conjuguees_ramenees_a_la_base() {
+        let t = query_terms("Quelles fonctions sont déclarées et comment les requêtes sont-elles transformées ?");
+        assert!(t.contains(&"declarer".to_string()), "{t:?}");
+        assert!(t.contains(&"requete".to_string()), "{t:?}");
+        assert!(t.contains(&"transformer".to_string()), "{t:?}");
+        // Mots vides conjugués filtrés.
+        let t = query_terms("Où est refusé un jeton dont la date est dépassée ?");
+        assert!(!t.contains(&"est".to_string()));
+    }
+
+    #[test]
+    fn negation_et_verbes_de_lieu() {
+        let t = query_terms("Où est défini le hook, sans enregistrer de cache global ?");
+        assert!(!t.contains(&"defini".to_string()), "{t:?}");
+        assert!(!t.contains(&"enregistrer".to_string()), "{t:?}");
+        assert!(t.contains(&"hook".to_string()) && t.contains(&"cache".to_string()), "{t:?}");
+    }
+
+    #[test]
+    fn question_anglaise_inchangee() {
+        let t = query_terms("registered routes are declared");
+        assert!(t.contains(&"declared".to_string()), "{t:?}");
+        assert!(t.contains(&"routes".to_string()), "{t:?}");
     }
 }

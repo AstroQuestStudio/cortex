@@ -1,0 +1,172 @@
+{
+  "project": "bench-flask",
+  "repo": "https://github.com/pallets/flask",
+  "commit": "22d924701a6ae2e4cd01e9a15bbaf3946094af65",
+  "written": "2026-11-19, avant toute exécution de Cortex sur ces questions",
+  "queries": [
+    {
+      "q": "Où est vérifiée la signature du cookie de session quand une requête arrive ?",
+      "expect": [
+        "src/flask/sessions.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/sessions.py:323 open_session lit le cookie et appelle s.loads(val, max_age=...), session vide si BadSignature"
+    },
+    {
+      "q": "ou est gere l'affichage dans le terminal de la liste des routes declarees",
+      "expect": [
+        "src/flask/cli.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/cli.py:1069 routes_command parcourt current_app.url_map.iter_rules()"
+    },
+    {
+      "q": "Quelle fonction transforme la valeur renvoyée par une vue (texte, dictionnaire, tuple) en objet Response ?",
+      "expect": [
+        "src/flask/app.py",
+        "src/flask/helpers.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/app.py:1129 Flask.make_response convertit rv ; helpers.py:146 make_response y délègue"
+    },
+    {
+      "q": "pourquoi une requete trop volumineuse est-elle refusee, ou se regle la taille maximale du corps",
+      "expect": [
+        "src/flask/wrappers.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/wrappers.py:60 Request.max_content_length : 413 RequestEntityTooLarge au-delà de la limite"
+    },
+    {
+      "q": "Comment MethodView choisit-il la méthode get ou post à exécuter selon le verbe de la requête ?",
+      "expect": [
+        "src/flask/views.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/views.py:182 MethodView.dispatch_request"
+    },
+    {
+      "q": "Comment les gabarits sont-ils cherchés à la fois dans le dossier de l'application et dans ceux des modules enregistrés ?",
+      "expect": [
+        "src/flask/templating.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/templating.py:53 DispatchingJinjaLoader (application et blueprints)"
+    },
+    {
+      "q": "Comment modifier la session que le client de test utilisera avant d'envoyer la requête suivante ?",
+      "expect": [
+        "src/flask/testing.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/testing.py:136 FlaskClient.session_transaction"
+    },
+    {
+      "q": "Comment charger les réglages à partir des variables d'environnement qui commencent par un préfixe donné ?",
+      "expect": [
+        "src/flask/config.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/config.py:126 Config.from_prefixed_env"
+    },
+    {
+      "q": "Quelle fonction envoie un fichier pris dans un dossier de téléversements vers le navigateur ?",
+      "expect": [
+        "src/flask/helpers.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/helpers.py:533 send_from_directory"
+    },
+    {
+      "q": "Quelle méthode exécute les fonctions enregistrées avec teardown_appcontext au moment où le contexte est détruit ?",
+      "expect": [
+        "src/flask/app.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/app.py:1360 do_teardown_appcontext appelle les fonctions de nettoyage puis envoie le signal"
+    },
+    {
+      "q": "Comment exécuter une fonction sur la réponse pour la seule requête en cours, sans enregistrer de hook global ?",
+      "expect": [
+        "src/flask/ctx.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/ctx.py:117 after_this_request"
+    },
+    {
+      "q": "Comment sont déterminés le domaine, le chemin et les attributs de sécurité du cookie de session ?",
+      "expect": [
+        "src/flask/sessions.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/sessions.py:175 get_cookie_domain, :187 get_cookie_path, :195-215 httponly/secure/samesite"
+    },
+    {
+      "q": "Comment retrouve-t-on le répertoire racine d'un paquet à partir de son nom d'import ?",
+      "expect": [
+        "src/flask/helpers.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/helpers.py:577 get_root_path"
+    },
+    {
+      "q": "ou l'application calcule-t-elle le dossier d'instance a cote du paquet ou dans le prefixe d'installation",
+      "expect": [
+        "src/flask/sansio/app.py",
+        "src/flask/sansio/scaffold.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/sansio/app.py:510 auto_find_instance_path ; sansio/scaffold.py:754 find_package"
+    },
+    {
+      "q": "Comment register_error_handler associe-t-il une fonction à une exception personnalisée ?",
+      "expect": [
+        "src/flask/sansio/scaffold.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/sansio/scaffold.py:642 register_error_handler et :598 errorhandler"
+    },
+    {
+      "q": "Comment url_for construit-il une URL absolue avec _external, le schéma et le nom de serveur ?",
+      "expect": [
+        "src/flask/app.py",
+        "src/flask/helpers.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/app.py:1003 Flask.url_for (_external lignes 1076-1115) ; helpers.py:195 url_for y délègue"
+    },
+    {
+      "q": "Quelle méthode interrompt le traitement et renvoie directement une réponse si une fonction exécutée avant la vue retourne une valeur ?",
+      "expect": [
+        "src/flask/app.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/app.py:1271 preprocess_request : une valeur non None de before_request arrête le traitement"
+    },
+    {
+      "q": "comment un generateur de reponse en flux conserve-t-il le contexte de la requete pendant l'envoi",
+      "expect": [
+        "src/flask/helpers.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/helpers.py:63 stream_with_context (generator ligne 114)"
+    },
+    {
+      "q": "Où est traitée l'erreur renvoyée quand le corps JSON d'une requête est invalide ?",
+      "expect": [
+        "src/flask/wrappers.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/wrappers.py:212 Request.on_json_loading_failed : BadRequest"
+    },
+    {
+      "q": "Comment le shell interactif se remplit-il avec l'application et les variables ajoutées par shell_context_processor ?",
+      "expect": [
+        "src/flask/cli.py",
+        "src/flask/app.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/cli.py:1009 shell_command ; app.py:534 make_shell_context exécute les processeurs"
+    }
+  ]
+}

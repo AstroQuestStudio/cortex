@@ -1,0 +1,112 @@
+{
+  "project": "bench-ripgrep",
+  "repo": "https://github.com/BurntSushi/ripgrep",
+  "commit": "e89fff89ac9af12e8d4ce9d5fd07beb408ca730f",
+  "written": "2026-11-19, avant toute exécution de Cortex sur ces questions",
+  "queries": [
+    {
+      "q": "ou est recupere le nom de la machine courante selon le systeme d'exploitation",
+      "expect": [
+        "crates/cli/src/hostname.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/cli/src/hostname.rs:16 hostname (gethostname ligne 36)"
+    },
+    {
+      "q": "Comment CommandReaderBuilder lance-t-il un programme externe et évite-t-il de bloquer sur sa sortie d'erreur ?",
+      "expect": [
+        "crates/cli/src/process.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/cli/src/process.rs:84 CommandReaderBuilder, async_stderr ligne 132"
+    },
+    {
+      "q": "Où est produit le script de complétion automatique pour l'interpréteur de commandes Bash ?",
+      "expect": [
+        "crates/core/flags/complete/bash.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/flags/complete/bash.rs:63 generate"
+    },
+    {
+      "q": "Comment generate_long compose-t-il le texte de version qui indique si PCRE2 et les instructions SIMD sont disponibles ?",
+      "expect": [
+        "crates/core/flags/doc/version.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/core/flags/doc/version.rs:31 generate_long (features, simd(compile))"
+    },
+    {
+      "q": "ou est initialise le journal de messages utilise pour les modes de debogage et de trace",
+      "expect": [
+        "crates/core/logger.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/core/logger.rs:25 init"
+    },
+    {
+      "q": "Comment choisit-on, pour chaque fichier, entre la lecture de l'entrée standard, un préprocesseur externe, la décompression ou la lecture directe ?",
+      "expect": [
+        "crates/core/search.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/search.rs:245 SearchWorker::search ; branches lignes 258-264"
+    },
+    {
+      "q": "Comment l'extension d'un fichier est-elle extraite d'un nom de fichier pour comparer avec les motifs de type *.ext ?",
+      "expect": [
+        "crates/globset/src/pathutil.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/globset/src/pathutil.rs:40 file_name_ext"
+    },
+    {
+      "q": "Comment is_hidden détermine-t-il qu'un fichier est caché, y compris avec l'attribut HIDDEN sous Windows ?",
+      "expect": [
+        "crates/ignore/src/pathutil.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/ignore/src/pathutil.rs:11 (unix) et :28 (windows) is_hidden"
+    },
+    {
+      "q": "comment sont analysees les specifications de couleur comme match:fg:red donnees par l'utilisateur",
+      "expect": [
+        "crates/printer/src/color.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/printer/src/color.rs:88 ColorSpecs et :152 UserColorSpec"
+    },
+    {
+      "q": "comment n'afficher que le nombre de lignes qui correspondent par fichier, ou seulement la liste des fichiers contenant un resultat",
+      "expect": [
+        "crates/printer/src/summary.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/printer/src/summary.rs:59 SummaryKind"
+    },
+    {
+      "q": "Comment une classe de caractères contenant le saut de ligne est-elle nettoyée pour que le motif ne puisse jamais le reconnaître ?",
+      "expect": [
+        "crates/regex/src/strip.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/regex/src/strip.rs:55 strip_from_match_ascii ; doc ligne 61"
+    },
+    {
+      "q": "ou est decide si un fichier est lu par projection en memoire plutot que par une lecture normale",
+      "expect": [
+        "crates/searcher/src/searcher/mmap.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/searcher/src/searcher/mmap.rs:65 MmapChoice::open"
+    },
+    {
+      "q": "Où est définie, avec sa documentation, l'option qui limite la largeur des lignes affichées ?",
+      "expect": [
+        "crates/core/flags/defs.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/flags/defs.rs:3761 struct MaxColumns"
+    }
+  ]
+}

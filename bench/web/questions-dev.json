@@ -1,0 +1,858 @@
+[
+ {
+  "id": "d001",
+  "q": "Comment activer le chargement instantané des pages (navigation sans rechargement) dans Material for MkDocs ?",
+  "lang": "fr",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/setup/setting-up-navigation/",
+    "anchor": "instant-loading"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Instant loading » : feature navigation.instant dans mkdocs.yml. Extrait vérifié le 2026-11-20 : « navigation.instant »."
+ },
+ {
+  "id": "d002",
+  "q": "À quoi sert le paramètre default de json.dumps pour sérialiser un datetime ?",
+  "lang": "fr",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/json.html",
+    "anchor": "json.dump"
+   }
+  ],
+  "tag": "api",
+  "why": "Le paramètre default de json.dump/dumps est appelé pour les objets non sérialisables. Extrait vérifié le 2026-11-20 : « A function that is called for objects that »."
+ },
+ {
+  "id": "d003",
+  "q": "non-exhaustive patterns error in a match expression on Option",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch06-02-match.html",
+    "anchor": "matches-are-exhaustive"
+   }
+  ],
+  "tag": "erreur",
+  "why": "La section « Matches Are Exhaustive » montre l'erreur E0004 quand le cas None est oublié. Extrait vérifié le 2026-11-20 : « non-exhaustive »."
+ },
+ {
+  "id": "d004",
+  "q": "docsify option to limit the maximum table of contents level in the sidebar",
+  "lang": "en",
+  "source": "docsify",
+  "expect": [
+   {
+    "url": "https://docsify.js.org/#/configuration",
+    "anchor": "maxlevel"
+   }
+  ],
+  "tag": "api",
+  "why": "Section « maxLevel » de la configuration (Number, défaut 6). Extrait vérifié le 2026-11-20 : « Maximum Table of content level ».",
+  "needs_js": true,
+  "raw_markdown": "https://docsify.js.org/configuration.md"
+ },
+ {
+  "id": "d005",
+  "q": "How do I wait for a spawned thread to finish before main exits",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch16-01-threads.html",
+    "anchor": "waiting-for-all-threads-to-finish"
+   }
+  ],
+  "tag": "howto",
+  "why": "La section sur join montre que thread::spawn renvoie un JoinHandle dont on appelle join. Extrait vérifié le 2026-11-20 : « JoinHandle »."
+ },
+ {
+  "id": "d006",
+  "q": "Quelle exception est levée par AbortSignal.timeout() quand le délai expire ?",
+  "lang": "fr",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static",
+    "anchor": "return_value"
+   }
+  ],
+  "tag": "api",
+  "why": "Section « Return value » : le signal est aborté avec reason = TimeoutError DOMException. Extrait vérifié le 2026-11-20 : « TimeoutError DOMException »."
+ },
+ {
+  "id": "d007",
+  "q": "Comment organiser les dossiers pour traduire un site VitePress en plusieurs langues ?",
+  "lang": "fr",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/guide/i18n",
+    "anchor": "internationalization"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Internationalization » : un dossier par langue (es/, fr/) et locales dans la config. Extrait vérifié le 2026-11-20 : « To use the built-in i18n features »."
+ },
+ {
+  "id": "d008",
+  "q": "Comment définir la langue du site dans Material for MkDocs ?",
+  "lang": "fr",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/setup/changing-the-language/",
+    "anchor": "site-language"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Site language » : theme.language dans mkdocs.yml (une seule langue canonique). Extrait vérifié le 2026-11-20 : « theme: language: en »."
+ },
+ {
+  "id": "d009",
+  "q": "Comment ajouter un article de blog dans Docusaurus ?",
+  "lang": "fr",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/blog",
+    "anchor": "adding-posts"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Adding posts » : fichier Markdown daté dans blog/ avec frontmatter title, slug, authors. Extrait vérifié le 2026-11-20 : « To publish in the blog, create a Markdown file within the blog directory »."
+ },
+ {
+  "id": "d010",
+  "q": "How do I make HTTP/3 requests over QUIC with ureq",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [],
+  "tag": "howto",
+  "why": "Aucune page de ureq 2.10.1 ni 3.5.2 (pages d'index et de configuration vérifiées) ne mentionne HTTP/3 ou QUIC : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 3 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "d011",
+  "q": "limit the number of concurrent asyncio tasks with a semaphore",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/asyncio-sync.html",
+    "anchor": "asyncio.Semaphore"
+   }
+  ],
+  "tag": "howto",
+  "why": "asyncio.Semaphore(value) limite la concurrence ; utilisable avec async with. Extrait vérifié le 2026-11-20 : « A semaphore manages an internal counter »."
+ },
+ {
+  "id": "d012",
+  "q": "Qu'est-ce que la sécurité au niveau des lignes (row level security) et le propriétaire de la table y est-il soumis ?",
+  "lang": "fr",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/16/ddl-rowsecurity.html",
+    "anchor": "DDL-ROWSECURITY"
+   }
+  ],
+  "tag": "concept",
+  "why": "Page « Row Security Policies » (PostgreSQL 16) : ENABLE ROW LEVEL SECURITY, propriétaire exempté sauf FORCE. Extrait vérifié le 2026-11-20 : « ALTER TABLE ... ENABLE ROW LEVEL SECURITY / the table's owner is typically not subject to row security policies »."
+ },
+ {
+  "id": "d013",
+  "q": "ureq returns Error::Status for 404 responses, how do I still read the response body of the error",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/enum.Error.html",
+    "anchor": "variant.Status"
+   }
+  ],
+  "tag": "erreur",
+  "why": "Dans ureq 2.10.1 l'erreur Status(u16, Response) porte la réponse complète, corps compris. Extrait vérifié le 2026-11-20 : « Values are (status_code, Response) »."
+ },
+ {
+  "id": "d014",
+  "q": "PostgreSQL 17 : comment ignorer les lignes mal formées lors d'un COPY FROM avec ON_ERROR ?",
+  "lang": "fr",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/17/sql-copy.html",
+    "anchor": null
+   }
+  ],
+  "tag": "version",
+  "why": "Option ON_ERROR de COPY introduite en 17 ; absente de la page 16. Extrait vérifié le 2026-11-20 : « ON_ERROR Specifies how to behave when encountering an error converting a column's input value ».",
+  "version_attendue": "17",
+  "version_piege": {
+   "version": "16",
+   "url": "https://www.postgresql.org/docs/16/sql-copy.html"
+  }
+ },
+ {
+  "id": "d015",
+  "q": "How do I snapshot the current docs as a new version in Docusaurus",
+  "lang": "en",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/versioning",
+    "anchor": "tagging-a-new-version"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Tagging a new version » : npm run docusaurus docs:version 1.1.0. Extrait vérifié le 2026-11-20 : « docs:version 1.1.0 »."
+ },
+ {
+  "id": "d016",
+  "q": "Comment annuler une requête fetch en cours avec AbortController ?",
+  "lang": "fr",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "anchor": "canceling_a_request"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Canceling a request » : le signal est passé en option, abort() rejette avec AbortError. Extrait vérifié le 2026-11-20 : « To make a request cancelable, create an AbortController »."
+ },
+ {
+  "id": "d017",
+  "q": "Quelles sont les règles de propriété (ownership) en Rust ?",
+  "lang": "fr",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+    "anchor": "ownership-rules"
+   }
+  ],
+  "tag": "concept",
+  "why": "La section « Ownership Rules » liste les trois règles (un propriétaire, un seul à la fois, libération à la sortie de portée). Extrait vérifié le 2026-11-20 : « Each value in Rust has an owner »."
+ },
+ {
+  "id": "d018",
+  "q": "How do I pretty print JSON to a file with indentation in Python",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/json.html",
+    "anchor": "json.dump"
+   }
+  ],
+  "tag": "howto",
+  "why": "json.dump accepte indent (entier ou chaîne) pour l'indentation ; version 3.13. Extrait vérifié le 2026-11-20 : « If a positive integer or string, JSON array elements and object members will be pre »."
+ },
+ {
+  "id": "d019",
+  "q": "How do I make an admonition collapsible with ??? syntax",
+  "lang": "en",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/reference/admonitions/",
+    "anchor": "collapsible-blocks"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Collapsible blocks » : l'extension pymdownx.details et la syntaxe ???. Extrait vérifié le 2026-11-20 : « ??? instead of !!! »."
+ },
+ {
+  "id": "d020",
+  "q": "How do I add a light and dark mode toggle in Material for MkDocs",
+  "lang": "en",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/",
+    "anchor": "color-palette-toggle"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Color palette toggle » : deux entrées theme.palette avec scheme default / slate et un toggle. Extrait vérifié le 2026-11-20 : « Offering a light and dark color palette »."
+ },
+ {
+  "id": "d021",
+  "q": "My VitePress site is served from a sub-path like /blog/ and assets are broken, what option do I set",
+  "lang": "en",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/guide/deploy",
+    "anchor": "setting-a-public-base-path"
+   }
+  ],
+  "tag": "erreur",
+  "why": "La section « Setting a Public Base Path » : base: '/blog/' dans la config quand le site n'est pas à la racine. Extrait vérifié le 2026-11-20 : « you need to set the base option to '/blog/' »."
+ },
+ {
+  "id": "d022",
+  "q": "How do I set up streaming replication with replication slots in PostgreSQL 16",
+  "lang": "en",
+  "source": "postgresql",
+  "expect": [],
+  "tag": "howto",
+  "why": "La réplication (warm-standby, runtime-config-replication) est hors du périmètre DDL / SQL du corpus ; les pages vérifiées ne mentionnent pas les slots : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 3 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "d023",
+  "q": "Does MERGE support a RETURNING clause in PostgreSQL 17",
+  "lang": "en",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/17/sql-merge.html",
+    "anchor": "SQL-MERGE"
+   }
+  ],
+  "tag": "version",
+  "why": "PostgreSQL 17 ajoute RETURNING à MERGE ; la doc 16 dit « There is no RETURNING clause with MERGE ». Extrait vérifié le 2026-11-20 : « The optional RETURNING clause causes MERGE to compute and return value(s) ».",
+  "version_attendue": "17",
+  "version_piege": {
+   "version": "16",
+   "url": "https://www.postgresql.org/docs/16/sql-merge.html"
+  }
+ },
+ {
+  "id": "d024",
+  "q": "json.decoder.JSONDecodeError Expecting value line 1 column 1 (char 0) how to handle and where did parsing fail",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/json.html",
+    "anchor": "json.JSONDecodeError"
+   }
+  ],
+  "tag": "erreur",
+  "why": "JSONDecodeError (sous-classe de ValueError) expose msg, doc, pos, lineno, colno. Extrait vérifié le 2026-11-20 : « The start index of doc where parsing failed »."
+ },
+ {
+  "id": "d025",
+  "q": "How do I propagate an error from a function that returns Result using the ? operator",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html",
+    "anchor": "a-shortcut-for-propagating-errors-the--operator"
+   }
+  ],
+  "tag": "howto",
+  "why": "Le point d'entrée est la section sur le raccourci ? ; elle explique que ? renvoie l'erreur à l'appelant via From. Extrait vérifié le 2026-11-20 : « The ? placed after a Result value is defined to work in almost the same way as the match expressions »."
+ },
+ {
+  "id": "d026",
+  "q": "Comment ajouter un en-tête HTTP à un objet Headers ?",
+  "lang": "fr",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Headers/append",
+    "anchor": "syntax"
+   }
+  ],
+  "tag": "api",
+  "why": "Page Headers.append() : syntaxe append(name, value), valeur de retour undefined. Extrait vérifié le 2026-11-20 : « append(name, value) »."
+ },
+ {
+  "id": "d027",
+  "q": "How do I connect Flask to MongoDB with PyMongo",
+  "lang": "en",
+  "source": "flask",
+  "expect": [],
+  "tag": "howto",
+  "why": "Les pages de la doc Flask vérifiées (démarrage, config, patrons SQLite, tests, API…) ne mentionnent pas MongoDB : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 7 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "d028",
+  "q": "Qu'est-ce qu'une route dynamique dans VitePress : comment un seul fichier Markdown génère plusieurs pages ?",
+  "lang": "fr",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/guide/routing",
+    "anchor": "dynamic-routes"
+   }
+  ],
+  "tag": "concept",
+  "why": "Section « Dynamic Routes » : fichier [pkg].md + fichier de chemins (paths loader). Extrait vérifié le 2026-11-20 : « You can generate many pages using a single Markdown file and dynamic data »."
+ },
+ {
+  "id": "d029",
+  "q": "Avec ureq 3, comment régler le délai de lecture par lecture (équivalent du timeout_read de la 2.x) ?",
+  "lang": "fr",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/3.5.2/ureq/config/struct.ConfigBuilder.html",
+    "anchor": "method.timeout_per_read"
+   }
+  ],
+  "tag": "version",
+  "why": "En 3.5.2 le réglage passe par ConfigBuilder::timeout_per_read ; la 2.10.1 utilisait AgentBuilder::timeout_read. Extrait vérifié le 2026-11-20 : « Max duration for each transport read ».",
+  "version_attendue": "3.5.2",
+  "version_piege": {
+   "version": "2.10.1",
+   "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html"
+  }
+ },
+ {
+  "id": "d030",
+  "q": "How do I deploy a Docusaurus site to Heroku",
+  "lang": "en",
+  "source": "docusaurus",
+  "expect": [],
+  "tag": "howto",
+  "why": "La page de déploiement liste Azure, Cloudflare, GitHub Pages, Netlify, Vercel, etc. mais pas Heroku : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 3 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "d031",
+  "q": "How do I configure an HTTP proxy for ureq requests",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html",
+    "anchor": "method.proxy"
+   }
+  ],
+  "tag": "howto",
+  "why": "AgentBuilder::proxy(Proxy::new(\"user:password@cool.proxy:9090\")) ; désactive try_proxy_from_env. Extrait vérifié le 2026-11-20 : « Set the proxy server to use for all connections from this Agent »."
+ },
+ {
+  "id": "d032",
+  "q": "How do I load Flask configuration values from environment variables with a prefix",
+  "lang": "en",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/config/",
+    "anchor": "configuring-from-environment-variables"
+   }
+  ],
+  "tag": "howto",
+  "why": "La section sur les variables d'environnement montre app.config.from_prefixed_env() (préfixe FLASK_ par défaut). Extrait vérifié le 2026-11-20 : « from_prefixed_env »."
+ },
+ {
+  "id": "d033",
+  "q": "Python 3.13 : comment arrêter proprement une asyncio.Queue avec shutdown ?",
+  "lang": "fr",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/asyncio-queue.html",
+    "anchor": "asyncio.Queue.shutdown"
+   }
+  ],
+  "tag": "version",
+  "why": "Queue.shutdown() est nouveau en 3.13 (QueueShutDown) ; absent de la doc 3.11. Extrait vérifié le 2026-11-20 : « Put a Queue instance into a shutdown mode ».",
+  "version_attendue": "3.13",
+  "version_piege": {
+   "version": "3.11",
+   "url": "https://docs.python.org/3.11/library/asyncio-queue.html"
+  }
+ },
+ {
+  "id": "d034",
+  "q": "How do I configure a read timeout on a ureq agent",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html",
+    "anchor": "method.timeout_read"
+   }
+  ],
+  "tag": "howto",
+  "why": "AgentBuilder::timeout_read (ureq 2.10.1) fixe le délai de lecture ; sans lui les lectures peuvent bloquer indéfiniment. Extrait vérifié le 2026-11-20 : « Timeout for the individual reads of the socket »."
+ },
+ {
+  "id": "d035",
+  "q": "Pourquoi le compilateur refuse une fonction qui renvoie une référence avec « missing lifetime specifier » ?",
+  "lang": "fr",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html",
+    "anchor": "generic-lifetimes-in-functions"
+   }
+  ],
+  "tag": "erreur",
+  "why": "La section sur les durées de vie génériques en fonction reproduit l'erreur E0106 et ajoute l'annotation 'a. Extrait vérifié le 2026-11-20 : « missing lifetime specifier »."
+ },
+ {
+  "id": "d036",
+  "q": "How do I add a custom React page at its own URL in Docusaurus",
+  "lang": "en",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/creating-pages",
+    "anchor": "add-a-react-page"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Add a React page » : un fichier dans src/pages devient une route. Extrait vérifié le 2026-11-20 : « Create a file /src/pages/helloReact.js »."
+ },
+ {
+  "id": "d037",
+  "q": "Comment vérifier qu'un test panique bien avec #[should_panic] ?",
+  "lang": "fr",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch11-01-writing-tests.html",
+    "anchor": "checking-for-panics-with-should_panic"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section dédiée à #[should_panic] et à son paramètre expected. Extrait vérifié le 2026-11-20 : « should_panic »."
+ },
+ {
+  "id": "d038",
+  "q": "How do I read a fetch response body as a stream chunk by chunk",
+  "lang": "en",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "anchor": "streaming_the_response_body"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Streaming the response body » : response.body.getReader(). Extrait vérifié le 2026-11-20 : « Request and response bodies are actually ReadableStream objects »."
+ },
+ {
+  "id": "d039",
+  "q": "How do I deploy a VitePress site to AWS Lambda",
+  "lang": "en",
+  "source": "vitepress",
+  "expect": [],
+  "tag": "howto",
+  "why": "Les pages de déploiement, de configuration et de routage vérifiées ne mentionnent pas Lambda : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 3 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "d040",
+  "q": "How do I initialize a docsify documentation site with docsify-cli",
+  "lang": "en",
+  "source": "docsify",
+  "expect": [
+   {
+    "url": "https://docsify.js.org/#/quickstart",
+    "anchor": "initialize"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Initialize » du démarrage rapide (Markdown brut /quickstart.md) : docsify init ./docs. Extrait vérifié le 2026-11-20 : « docsify init ./docs ».",
+  "needs_js": true,
+  "raw_markdown": "https://docsify.js.org/quickstart.md"
+ },
+ {
+  "id": "d041",
+  "q": "How to make ureq refuse plain http URLs and redirects to http",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html",
+    "anchor": "method.https_only"
+   }
+  ],
+  "tag": "howto",
+  "why": "AgentBuilder::https_only(true) force le HTTPS et refuse les redirections vers HTTP. Extrait vérifié le 2026-11-20 : « This setting also makes the client refuse HTTPS to HTTP redirects »."
+ },
+ {
+  "id": "d042",
+  "q": "How do I walk a directory tree with pathlib in Python 3.13, like os.walk",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/pathlib.html",
+    "anchor": "pathlib.Path.walk"
+   }
+  ],
+  "tag": "version",
+  "why": "Path.walk existe depuis Python 3.12 ; la page 3.11 ne le documente pas. Extrait vérifié le 2026-11-20 : « Generate the file names in a directory tree ».",
+  "version_attendue": "3.13",
+  "version_piege": {
+   "version": "3.11",
+   "url": "https://docs.python.org/3.11/library/pathlib.html"
+  }
+ },
+ {
+  "id": "d043",
+  "q": "How do I register a custom 404 error page handler in Flask",
+  "lang": "en",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/errorhandling/",
+    "anchor": "error-handlers"
+   }
+  ],
+  "tag": "howto",
+  "why": "La section « Error Handlers » explique @app.errorhandler(404) et app.register_error_handler. Extrait vérifié le 2026-11-20 : « registering error handlers »."
+ },
+ {
+  "id": "d044",
+  "q": "In which Flask version were the FLASK_ENV variable and app.env property removed, not just deprecated",
+  "lang": "en",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/changes/",
+    "anchor": "version-2-3-0"
+   }
+  ],
+  "tag": "version",
+  "why": "Dépréciés en 2.2.0, supprimés en 2.3.0 ; la section 2.2.0 dit seulement « deprecated ». Extrait vérifié le 2026-11-20 : « The FLASK_ENV environment variable, ENV config key, and app.env property are removed ».",
+  "version_attendue": "2.3.0",
+  "version_piege": {
+   "version": "2.2.0",
+   "url": "https://flask.palletsprojects.com/en/stable/changes/"
+  }
+ },
+ {
+  "id": "d045",
+  "q": "Which WITH CHECK clause of a row level security policy applies to INSERT and can an INSERT policy have a USING expression",
+  "lang": "en",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/16/sql-createpolicy.html",
+    "anchor": "SQL-CREATEPOLICY-INSERT"
+   }
+  ],
+  "tag": "api",
+  "why": "Section INSERT de CREATE POLICY (PostgreSQL 16) : seule l'expression WITH CHECK s'applique aux INSERT. Extrait vérifié le 2026-11-20 : « An INSERT policy cannot have a USING expression »."
+ },
+ {
+  "id": "d046",
+  "q": "recursively find all .py files under a directory with pathlib",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/pathlib.html",
+    "anchor": "pathlib.Path.rglob"
+   }
+  ],
+  "tag": "howto",
+  "why": "Path.rglob(pattern) équivaut à glob avec **/ devant ; ordre non garanti. Extrait vérifié le 2026-11-20 : « Glob the given relative pattern recursively »."
+ },
+ {
+  "id": "d047",
+  "q": "fetch does not throw on a 404 response, how do I check that the request was successful",
+  "lang": "en",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "anchor": "checking_response_status"
+   }
+  ],
+  "tag": "erreur",
+  "why": "La section « Checking response status » : tester response.ok / response.status avant de lire le corps. Extrait vérifié le 2026-11-20 : « if the server responds with an error like 404, then fetch() fulfills with a Response »."
+ },
+ {
+  "id": "d048",
+  "q": "Response.json() throws SyntaxError, what causes it",
+  "lang": "en",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Response/json",
+    "anchor": "exceptions"
+   }
+  ],
+  "tag": "erreur",
+  "why": "Section « Exceptions » de Response.json() : SyntaxError, TypeError si le corps est déjà lu. Extrait vérifié le 2026-11-20 : « The response body cannot be parsed as JSON »."
+ },
+ {
+  "id": "d049",
+  "q": "RuntimeError: Working outside of application context",
+  "lang": "en",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/appcontext/",
+    "anchor": "the-application-context"
+   }
+  ],
+  "tag": "erreur",
+  "why": "La page « The Application Context » décrit l'erreur et la solution (app.app_context()). Extrait vérifié le 2026-11-20 : « Working outside of application context »."
+ },
+ {
+  "id": "d050",
+  "q": "Pourquoi ne peut-on pas indexer une String avec s[0] ?",
+  "lang": "fr",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch08-02-strings.html",
+    "anchor": "indexing-into-strings"
+   }
+  ],
+  "tag": "concept",
+  "why": "La section « Indexing into Strings » explique l'erreur et l'encodage UTF-8. Extrait vérifié le 2026-11-20 : « indexing »."
+ },
+ {
+  "id": "d051",
+  "q": "Why use Blueprints in Flask to factor a large application into modules",
+  "lang": "en",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/blueprints/",
+    "anchor": "why-blueprints"
+   }
+  ],
+  "tag": "concept",
+  "why": "La section « Why Blueprints? » : découper une grande application, enregistrer avec un préfixe d'URL ou un sous-domaine. Extrait vérifié le 2026-11-20 : « Factor an application into a set of blueprints »."
+ },
+ {
+  "id": "d052",
+  "q": "Comment désactiver le suivi des redirections HTTP avec ureq 2.10 ?",
+  "lang": "fr",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html",
+    "anchor": "method.redirects"
+   }
+  ],
+  "tag": "howto",
+  "why": "AgentBuilder::redirects(0) renvoie la réponse 3xx au lieu de la suivre (défaut 5). Extrait vérifié le 2026-11-20 : « Set to 0 to avoid redirects »."
+ },
+ {
+  "id": "d053",
+  "q": "How do I set up a version selector for multiple documentation versions using mike",
+  "lang": "en",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/setup/setting-up-versioning/",
+    "anchor": "versioning"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Versioning » : extra.version.provider: mike, outil mike pour déployer plusieurs versions. Extrait vérifié le 2026-11-20 : « extra: version: provider: mike »."
+ },
+ {
+  "id": "d054",
+  "q": "Quel est le nombre par défaut de connexions inactives gardées dans le pool de ureq 2.10.1 ?",
+  "lang": "fr",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html",
+    "anchor": "method.max_idle_connections"
+   }
+  ],
+  "tag": "version",
+  "why": "Le défaut est 100 en 2.10.1 ; la 3.5.2 documente un défaut de 10 pour max_idle_connections. Extrait vérifié le 2026-11-20 : « By default, this is set to 100 ».",
+  "version_attendue": "2.10.1",
+  "version_piege": {
+   "version": "3.5.2",
+   "url": "https://docs.rs/ureq/3.5.2/ureq/config/struct.ConfigBuilder.html"
+  }
+ },
+ {
+  "id": "d055",
+  "q": "How do I use Algolia DocSearch as the search backend in Material for MkDocs",
+  "lang": "en",
+  "source": "mkdocs-material",
+  "expect": [],
+  "tag": "howto",
+  "why": "Les pages de recherche, navigation, langue et publication vérifiées ne mentionnent ni Algolia ni DocSearch : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 5 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "d056",
+  "q": "Comment créer un dossier et tous ses parents avec pathlib sans erreur s'il existe déjà ?",
+  "lang": "fr",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/pathlib.html",
+    "anchor": "pathlib.Path.mkdir"
+   }
+  ],
+  "tag": "howto",
+  "why": "Path.mkdir(parents=True, exist_ok=True) ; sans exist_ok une FileExistsError est levée. Extrait vérifié le 2026-11-20 : « exist_ok »."
+ },
+ {
+  "id": "d057",
+  "q": "Comment sécuriser le nom d'un fichier envoyé par un utilisateur lors d'un upload avec Flask ?",
+  "lang": "fr",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/patterns/fileuploads/",
+    "anchor": "a-gentle-introduction"
+   }
+  ],
+  "tag": "howto",
+  "why": "Le patron « Uploading Files » recommande werkzeug.utils.secure_filename avant d'enregistrer le fichier. Extrait vérifié le 2026-11-20 : « secure_filename »."
+ },
+ {
+  "id": "d058",
+  "q": "Comment mettre en surbrillance certaines lignes d'un bloc de code dans VitePress ?",
+  "lang": "fr",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/guide/markdown",
+    "anchor": "line-highlighting-in-code-blocks"
+   }
+  ],
+  "tag": "howto",
+  "why": "Syntaxe ```js{4} dans la section « Line Highlighting in Code Blocks ». Extrait vérifié le 2026-11-20 : « Line Highlighting in Code Blocks »."
+ },
+ {
+  "id": "d059",
+  "q": "Comment publier un site Docusaurus sur GitHub Pages ?",
+  "lang": "fr",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/deployment",
+    "anchor": "deploying-to-github-pages"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Deploying to GitHub Pages » : branche source / branche publiée, commande de déploiement. Extrait vérifié le 2026-11-20 : « publish to GitHub Pages »."
+ },
+ {
+  "id": "d060",
+  "q": "Flask 2.2 : quels noms de paramètres de send_file ont été supprimés (attachment_filename, cache_timeout) ?",
+  "lang": "fr",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/changes/",
+    "anchor": "version-2-2-0"
+   }
+  ],
+  "tag": "version",
+  "why": "Le journal des changements 2.2.0 liste les anciens noms supprimés et leurs remplaçants. Extrait vérifié le 2026-11-20 : « download_name replaces attachment_filename ».",
+  "version_attendue": "2.2.0"
+ }
+]

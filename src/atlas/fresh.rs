@@ -461,6 +461,115 @@ fn refresh_if(h: &mut Handle, writable: bool) -> RefreshStats {
     }
 }
 
+/// Atlas ouvert dont l'EXTRACTION est plus ancienne que `EXTRACT_VERSION` : les
+/// segments sont lisibles mais leurs symboles périmés (nouveaux langages, nouveaux
+/// `kind`), et les fichiers n'ayant pas changé, aucune mise à jour incrémentale
+/// ne les ré-extrairait. Reconstruit ALORS le projet une fois, depuis les
+/// sources, avec une ligne sur stderr. Appelée par `ensure_and_open` : couvre
+/// find, le MCP, `update` et `update-all`. Jamais fatale : source absente, atlas
+/// non inscriptible, verrou pris par un autre processus ou échec de
+/// construction → l'index existant est servi tel quel (et retenté plus tard).
+pub(super) fn reextract_if_stale(h: Handle) -> std::io::Result<Handle> {
+    if h.manifest.extract_version >= super::manifest::EXTRACT_VERSION {
+        return Ok(h);
+    }
+    let project = h.project.clone();
+    let root = PathBuf::from(h.root());
+    if !root.is_dir() || !atlas_writable(&project) {
+        return Ok(h);
+    }
+    eprintln!("cortex: extraction v{}, réindexation de {}", super::manifest::EXTRACT_VERSION, project);
+    drop(h);
+    let rebuilt = index::build_index(&project, &root).and_then(|(idx, tracked)| super::rebuild_full(&project, &idx, tracked));
+    if let Err(e) = rebuilt {
+        eprintln!("cortex: réindexation de {} impossible ({}) : index existant servi tel quel", project, e);
+    }
+    Handle::open(&project)
+}
+
+/// Chemins de fichiers cités dans un texte libre (question, identifiant `S:chemin#symbole`,
+/// `chemin:12-40`) : au plus 8, relatifs, avec une extension. Sert à `probe_chemins`.
+pub fn chemins_cites(texte: &str) -> Vec<String> {
+    let mut v: Vec<String> = Vec::new();
+    for tok in texte
+        .split(|c: char| c.is_whitespace() || matches!(c, '"' | '\'' | '`' | ',' | ';' | '(' | ')' | '[' | ']' | '<' | '>' | '{' | '}'))
+    {
+        let mut t = tok;
+        for pre in ["S:", "F:", "D:"] {
+            if let Some(r) = t.strip_prefix(pre) {
+                t = r;
+                break;
+            }
+        }
+        if let Some((a, _)) = t.split_once('#') {
+            t = a;
+        }
+        if let Some((a, b)) = t.rsplit_once(':') {
+            if !b.is_empty() && b.chars().all(|c| c.is_ascii_digit() || c == '-') {
+                t = a;
+            }
+        }
+        let t = t.trim_start_matches("./");
+        if t.is_empty() || t.starts_with('/') || t.starts_with('\\') || t.contains("..") || t.contains(':') {
+            continue;
+        }
+        let nom = t.rsplit(['/', '\\']).next().unwrap_or(t);
+        let Some((stem, ext)) = nom.rsplit_once('.') else { continue };
+        if stem.is_empty() || ext.is_empty() || ext.len() > 8 || !ext.chars().all(|c| c.is_ascii_alphanumeric()) {
+            continue;
+        }
+        let t = t.replace('\\', "/");
+        if !v.contains(&t) {
+            v.push(t);
+            if v.len() >= 8 {
+                break;
+            }
+        }
+    }
+    v
+}
+
+/// Sonde de fraîcheur PEU COÛTEUSE (quelques `stat`, pas de parcours) pour les fichiers que la
+/// requête nomme : vrai si l'un d'eux a changé d'après (mtime, taille) par rapport à l'atlas,
+/// a disparu, ou est nouveau (indexable, ni exclu ni déjà vu inindexable). Appelée quand le
+/// contrôle complet (`refresh`, ~130 ms sur un gros dépôt) vient d'avoir lieu : un agent qui
+/// écrit un fichier puis l'interroge aussitôt le voit tout de suite.
+pub fn probe_chemins(h: &Handle, textes: &[String]) -> bool {
+    let root = Path::new(h.root());
+    let walk_state = h.manifest.walk.as_ref();
+    for texte in textes {
+        for p in chemins_cites(texte) {
+            let abs = root.join(&p);
+            let sur_disque = std::fs::metadata(&abs).ok().filter(|m| m.is_file());
+            match h.file_by_path(&p).and_then(|g| h.node(g)) {
+                Some(r) => {
+                    let (mt, sz) = h.meta(&r);
+                    match &sur_disque {
+                        Some(m) if (index::mtime_micros(m), m.len()) == (mt, sz) => {}
+                        _ => return true,
+                    }
+                }
+                None => {
+                    let Some(m) = sur_disque else { continue };
+                    if index::in_ignored_dir(&p) || !Lang::from_path(&p).is_indexable() {
+                        continue;
+                    }
+                    if h.manifest.skipped.iter().any(|s| s.path == p && (s.mtime, s.size) == (index::mtime_micros(&m), m.len())) {
+                        continue;
+                    }
+                    let exclu = walk_state.is_some_and(|w| {
+                        w.ignored.iter().any(|i| p == *i || (p.starts_with(i.as_str()) && p.as_bytes().get(i.len()) == Some(&b'/')))
+                    });
+                    if !exclu {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
 /// `cortex update` : parcours COMPLET et comparaison par taille + empreinte
 /// blake3 de chaque fichier (pas seulement mtime/taille), puis mise à jour de
 /// l'atlas (delta, ou reconstruction si le changement est massif).
@@ -635,6 +744,43 @@ export function beta() {}
         clean(&name);
     }
 
+    #[test]
+    fn chemins_cites_formes_usuelles() {
+        let v = chemins_cites(
+            "S:src/lib/util.ts#valider voir `src/app/page.tsx:4-5` et ./docs/guide.md, C:\\x\\y.rs ../hors.ts pas.de.chemin/ 12",
+        );
+        assert_eq!(v, vec!["src/lib/util.ts", "src/app/page.tsx", "docs/guide.md"]);
+        assert!(chemins_cites("comment marche le zoom ?").is_empty());
+        assert_eq!(chemins_cites("F:a\\b\\c.rs"), vec!["a/b/c.rs"]);
+        assert!(chemins_cites(&"x.ts ".repeat(50)).len() <= 8);
+    }
+
+    /// La sonde (stat seulement) voit un fichier modifié, un fichier nouveau et un fichier
+    /// supprimé quand ils sont NOMMÉS ; rien d'autre ; un fichier inchangé ou exclu : faux.
+    #[test]
+    fn sonde_chemins_nommes() {
+        let (name, dir) = project("sonde");
+        write(&dir, "a.ts", "export function a() {}\n");
+        write(&dir, "sub/b.ts", "export function b() {}\n");
+        write(&dir, ".ignore", "tmp/\n");
+        let mut h = index_it(&name, &dir);
+        let t = |s: &str| vec![s.to_string()];
+        assert!(!probe_chemins(&h, &t("a.ts S:sub/b.ts#b")), "rien n'a changé");
+        write(&dir, "a.ts", "export function a() {}\nexport function plus() {}\n");
+        assert!(probe_chemins(&h, &t("outline a.ts")), "modifié");
+        assert!(!probe_chemins(&h, &t("sub/b.ts")), "un autre fichier reste inchangé");
+        assert!(!probe_chemins(&h, &t("comment marche a ?")), "pas de chemin cité : la sonde ne dit rien");
+        write(&dir, "sub/neuf.ts", "export function neuf() {}\n");
+        assert!(probe_chemins(&h, &t("read sub/neuf.ts:1-3")), "nouveau");
+        write(&dir, "tmp/x.ts", "export function x() {}\n");
+        refresh(&mut h);
+        assert!(!probe_chemins(&h, &t("a.ts sub/neuf.ts tmp/x.ts")), "après le contrôle complet, tout est à jour");
+        std::fs::remove_file(dir.join("sub/b.ts")).unwrap();
+        assert!(probe_chemins(&h, &t("sub/b.ts")), "supprimé");
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
+    }
+
     fn write(dir: &Path, rel: &str, content: &str) {
         let p = dir.join(rel);
         std::fs::create_dir_all(p.parent().unwrap()).unwrap();
@@ -752,5 +898,76 @@ export function beta() {}
         clean(&a);
         clean(b);
         clean(c);
+    }
+
+    /// Un atlas d'extraction ANTÉRIEURE (manifeste sans `extract_version`, ou
+    /// version inférieure) est ré-extrait en entier UNE fois, même si aucun
+    /// fichier n'a changé : le symbole SQL, absent de l'ancien index, apparaît ;
+    /// le second appel ne reconstruit plus rien.
+    #[test]
+    fn extraction_perimee_reindexe_une_fois() {
+        let (name, dir) = project("extract");
+        std::fs::write(dir.join("a.ts"), "export function a() {}\n").unwrap();
+        let _ = index_it(&name, &dir);
+        // Fichier SQL déjà « vu » sans symbole par l'ancienne extraction : mémorisé
+        // comme inchangé, ni la fraîcheur ni `update` ne le relisent.
+        std::fs::write(dir.join("schema.sql"), "CREATE TABLE utilisateurs_zebre (id integer);\n").unwrap();
+        let (_, mtime, size) = index::read_file(&dir.join("schema.sql")).unwrap();
+        let mut m = super::super::manifest::Manifest::load(&name).unwrap();
+        m.skipped.push(SkippedPath { path: "schema.sql".into(), mtime, size });
+        m.extract_version = 1;
+        m.save(&name).unwrap();
+        assert!(Handle::open(&name).unwrap().search("utilisateurs_zebre", 5).is_empty());
+
+        let seg_avant = Handle::open(&name).unwrap().segments_cle();
+        let h = crate::atlas::ensure_and_open(&name).unwrap();
+        assert!(h.search("utilisateurs_zebre", 5).iter().any(|x| x.name == "utilisateurs_zebre"), "symbole SQL absent après ré-extraction");
+        let seg_apres = h.segments_cle();
+        assert_ne!(seg_avant, seg_apres, "reconstruction attendue");
+        assert_eq!(h.manifest.extract_version, super::super::manifest::EXTRACT_VERSION);
+        drop(h);
+
+        // Deuxième appel : plus rien à reconstruire.
+        let h2 = crate::atlas::ensure_and_open(&name).unwrap();
+        assert_eq!(h2.segments_cle(), seg_apres, "ré-extraction répétée");
+        drop(h2);
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
+    }
+
+    /// Manifeste écrit avant le champ : `extract_version` vaut 0 (donc périmé) ;
+    /// un manifeste neuf porte la version courante ; un lecteur ancien (sans le
+    /// champ) ignore la clé inconnue sans planter.
+    #[test]
+    fn manifeste_sans_version_vaut_zero() {
+        let json = r#"{"format_version":6,"root":"/x","segments":["s"],"generated_at":0}"#;
+        let m: super::super::manifest::Manifest = serde_json::from_str(json).unwrap();
+        assert_eq!(m.extract_version, 0);
+        let neuf = super::super::manifest::Manifest::new("/x", vec![]);
+        assert_eq!(neuf.extract_version, super::super::manifest::EXTRACT_VERSION);
+        #[derive(serde::Deserialize)]
+        struct Ancien {
+            format_version: u32,
+        }
+        let neuf_json = serde_json::to_string(&neuf).unwrap();
+        assert_eq!(serde_json::from_str::<Ancien>(&neuf_json).unwrap().format_version, neuf.format_version);
+    }
+
+    /// Compaction / changement massif : dérivés de l'index existant, ils
+    /// CONSERVENT la version d'extraction (jamais promue sans ré-extraction).
+    #[test]
+    fn rebuild_derive_garde_la_version() {
+        let (name, dir) = project("derive");
+        std::fs::write(dir.join("a.ts"), "export function a() {}\n").unwrap();
+        let h = index_it(&name, &dir);
+        let idx = h.materialize();
+        drop(h);
+        let mut m = super::super::manifest::Manifest::load(&name).unwrap();
+        m.extract_version = 1;
+        m.save(&name).unwrap();
+        crate::atlas::rebuild_derived_locked(&name, &idx, Tracked::default()).unwrap();
+        assert_eq!(super::super::manifest::Manifest::load(&name).unwrap().extract_version, 1);
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
     }
 }

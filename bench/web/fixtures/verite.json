@@ -1,0 +1,1287 @@
+{
+ "doc-pagination.json": {
+  "code": [
+   "curl 'https://api.example.org/v1/items?cursor=abc123&limit=50'"
+  ],
+  "completeness": "complete",
+  "ct": "application/json",
+  "family": "Generic",
+  "must_have": [
+   "The default page size is 25 and the maximum is 100."
+  ],
+  "titles": [
+   "Pagination",
+   "Cursors",
+   "Limits"
+  ],
+  "url": "https://api.example.org/docs/pagination.json"
+ },
+ "docusaurus-routing.html": {
+  "anchors": [
+   "defining-routes",
+   "path-params",
+   "optional-params",
+   "options",
+   "options~2"
+  ],
+  "canonical": "https://docs.fluxrouter.dev/docs/v2/routing",
+  "code": [
+   "import { Router } from 'fluxrouter';\n\nconst router = new Router({ strict: true });\nrouter.add('/users/:id', (ctx) => ctx.json({ id: ctx.params.id }));",
+   "router.add('/blog/:slug?', showBlog);",
+   "npm install fluxrouter@2",
+   "yarn add fluxrouter@2"
+  ],
+  "completeness": "complete",
+  "family": "Docusaurus",
+  "lang": "en",
+  "leak": [
+   "Skip to main content",
+   "Join our Discord",
+   "Edit this page",
+   "Last updated on",
+   "Previous",
+   "Introduction",
+   "Middleware",
+   "Breadcrumb Guide",
+   "Routing sidebar entry",
+   "On this page",
+   "Version: 2.x",
+   "Copyright (c) 2024",
+   "Direct link to",
+   "Copy code"
+  ],
+  "links_contain": [
+   "https://docs.fluxrouter.dev/docs/v2/middleware"
+  ],
+  "must_have": [
+   "**npm**",
+   "**yarn**",
+   "src/router.ts",
+   "| `strict` | `boolean` | `false` |"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Routes are matched in declaration order"
+   ],
+   [
+    "Tip",
+    "Use `basePath` when the app is served from a sub-directory"
+   ]
+  ],
+  "titles": [
+   "Routing",
+   "Defining routes",
+   "Path params",
+   "Optional params",
+   "Options"
+  ],
+  "url": "https://docs.fluxrouter.dev/docs/v2/routing",
+  "version": "2.4.1"
+ },
+ "generic-article.html": {
+  "canonical": "https://blog.tinkerbook.example/2024/handling-retries",
+  "code": [
+   "import random, time\n\ndef retry(fn, attempts=5, base=0.1):\n    for i in range(attempts):\n        try:\n            return fn()\n        except IOError:\n            time.sleep(base * 2 ** i + random.random() * 0.05)\n    raise RuntimeError(\"giving up\")"
+  ],
+  "completeness": "complete",
+  "family": "Generic",
+  "lang": "en",
+  "leak": [
+   "We use cookies",
+   "Archive",
+   "Subscribe to our newsletter",
+   "Popular posts",
+   "All rights reserved",
+   "Privacy policy",
+   "Accept all",
+   "Ten tips for logging"
+  ],
+  "must_have": [
+   "| Status | Retry? |",
+   "> Retry only idempotent requests",
+   "1. Wait `base * 2^attempt` milliseconds."
+  ],
+  "titles": [
+   "Handling retries in HTTP clients",
+   "Why back off",
+   "A minimal implementation",
+   "Which errors to retry",
+   "Conclusion"
+  ],
+  "url": "https://blog.tinkerbook.example/2024/handling-retries"
+ },
+ "gitbook-hint.html": {
+  "anchors": [
+   "webhooks",
+   "register-an-endpoint",
+   "payload"
+  ],
+  "canonical": "https://lumen.gitbook.io/docs/webhooks",
+  "code": [
+   "lumen webhook add --url https://example.org/hook --event invoice.paid",
+   "{\n  \"event\": \"invoice.paid\",\n  \"id\": \"evt_123\",\n  \"data\": { \"amount\": 4200 }\n}"
+  ],
+  "completeness": "complete",
+  "family": "GitBook",
+  "lang": "en",
+  "leak": [
+   "Ask AI",
+   "Overview sidebar entry",
+   "Powered by GitBook",
+   "Last modified 3d ago"
+  ],
+  "must_have": [
+   "- The `id` is unique per delivery."
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Endpoints must answer within **5 seconds**"
+   ],
+   [
+    "Success",
+    "Deliveries are signed with your endpoint secret"
+   ]
+  ],
+  "titles": [
+   "Webhooks",
+   "Register an endpoint",
+   "Payload"
+  ],
+  "url": "https://lumen.gitbook.io/docs/webhooks"
+ },
+ "github-readme.html": {
+  "anchors": [
+   "gearbox",
+   "install",
+   "usage",
+   "flags",
+   "license"
+  ],
+  "canonical": "https://github.com/gearbox/gearbox",
+  "code": [
+   "cargo install gearbox --locked",
+   "[task.build]\nrun = \"cargo build\"\ndeps = [\"fmt\"]\n\n[task.fmt]\nrun = \"cargo fmt --check\""
+  ],
+  "completeness": "complete",
+  "family": "GithubMarkdown",
+  "lang": "en",
+  "leak": [
+   "Features",
+   "Pricing",
+   "Search or jump to",
+   "Issues 12",
+   "© 2024 GitHub",
+   "README.md",
+   "Copy"
+  ],
+  "must_have": [
+   "- `--dry-run`: print the commands without running them",
+   "  - defaults to the number of cores"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Tasks run with your full environment"
+   ]
+  ],
+  "titles": [
+   "Gearbox",
+   "Install",
+   "Usage",
+   "Flags",
+   "License"
+  ],
+  "url": "https://github.com/gearbox/gearbox"
+ },
+ "guide.md": {
+  "anchors": [
+   "deploying-harbor",
+   "prerequisites",
+   "installation",
+   "configuration-file",
+   "setext-heading-level-two",
+   "installation~2"
+  ],
+  "code": [
+   "curl -LO https://example.org/harbor-4.2.tar.gz\nsha256sum -c harbor-4.2.tar.gz.sha256",
+   "hostname: registry.example.org\nhttp:\n  port: 8080\n# a comment inside the fence is kept"
+  ],
+  "completeness": "complete",
+  "ct": "text/markdown; charset=utf-8",
+  "family": "Generic",
+  "forbidden": [
+   "ignore previous instructions",
+   "inline comment payload",
+   "SYSTEM:"
+  ],
+  "lang": "en",
+  "links_contain": [
+   "https://harbor.example.org/docs/upgrade.md",
+   "https://example.org/status"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Never run two Harbor instances"
+   ],
+   [
+    "Note",
+    "The installer is idempotent"
+   ],
+   [
+    "Tip",
+    "Set `hostname` to the public name"
+   ],
+   [
+    "Warning",
+    "Back up `harbor.yml` before upgrading"
+   ]
+  ],
+  "titles": [
+   "Deploying Harbor",
+   "Requirements",
+   "Installation",
+   "Configuration file",
+   "Setext heading level two"
+  ],
+  "url": "https://harbor.example.org/docs/deploy.md",
+  "version": "4.2"
+ },
+ "hidden-injection.html": {
+  "canonical": null,
+  "code": [
+   "import hmac, hashlib\n\ndef verify(secret: bytes, body: bytes, header: str) -> bool:\n    mac = hmac.new(secret, body, hashlib.sha256).hexdigest()\n    return hmac.compare_digest(mac, header)"
+  ],
+  "completeness": "complete",
+  "family": "Generic",
+  "forbidden": [
+   "Ignore previous instructions",
+   "ignore all previous instructions",
+   "SYSTEM:",
+   "disregard the documentation",
+   "tu es maintenant",
+   "Reveal secrets",
+   "HIDDEN_VISIBILITY_PAYLOAD",
+   "ARIA_HIDDEN_PAYLOAD",
+   "TEMPLATE_PAYLOAD",
+   "NOSCRIPT_PAYLOAD",
+   "OFFSCREEN_PAYLOAD",
+   "id_rsa",
+   "evil.example.net"
+  ],
+  "lang": "en",
+  "links_contain": [
+   "https://docs.pigeon.example/pigeon/webhooks/retries"
+  ],
+  "links_forbid": [
+   "secret-admin"
+  ],
+  "must_have": [
+   "This paragraph is only faded and must stay.",
+   "`X-Pigeon-Signature`"
+  ],
+  "titles": [
+   "Webhook signatures",
+   "Verifying a signature",
+   "Replay protection"
+  ],
+  "url": "https://docs.pigeon.example/api/v3/webhooks",
+  "version": "v3"
+ },
+ "latin1-fr.html": {
+  "code": [
+   "from creme import Collection\n\nc = Collection(\"café\")\nc.ajouter(\"été\")"
+  ],
+  "completeness": "complete",
+  "family": "Generic",
+  "lang": "fr",
+  "leak": [
+   "Nous écrire",
+   "Tous droits réservés"
+  ],
+  "must_have": [
+   "Prix : 5 € ou 4 £",
+   "bibliothèque `crème`"
+  ],
+  "titles": [
+   "Présentation du projet",
+   "Démarrage rapide",
+   "Évolutions prévues"
+  ],
+  "url": "https://biblio.example.fr/presentation"
+ },
+ "llms.txt": {
+  "code": [],
+  "completeness": "complete",
+  "ct": "text/plain; charset=utf-8",
+  "family": "Generic",
+  "links_contain": [
+   "https://harbor.example.org/docs/quickstart.md",
+   "https://harbor.example.org/changelog.md"
+  ],
+  "titles": [
+   "Harbor",
+   "Docs",
+   "Optional"
+  ],
+  "url": "https://harbor.example.org/llms.txt"
+ },
+ "long-reference.html": {
+  "canonical": "https://gridlock.example.dev/docs/2.0/reference",
+  "code": [
+   "pub fn grid_op_000(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_000(&mut grid, 0, 0, Flags::empty())?;\nassert_eq!(c.index(), 0);",
+   "pub fn grid_op_001(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_001(&mut grid, 1, 1, Flags::empty())?;\nassert_eq!(c.index(), 1);",
+   "pub fn grid_op_002(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_002(&mut grid, 2, 2, Flags::empty())?;\nassert_eq!(c.index(), 2);",
+   "pub fn grid_op_003(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_003(&mut grid, 3, 3, Flags::empty())?;\nassert_eq!(c.index(), 3);",
+   "pub fn grid_op_004(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_004(&mut grid, 4, 4, Flags::empty())?;\nassert_eq!(c.index(), 4);",
+   "pub fn grid_op_005(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_005(&mut grid, 5, 5, Flags::empty())?;\nassert_eq!(c.index(), 5);",
+   "pub fn grid_op_006(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_006(&mut grid, 6, 6, Flags::empty())?;\nassert_eq!(c.index(), 6);",
+   "pub fn grid_op_007(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_007(&mut grid, 7, 7, Flags::empty())?;\nassert_eq!(c.index(), 7);",
+   "pub fn grid_op_008(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_008(&mut grid, 8, 8, Flags::empty())?;\nassert_eq!(c.index(), 8);",
+   "pub fn grid_op_009(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_009(&mut grid, 9, 9, Flags::empty())?;\nassert_eq!(c.index(), 9);",
+   "pub fn grid_op_010(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_010(&mut grid, 10, 10, Flags::empty())?;\nassert_eq!(c.index(), 10);",
+   "pub fn grid_op_011(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_011(&mut grid, 11, 11, Flags::empty())?;\nassert_eq!(c.index(), 11);",
+   "pub fn grid_op_012(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_012(&mut grid, 12, 12, Flags::empty())?;\nassert_eq!(c.index(), 12);",
+   "pub fn grid_op_013(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_013(&mut grid, 13, 13, Flags::empty())?;\nassert_eq!(c.index(), 13);",
+   "pub fn grid_op_014(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_014(&mut grid, 14, 14, Flags::empty())?;\nassert_eq!(c.index(), 14);",
+   "pub fn grid_op_015(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_015(&mut grid, 15, 15, Flags::empty())?;\nassert_eq!(c.index(), 15);",
+   "pub fn grid_op_016(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_016(&mut grid, 16, 16, Flags::empty())?;\nassert_eq!(c.index(), 16);",
+   "pub fn grid_op_017(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_017(&mut grid, 0, 17, Flags::empty())?;\nassert_eq!(c.index(), 17);",
+   "pub fn grid_op_018(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_018(&mut grid, 1, 18, Flags::empty())?;\nassert_eq!(c.index(), 18);",
+   "pub fn grid_op_019(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_019(&mut grid, 2, 19, Flags::empty())?;\nassert_eq!(c.index(), 19);",
+   "pub fn grid_op_020(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_020(&mut grid, 3, 20, Flags::empty())?;\nassert_eq!(c.index(), 20);",
+   "pub fn grid_op_021(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_021(&mut grid, 4, 21, Flags::empty())?;\nassert_eq!(c.index(), 21);",
+   "pub fn grid_op_022(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_022(&mut grid, 5, 22, Flags::empty())?;\nassert_eq!(c.index(), 22);",
+   "pub fn grid_op_023(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_023(&mut grid, 6, 0, Flags::empty())?;\nassert_eq!(c.index(), 23);",
+   "pub fn grid_op_024(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_024(&mut grid, 7, 1, Flags::empty())?;\nassert_eq!(c.index(), 24);",
+   "pub fn grid_op_025(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_025(&mut grid, 8, 2, Flags::empty())?;\nassert_eq!(c.index(), 25);",
+   "pub fn grid_op_026(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_026(&mut grid, 9, 3, Flags::empty())?;\nassert_eq!(c.index(), 26);",
+   "pub fn grid_op_027(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_027(&mut grid, 10, 4, Flags::empty())?;\nassert_eq!(c.index(), 27);",
+   "pub fn grid_op_028(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_028(&mut grid, 11, 5, Flags::empty())?;\nassert_eq!(c.index(), 28);",
+   "pub fn grid_op_029(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_029(&mut grid, 12, 6, Flags::empty())?;\nassert_eq!(c.index(), 29);",
+   "pub fn grid_op_030(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_030(&mut grid, 13, 7, Flags::empty())?;\nassert_eq!(c.index(), 30);",
+   "pub fn grid_op_031(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_031(&mut grid, 14, 8, Flags::empty())?;\nassert_eq!(c.index(), 31);",
+   "pub fn grid_op_032(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_032(&mut grid, 15, 9, Flags::empty())?;\nassert_eq!(c.index(), 32);",
+   "pub fn grid_op_033(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_033(&mut grid, 16, 10, Flags::empty())?;\nassert_eq!(c.index(), 33);",
+   "pub fn grid_op_034(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_034(&mut grid, 0, 11, Flags::empty())?;\nassert_eq!(c.index(), 34);",
+   "pub fn grid_op_035(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_035(&mut grid, 1, 12, Flags::empty())?;\nassert_eq!(c.index(), 35);",
+   "pub fn grid_op_036(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_036(&mut grid, 2, 13, Flags::empty())?;\nassert_eq!(c.index(), 36);",
+   "pub fn grid_op_037(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_037(&mut grid, 3, 14, Flags::empty())?;\nassert_eq!(c.index(), 37);",
+   "pub fn grid_op_038(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_038(&mut grid, 4, 15, Flags::empty())?;\nassert_eq!(c.index(), 38);",
+   "pub fn grid_op_039(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_039(&mut grid, 5, 16, Flags::empty())?;\nassert_eq!(c.index(), 39);",
+   "pub fn grid_op_040(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_040(&mut grid, 6, 17, Flags::empty())?;\nassert_eq!(c.index(), 40);",
+   "pub fn grid_op_041(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_041(&mut grid, 7, 18, Flags::empty())?;\nassert_eq!(c.index(), 41);",
+   "pub fn grid_op_042(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_042(&mut grid, 8, 19, Flags::empty())?;\nassert_eq!(c.index(), 42);",
+   "pub fn grid_op_043(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_043(&mut grid, 9, 20, Flags::empty())?;\nassert_eq!(c.index(), 43);",
+   "pub fn grid_op_044(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_044(&mut grid, 10, 21, Flags::empty())?;\nassert_eq!(c.index(), 44);",
+   "pub fn grid_op_045(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_045(&mut grid, 11, 22, Flags::empty())?;\nassert_eq!(c.index(), 45);",
+   "pub fn grid_op_046(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_046(&mut grid, 12, 0, Flags::empty())?;\nassert_eq!(c.index(), 46);",
+   "pub fn grid_op_047(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_047(&mut grid, 13, 1, Flags::empty())?;\nassert_eq!(c.index(), 47);",
+   "pub fn grid_op_048(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_048(&mut grid, 14, 2, Flags::empty())?;\nassert_eq!(c.index(), 48);",
+   "pub fn grid_op_049(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_049(&mut grid, 15, 3, Flags::empty())?;\nassert_eq!(c.index(), 49);",
+   "pub fn grid_op_050(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_050(&mut grid, 16, 4, Flags::empty())?;\nassert_eq!(c.index(), 50);",
+   "pub fn grid_op_051(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_051(&mut grid, 0, 5, Flags::empty())?;\nassert_eq!(c.index(), 51);",
+   "pub fn grid_op_052(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_052(&mut grid, 1, 6, Flags::empty())?;\nassert_eq!(c.index(), 52);",
+   "pub fn grid_op_053(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_053(&mut grid, 2, 7, Flags::empty())?;\nassert_eq!(c.index(), 53);",
+   "pub fn grid_op_054(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_054(&mut grid, 3, 8, Flags::empty())?;\nassert_eq!(c.index(), 54);",
+   "pub fn grid_op_055(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_055(&mut grid, 4, 9, Flags::empty())?;\nassert_eq!(c.index(), 55);",
+   "pub fn grid_op_056(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_056(&mut grid, 5, 10, Flags::empty())?;\nassert_eq!(c.index(), 56);",
+   "pub fn grid_op_057(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_057(&mut grid, 6, 11, Flags::empty())?;\nassert_eq!(c.index(), 57);",
+   "pub fn grid_op_058(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_058(&mut grid, 7, 12, Flags::empty())?;\nassert_eq!(c.index(), 58);",
+   "pub fn grid_op_059(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_059(&mut grid, 8, 13, Flags::empty())?;\nassert_eq!(c.index(), 59);",
+   "pub fn grid_op_060(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_060(&mut grid, 9, 14, Flags::empty())?;\nassert_eq!(c.index(), 60);",
+   "pub fn grid_op_061(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_061(&mut grid, 10, 15, Flags::empty())?;\nassert_eq!(c.index(), 61);",
+   "pub fn grid_op_062(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_062(&mut grid, 11, 16, Flags::empty())?;\nassert_eq!(c.index(), 62);",
+   "pub fn grid_op_063(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_063(&mut grid, 12, 17, Flags::empty())?;\nassert_eq!(c.index(), 63);",
+   "pub fn grid_op_064(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_064(&mut grid, 13, 18, Flags::empty())?;\nassert_eq!(c.index(), 64);",
+   "pub fn grid_op_065(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_065(&mut grid, 14, 19, Flags::empty())?;\nassert_eq!(c.index(), 65);",
+   "pub fn grid_op_066(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_066(&mut grid, 15, 20, Flags::empty())?;\nassert_eq!(c.index(), 66);",
+   "pub fn grid_op_067(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_067(&mut grid, 16, 21, Flags::empty())?;\nassert_eq!(c.index(), 67);",
+   "pub fn grid_op_068(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_068(&mut grid, 0, 22, Flags::empty())?;\nassert_eq!(c.index(), 68);",
+   "pub fn grid_op_069(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_069(&mut grid, 1, 0, Flags::empty())?;\nassert_eq!(c.index(), 69);",
+   "pub fn grid_op_070(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_070(&mut grid, 2, 1, Flags::empty())?;\nassert_eq!(c.index(), 70);",
+   "pub fn grid_op_071(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_071(&mut grid, 3, 2, Flags::empty())?;\nassert_eq!(c.index(), 71);",
+   "pub fn grid_op_072(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_072(&mut grid, 4, 3, Flags::empty())?;\nassert_eq!(c.index(), 72);",
+   "pub fn grid_op_073(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_073(&mut grid, 5, 4, Flags::empty())?;\nassert_eq!(c.index(), 73);",
+   "pub fn grid_op_074(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_074(&mut grid, 6, 5, Flags::empty())?;\nassert_eq!(c.index(), 74);",
+   "pub fn grid_op_075(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_075(&mut grid, 7, 6, Flags::empty())?;\nassert_eq!(c.index(), 75);",
+   "pub fn grid_op_076(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_076(&mut grid, 8, 7, Flags::empty())?;\nassert_eq!(c.index(), 76);",
+   "pub fn grid_op_077(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_077(&mut grid, 9, 8, Flags::empty())?;\nassert_eq!(c.index(), 77);",
+   "pub fn grid_op_078(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_078(&mut grid, 10, 9, Flags::empty())?;\nassert_eq!(c.index(), 78);",
+   "pub fn grid_op_079(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_079(&mut grid, 11, 10, Flags::empty())?;\nassert_eq!(c.index(), 79);",
+   "pub fn grid_op_080(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_080(&mut grid, 12, 11, Flags::empty())?;\nassert_eq!(c.index(), 80);",
+   "pub fn grid_op_081(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_081(&mut grid, 13, 12, Flags::empty())?;\nassert_eq!(c.index(), 81);",
+   "pub fn grid_op_082(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_082(&mut grid, 14, 13, Flags::empty())?;\nassert_eq!(c.index(), 82);",
+   "pub fn grid_op_083(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_083(&mut grid, 15, 14, Flags::empty())?;\nassert_eq!(c.index(), 83);",
+   "pub fn grid_op_084(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_084(&mut grid, 16, 15, Flags::empty())?;\nassert_eq!(c.index(), 84);",
+   "pub fn grid_op_085(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_085(&mut grid, 0, 16, Flags::empty())?;\nassert_eq!(c.index(), 85);",
+   "pub fn grid_op_086(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_086(&mut grid, 1, 17, Flags::empty())?;\nassert_eq!(c.index(), 86);",
+   "pub fn grid_op_087(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_087(&mut grid, 2, 18, Flags::empty())?;\nassert_eq!(c.index(), 87);",
+   "pub fn grid_op_088(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_088(&mut grid, 3, 19, Flags::empty())?;\nassert_eq!(c.index(), 88);",
+   "pub fn grid_op_089(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_089(&mut grid, 4, 20, Flags::empty())?;\nassert_eq!(c.index(), 89);",
+   "pub fn grid_op_090(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_090(&mut grid, 5, 21, Flags::empty())?;\nassert_eq!(c.index(), 90);",
+   "pub fn grid_op_091(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_091(&mut grid, 6, 22, Flags::empty())?;\nassert_eq!(c.index(), 91);",
+   "pub fn grid_op_092(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_092(&mut grid, 7, 0, Flags::empty())?;\nassert_eq!(c.index(), 92);",
+   "pub fn grid_op_093(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_093(&mut grid, 8, 1, Flags::empty())?;\nassert_eq!(c.index(), 93);",
+   "pub fn grid_op_094(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_094(&mut grid, 9, 2, Flags::empty())?;\nassert_eq!(c.index(), 94);",
+   "pub fn grid_op_095(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_095(&mut grid, 10, 3, Flags::empty())?;\nassert_eq!(c.index(), 95);",
+   "pub fn grid_op_096(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_096(&mut grid, 11, 4, Flags::empty())?;\nassert_eq!(c.index(), 96);",
+   "pub fn grid_op_097(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_097(&mut grid, 12, 5, Flags::empty())?;\nassert_eq!(c.index(), 97);",
+   "pub fn grid_op_098(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_098(&mut grid, 13, 6, Flags::empty())?;\nassert_eq!(c.index(), 98);",
+   "pub fn grid_op_099(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_099(&mut grid, 14, 7, Flags::empty())?;\nassert_eq!(c.index(), 99);",
+   "pub fn grid_op_100(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_100(&mut grid, 15, 8, Flags::empty())?;\nassert_eq!(c.index(), 100);",
+   "pub fn grid_op_101(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_101(&mut grid, 16, 9, Flags::empty())?;\nassert_eq!(c.index(), 101);",
+   "pub fn grid_op_102(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_102(&mut grid, 0, 10, Flags::empty())?;\nassert_eq!(c.index(), 102);",
+   "pub fn grid_op_103(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_103(&mut grid, 1, 11, Flags::empty())?;\nassert_eq!(c.index(), 103);",
+   "pub fn grid_op_104(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_104(&mut grid, 2, 12, Flags::empty())?;\nassert_eq!(c.index(), 104);",
+   "pub fn grid_op_105(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_105(&mut grid, 3, 13, Flags::empty())?;\nassert_eq!(c.index(), 105);",
+   "pub fn grid_op_106(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_106(&mut grid, 4, 14, Flags::empty())?;\nassert_eq!(c.index(), 106);",
+   "pub fn grid_op_107(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_107(&mut grid, 5, 15, Flags::empty())?;\nassert_eq!(c.index(), 107);",
+   "pub fn grid_op_108(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_108(&mut grid, 6, 16, Flags::empty())?;\nassert_eq!(c.index(), 108);",
+   "pub fn grid_op_109(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_109(&mut grid, 7, 17, Flags::empty())?;\nassert_eq!(c.index(), 109);",
+   "pub fn grid_op_110(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_110(&mut grid, 8, 18, Flags::empty())?;\nassert_eq!(c.index(), 110);",
+   "pub fn grid_op_111(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_111(&mut grid, 9, 19, Flags::empty())?;\nassert_eq!(c.index(), 111);",
+   "pub fn grid_op_112(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_112(&mut grid, 10, 20, Flags::empty())?;\nassert_eq!(c.index(), 112);",
+   "pub fn grid_op_113(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_113(&mut grid, 11, 21, Flags::empty())?;\nassert_eq!(c.index(), 113);",
+   "pub fn grid_op_114(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_114(&mut grid, 12, 22, Flags::empty())?;\nassert_eq!(c.index(), 114);",
+   "pub fn grid_op_115(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_115(&mut grid, 13, 0, Flags::empty())?;\nassert_eq!(c.index(), 115);",
+   "pub fn grid_op_116(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_116(&mut grid, 14, 1, Flags::empty())?;\nassert_eq!(c.index(), 116);",
+   "pub fn grid_op_117(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_117(&mut grid, 15, 2, Flags::empty())?;\nassert_eq!(c.index(), 117);",
+   "pub fn grid_op_118(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_118(&mut grid, 16, 3, Flags::empty())?;\nassert_eq!(c.index(), 118);",
+   "pub fn grid_op_119(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_119(&mut grid, 0, 4, Flags::empty())?;\nassert_eq!(c.index(), 119);",
+   "pub fn grid_op_120(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_120(&mut grid, 1, 5, Flags::empty())?;\nassert_eq!(c.index(), 120);",
+   "pub fn grid_op_121(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_121(&mut grid, 2, 6, Flags::empty())?;\nassert_eq!(c.index(), 121);",
+   "pub fn grid_op_122(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_122(&mut grid, 3, 7, Flags::empty())?;\nassert_eq!(c.index(), 122);",
+   "pub fn grid_op_123(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_123(&mut grid, 4, 8, Flags::empty())?;\nassert_eq!(c.index(), 123);",
+   "pub fn grid_op_124(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_124(&mut grid, 5, 9, Flags::empty())?;\nassert_eq!(c.index(), 124);",
+   "pub fn grid_op_125(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_125(&mut grid, 6, 10, Flags::empty())?;\nassert_eq!(c.index(), 125);",
+   "pub fn grid_op_126(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_126(&mut grid, 7, 11, Flags::empty())?;\nassert_eq!(c.index(), 126);",
+   "pub fn grid_op_127(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_127(&mut grid, 8, 12, Flags::empty())?;\nassert_eq!(c.index(), 127);",
+   "pub fn grid_op_128(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_128(&mut grid, 9, 13, Flags::empty())?;\nassert_eq!(c.index(), 128);",
+   "pub fn grid_op_129(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_129(&mut grid, 10, 14, Flags::empty())?;\nassert_eq!(c.index(), 129);",
+   "pub fn grid_op_130(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_130(&mut grid, 11, 15, Flags::empty())?;\nassert_eq!(c.index(), 130);",
+   "pub fn grid_op_131(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_131(&mut grid, 12, 16, Flags::empty())?;\nassert_eq!(c.index(), 131);",
+   "pub fn grid_op_132(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_132(&mut grid, 13, 17, Flags::empty())?;\nassert_eq!(c.index(), 132);",
+   "pub fn grid_op_133(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_133(&mut grid, 14, 18, Flags::empty())?;\nassert_eq!(c.index(), 133);",
+   "pub fn grid_op_134(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_134(&mut grid, 15, 19, Flags::empty())?;\nassert_eq!(c.index(), 134);",
+   "pub fn grid_op_135(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_135(&mut grid, 16, 20, Flags::empty())?;\nassert_eq!(c.index(), 135);",
+   "pub fn grid_op_136(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_136(&mut grid, 0, 21, Flags::empty())?;\nassert_eq!(c.index(), 136);",
+   "pub fn grid_op_137(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_137(&mut grid, 1, 22, Flags::empty())?;\nassert_eq!(c.index(), 137);",
+   "pub fn grid_op_138(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_138(&mut grid, 2, 0, Flags::empty())?;\nassert_eq!(c.index(), 138);",
+   "pub fn grid_op_139(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_139(&mut grid, 3, 1, Flags::empty())?;\nassert_eq!(c.index(), 139);",
+   "pub fn grid_op_140(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_140(&mut grid, 4, 2, Flags::empty())?;\nassert_eq!(c.index(), 140);",
+   "pub fn grid_op_141(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_141(&mut grid, 5, 3, Flags::empty())?;\nassert_eq!(c.index(), 141);",
+   "pub fn grid_op_142(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_142(&mut grid, 6, 4, Flags::empty())?;\nassert_eq!(c.index(), 142);",
+   "pub fn grid_op_143(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_143(&mut grid, 7, 5, Flags::empty())?;\nassert_eq!(c.index(), 143);",
+   "pub fn grid_op_144(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_144(&mut grid, 8, 6, Flags::empty())?;\nassert_eq!(c.index(), 144);",
+   "pub fn grid_op_145(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_145(&mut grid, 9, 7, Flags::empty())?;\nassert_eq!(c.index(), 145);",
+   "pub fn grid_op_146(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_146(&mut grid, 10, 8, Flags::empty())?;\nassert_eq!(c.index(), 146);",
+   "pub fn grid_op_147(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_147(&mut grid, 11, 9, Flags::empty())?;\nassert_eq!(c.index(), 147);",
+   "pub fn grid_op_148(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_148(&mut grid, 12, 10, Flags::empty())?;\nassert_eq!(c.index(), 148);",
+   "pub fn grid_op_149(grid: &mut Grid, x: usize, y: usize, flags: Flags) -> Result<Cell, GridError>",
+   "let c = grid_op_149(&mut grid, 13, 11, Flags::empty())?;\nassert_eq!(c.index(), 149);"
+  ],
+  "completeness": "complete",
+  "family": "Docusaurus",
+  "lang": "en",
+  "leak": [
+   "Skip to main content",
+   "sidebar fn-",
+   "Edit this page",
+   "Previous",
+   "Copyright (c) 2024 Gridlock",
+   "Direct link to"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Operation 3 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 10 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 17 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 24 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 31 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 38 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 45 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 52 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 59 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 66 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 73 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 80 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 87 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 94 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 101 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 108 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 115 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 122 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 129 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 136 is not thread safe; wrap the grid in a mutex first."
+   ],
+   [
+    "Warning",
+    "Operation 143 is not thread safe; wrap the grid in a mutex first."
+   ]
+  ],
+  "titles": [
+   "Reference",
+   "grid_op_000",
+   "Example",
+   "grid_op_001",
+   "grid_op_002",
+   "grid_op_003",
+   "grid_op_004",
+   "grid_op_005",
+   "grid_op_006",
+   "grid_op_007",
+   "grid_op_008",
+   "grid_op_009",
+   "grid_op_010",
+   "grid_op_011",
+   "grid_op_012",
+   "grid_op_013",
+   "grid_op_014",
+   "grid_op_015",
+   "grid_op_016",
+   "grid_op_017",
+   "grid_op_018",
+   "grid_op_019",
+   "grid_op_020",
+   "grid_op_021",
+   "grid_op_022",
+   "grid_op_023",
+   "grid_op_024",
+   "grid_op_025",
+   "grid_op_026",
+   "grid_op_027",
+   "grid_op_028",
+   "grid_op_029",
+   "grid_op_030",
+   "grid_op_031",
+   "grid_op_032",
+   "grid_op_033",
+   "grid_op_034",
+   "grid_op_035",
+   "grid_op_036",
+   "grid_op_037",
+   "grid_op_038",
+   "grid_op_039",
+   "grid_op_040",
+   "grid_op_041",
+   "grid_op_042",
+   "grid_op_043",
+   "grid_op_044",
+   "grid_op_045",
+   "grid_op_046",
+   "grid_op_047",
+   "grid_op_048",
+   "grid_op_049",
+   "grid_op_050",
+   "grid_op_051",
+   "grid_op_052",
+   "grid_op_053",
+   "grid_op_054",
+   "grid_op_055",
+   "grid_op_056",
+   "grid_op_057",
+   "grid_op_058",
+   "grid_op_059",
+   "grid_op_060",
+   "grid_op_061",
+   "grid_op_062",
+   "grid_op_063",
+   "grid_op_064",
+   "grid_op_065",
+   "grid_op_066",
+   "grid_op_067",
+   "grid_op_068",
+   "grid_op_069",
+   "grid_op_070",
+   "grid_op_071",
+   "grid_op_072",
+   "grid_op_073",
+   "grid_op_074",
+   "grid_op_075",
+   "grid_op_076",
+   "grid_op_077",
+   "grid_op_078",
+   "grid_op_079",
+   "grid_op_080",
+   "grid_op_081",
+   "grid_op_082",
+   "grid_op_083",
+   "grid_op_084",
+   "grid_op_085",
+   "grid_op_086",
+   "grid_op_087",
+   "grid_op_088",
+   "grid_op_089",
+   "grid_op_090",
+   "grid_op_091",
+   "grid_op_092",
+   "grid_op_093",
+   "grid_op_094",
+   "grid_op_095",
+   "grid_op_096",
+   "grid_op_097",
+   "grid_op_098",
+   "grid_op_099",
+   "grid_op_100",
+   "grid_op_101",
+   "grid_op_102",
+   "grid_op_103",
+   "grid_op_104",
+   "grid_op_105",
+   "grid_op_106",
+   "grid_op_107",
+   "grid_op_108",
+   "grid_op_109",
+   "grid_op_110",
+   "grid_op_111",
+   "grid_op_112",
+   "grid_op_113",
+   "grid_op_114",
+   "grid_op_115",
+   "grid_op_116",
+   "grid_op_117",
+   "grid_op_118",
+   "grid_op_119",
+   "grid_op_120",
+   "grid_op_121",
+   "grid_op_122",
+   "grid_op_123",
+   "grid_op_124",
+   "grid_op_125",
+   "grid_op_126",
+   "grid_op_127",
+   "grid_op_128",
+   "grid_op_129",
+   "grid_op_130",
+   "grid_op_131",
+   "grid_op_132",
+   "grid_op_133",
+   "grid_op_134",
+   "grid_op_135",
+   "grid_op_136",
+   "grid_op_137",
+   "grid_op_138",
+   "grid_op_139",
+   "grid_op_140",
+   "grid_op_141",
+   "grid_op_142",
+   "grid_op_143",
+   "grid_op_144",
+   "grid_op_145",
+   "grid_op_146",
+   "grid_op_147",
+   "grid_op_148",
+   "grid_op_149"
+  ],
+  "url": "https://gridlock.example.dev/docs/2.0/reference",
+  "version": "2.0"
+ },
+ "mdn-like-array-map.html": {
+  "anchors": [
+   "syntax",
+   "parameters",
+   "return_value",
+   "specifications",
+   "browser_compatibility"
+  ],
+  "canonical": "https://webdocs.example.com/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map",
+  "code": [
+   "map(callbackFn)\nmap(callbackFn, thisArg)",
+   "const numbers = [1, 4, 9];\nconst roots = numbers.map((num) => Math.sqrt(num));\n\n// roots is now     [1, 2, 3]\n// numbers is still [1, 4, 9]"
+  ],
+  "completeness": "complete",
+  "family": "Generic",
+  "lang": "en-US",
+  "leak": [
+   "Technologies",
+   "References & Guides",
+   "filter() sidebar link",
+   "Search Webdocs",
+   "Widely available",
+   "In this article",
+   "Privacy",
+   "2005-2024 Webdocs contributors",
+   "MDN Web Docs Interactive Example"
+  ],
+  "must_have": [
+   "A value to use as `this` when executing `callbackFn`",
+   "| Chrome | 1 |"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Do not use `map()` when you do not use the returned array"
+   ],
+   [
+    "Note",
+    "The `map()` method is generic"
+   ]
+  ],
+  "titles": [
+   "Array.prototype.map()",
+   "Try it",
+   "Syntax",
+   "Parameters",
+   "Return value",
+   "Examples",
+   "Mapping an array of numbers to an array of square roots",
+   "Specifications",
+   "Browser compatibility"
+  ],
+  "url": "https://webdocs.example.com/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map"
+ },
+ "mintlify-guide.html": {
+  "anchors": [
+   "authentication",
+   "creating-a-key",
+   "making-a-request",
+   "response-codes"
+  ],
+  "canonical": "https://docs.hexa.example/api-reference/authentication",
+  "code": [
+   "curl https://api.hexa.example/v1/me \\\n  -H \"Authorization: Bearer $HEXA_KEY\"",
+   "const res = await fetch(\"https://api.hexa.example/v1/me\", {\n  headers: { Authorization: `Bearer ${process.env.HEXA_KEY}` },\n});"
+  ],
+  "completeness": "complete",
+  "family": "Mintlify",
+  "lang": "en",
+  "leak": [
+   "Changelog",
+   "Introduction sidebar",
+   "Was this page helpful?",
+   "Next: Pagination",
+   "Search..."
+  ],
+  "must_have": [
+   "**cURL**",
+   "**Node**",
+   "| 401 | Missing or invalid key |"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Keep your key secret"
+   ],
+   [
+    "Info",
+    "Keys never expire"
+   ]
+  ],
+  "titles": [
+   "Authentication",
+   "Creating a key",
+   "Making a request",
+   "Response codes"
+  ],
+  "url": "https://docs.hexa.example/api-reference/authentication"
+ },
+ "mkdocs-material-install.html": {
+  "anchors": [
+   "installation",
+   "from-a-package-manager",
+   "from-source",
+   "supported-platforms"
+  ],
+  "canonical": "https://squidtools.example.net/en/stable/getting-started/installation/",
+  "code": [
+   "pip install squid-cli==3.4.0",
+   "conda install -c squid squid-cli=3.4.0",
+   "git clone https://example.net/squid.git\ncd squid\ncargo build --release"
+  ],
+  "completeness": "complete",
+  "family": "MkDocs",
+  "lang": "en",
+  "leak": [
+   "Skip to content",
+   "Back to top",
+   "Quickstart sidebar link",
+   "Table of contents",
+   "Made with Material for MkDocs",
+   "Copyright",
+   "Edit this page",
+   "Permanent link"
+  ],
+  "must_have": [
+   "**pip**",
+   "**conda**",
+   "| Platform | Architecture |",
+   "| Linux | x86_64, aarch64 |",
+   "**Offline installation**"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Version `3.3` and older are not supported on Python 3.12"
+   ],
+   [
+    "Note",
+    "A recent Rust toolchain (1.75 or newer) is required"
+   ],
+   [
+    "Tip",
+    "Pass `--prefix` to the install script"
+   ]
+  ],
+  "titles": [
+   "Installation",
+   "From a package manager",
+   "From source",
+   "Supported platforms"
+  ],
+  "url": "https://squidtools.example.net/en/stable/getting-started/installation/",
+  "version": "stable"
+ },
+ "nextra-callout.html": {
+  "anchors": [
+   "data-fetching",
+   "loading-data",
+   "error-states"
+  ],
+  "canonical": "https://pixelkit.example.dev/docs/next/data-fetching",
+  "code": [
+   "const { data } = useQuery('/api/items');\nif (!data) return <Spinner />;"
+  ],
+  "completeness": "complete",
+  "family": "Nextra",
+  "lang": "en",
+  "leak": [
+   "Documentation",
+   "Search documentation",
+   "Getting Started sidebar",
+   "On This Page",
+   "Last updated on",
+   "← Getting Started",
+   "Mutations →",
+   "MIT 2024"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Queries run twice in development"
+   ],
+   [
+    "Info",
+    "Results are cached for 30 seconds"
+   ]
+  ],
+  "titles": [
+   "Data Fetching",
+   "Loading data",
+   "Error states"
+  ],
+  "url": "https://pixelkit.example.dev/docs/next/data-fetching",
+  "version": "next"
+ },
+ "rustdoc-fn-parse.html": {
+  "anchors": [
+   "errors",
+   "examples"
+  ],
+  "canonical": "https://docs.rs/tomlish/0.21.3/tomlish/fn.parse_config.html",
+  "code": [
+   "pub fn parse_config<T: AsRef<str>>(\n    input: T,\n    opts: &Options,\n) -> Result<Config, ParseError>",
+   "use tomlish::{parse_config, Options};\n\nlet cfg = parse_config(\"name = \\\"demo\\\"\", &Options::default()).unwrap();\nassert_eq!(cfg.get_str(\"name\"), Some(\"demo\"));",
+   "let bad = tomlish::parse_config(\"= 1\", &Default::default());\nassert!(bad.is_err());"
+  ],
+  "completeness": "complete",
+  "family": "RustDoc",
+  "forbidden": [
+   "fn main() {"
+  ],
+  "lang": "en",
+  "leak": [
+   "Copy item path",
+   "This old browser is unsupported",
+   "internal navigation state",
+   "In crate tomlish",
+   "Expand description",
+   "static.files"
+  ],
+  "must_have": [
+   "Comments starting with `#` are ignored."
+  ],
+  "notes": [
+   [
+    "Deprecated",
+    "Deprecated since 0.20.0"
+   ]
+  ],
+  "titles": [
+   "Function tomlish::parse_config",
+   "Errors",
+   "Examples"
+  ],
+  "url": "https://docs.rs/tomlish/0.21.3/tomlish/fn.parse_config.html",
+  "version": "0.21.3"
+ },
+ "rustdoc-struct-options.html": {
+  "anchors": [
+   "fields",
+   "method.new",
+   "method.with_max_depth",
+   "method.default"
+  ],
+  "code": [
+   "pub struct Options {\n    pub strict: bool,\n    pub max_depth: usize,\n}",
+   "let o = tomlish::Options::new().with_max_depth(8);"
+  ],
+  "completeness": "complete",
+  "family": "RustDoc",
+  "lang": "en",
+  "leak": [
+   "Sidebar Implementations",
+   "Copy item path",
+   "Expand description"
+  ],
+  "must_have": [
+   "Maximum nesting of tables. Defaults to 64.",
+   "Creates options with the default values."
+  ],
+  "titles": [
+   "Struct tomlish::Options",
+   "Fields",
+   "Implementations",
+   "impl Options",
+   "pub fn new() -> Options",
+   "pub fn with_max_depth(self, depth: usize) -> Options",
+   "Trait Implementations",
+   "impl Default for Options",
+   "fn default() -> Options"
+  ],
+  "url": "https://docs.rs/tomlish/0.21.3/tomlish/struct.Options.html",
+  "version": "0.21.3"
+ },
+ "spa-empty.html": {
+  "code": [],
+  "completeness": "needs_js",
+  "family": "Generic",
+  "lang": "en",
+  "leak": [
+   "You need to enable JavaScript"
+  ],
+  "titles": [],
+  "url": "https://orbit.example.dev/docs/"
+ },
+ "sphinx-requests-api.html": {
+  "anchors": [
+   "developer-interface",
+   "main-interface",
+   "fetchly.get",
+   "fetchly.Session",
+   "fetchly.Session.close",
+   "fetchly.RequestException"
+  ],
+  "canonical": "https://fetchly.example.org/en/latest/api/",
+  "code": [
+   "fetchly.get(url, params=None, **kwargs)",
+   ">>> import fetchly\n>>> r = fetchly.get('https://example.org', params={'q': 1})",
+   "class fetchly.Session",
+   "close()",
+   "exception fetchly.RequestException"
+  ],
+  "completeness": "complete",
+  "family": "Sphinx",
+  "lang": "en",
+  "leak": [
+   "Edit on GitHub",
+   "Quickstart menu entry",
+   "Search docs",
+   "Read the Docs",
+   "Copyright 2024",
+   "Previous",
+   "[source]",
+   "¶"
+  ],
+  "must_have": [
+   "**Parameters:**",
+   "URL for the new Request object",
+   "Closes all adapters and as such the session."
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Without `timeout` a request can hang forever"
+   ],
+   [
+    "New",
+    "The `params` argument accepts a list of tuples"
+   ]
+  ],
+  "titles": [
+   "Developer Interface",
+   "Main Interface",
+   "Exceptions",
+   "fetchly.get",
+   "fetchly.Session",
+   "fetchly.Session.close",
+   "fetchly.RequestException"
+  ],
+  "url": "https://fetchly.example.org/en/latest/api/",
+  "version": "2.31.0"
+ },
+ "vitepress-config.html": {
+  "anchors": [
+   "configuration",
+   "files",
+   "environment-variables",
+   "reserved-names"
+  ],
+  "canonical": "https://quillbase.example.org/v0.21.3/guide/configuration.html",
+  "code": [
+   "import { defineConfig } from 'quillbase'\n\nexport default defineConfig({\n  outDir: 'dist',\n  cleanUrls: true,\n})",
+   "export QB_TOKEN=abc123",
+   "$env:QB_TOKEN = \"abc123\""
+  ],
+  "completeness": "complete",
+  "family": "VitePress",
+  "lang": "en-US",
+  "leak": [
+   "Skip to content",
+   "Return to top",
+   "On this page",
+   "Edit this page on GitHub",
+   "Last updated",
+   "Previous page",
+   "Next page",
+   "Released under the MIT License",
+   "Copyright 2024",
+   "Getting Started",
+   "API Reference",
+   "Permalink to"
+  ],
+  "must_have": [
+   "**bash**",
+   "**powershell**",
+   "`QB_HOME`: the data directory",
+   "Code-based configuration lets editors complete option names"
+  ],
+  "notes": [
+   [
+    "Warning",
+    "Changing `outDir` after the first build leaves stale files behind"
+   ],
+   [
+    "Tip",
+    "The config file is reloaded automatically in dev mode"
+   ]
+  ],
+  "titles": [
+   "Configuration",
+   "Files",
+   "Environment variables",
+   "Reserved names"
+  ],
+  "url": "https://quillbase.example.org/v0.21.3/guide/configuration.html",
+  "version": "v0.21.3"
+ }
+}

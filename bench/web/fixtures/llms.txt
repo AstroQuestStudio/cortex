@@ -1,0 +1,14 @@
+# Harbor
+
+> Harbor is a small container registry written in Rust.
+
+Notes on the layout of the documentation.
+
+## Docs
+
+- [Quickstart](https://harbor.example.org/docs/quickstart.md): install and push a first image
+- [Configuration](https://harbor.example.org/docs/configuration.md): every option of harbor.yml
+
+## Optional
+
+- [Changelog](https://harbor.example.org/changelog.md)

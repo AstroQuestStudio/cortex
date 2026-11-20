@@ -1,0 +1,19 @@
+
+C:\proj\a.js
+  1:7   error    'unused' is assigned a value but never used  no-unused-vars
+  2:1   warning  Unexpected console statement                 no-console
+  2:1   error    'console' is not defined                     no-undef
+  3:5   error    'a' is not defined                           no-undef
+  3:7   error    Expected '===' and instead saw '=='          eqeqeq
+  3:15  error    'b' is not defined                           no-undef
+
+C:\proj\b.js
+  1:26  error    Expected '===' and instead saw '=='  eqeqeq
+  2:1   warning  Unexpected console statement         no-console
+  2:1   error    'console' is not defined             no-undef
+
+C:\proj\eslint.config.js
+  1:1  error  'module' is not defined  no-undef
+
+✖ 10 problems (8 errors, 2 warnings)
+

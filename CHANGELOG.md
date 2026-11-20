@@ -6,6 +6,110 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-11-20
+
+### Added
+- **`cortex peek <file> ["<question>"]` / MCP `cortex_peek`**: reads the right spot of ANY big text
+  file (vitest/cargo/server log, big JSON, big source), indexed or not, instead of all of it. With a
+  question: the best-ranked numbered line windows (BM25 per line, question terms split like `find`,
+  identifiers and paths searched as written, plus failure signals `FAIL`, `error[E…]`, `panicked at`,
+  `AssertionError`, `×`/`✗`…), merged, deduplicated (digits ignored, « +N similar »), capped
+  (`--max-lignes`, default 60; `-C` context). `--erreurs`: only failure blocks with test name,
+  assertion, useful stack and a `locations : file:line` line (framework frames in `node_modules`
+  collapsed). No question: summary (header, totals line, first failure blocks, end of file). Very
+  long lines (minified JSON) are shown as excerpts around the terms. UTF-16 and CRLF files are read.
+  Two parallel Aho-Corasick passes over the bytes (`src/peek.rs`); new dependency `aho-corasick`
+  (already pulled by `ignore`).
+- **`peek`: accents, more test runners, passing tests, Rust panics, `ask`.** Accents are folded
+  in both directions: a French log with an unaccented question (`echoue` finds `échoue`, `échoué`)
+  and the reverse, capitals, `ç`, `œ`; a log with no accented letter costs nothing (no extra
+  pattern). Failure blocks and summary lines of pytest (`E   ` details, `FAILED x::y`,
+  `N failed, M passed`), jest (`●` blocks, `Tests:`), `go test` (`--- FAIL`, `FAIL pkg`, `panic:`,
+  goroutine stacks) and eslint (`12:5  error …` lines grouped under their file, `✖ N problems`), on
+  top of vitest and cargo. When the question asks why something fails and the log holds real
+  failures, a passing test line (`... ok`, `✓`, `PASS`) is no longer returned as an answer, whatever
+  its name. Rust panics come with their message (`called `Option::unwrap()` on a `None` value`,
+  ``assertion `left == right` failed`` with its left/right lines). `ask` hands a question that names
+  a log file (`.log .txt .out .json`, or any file outside the index) to `peek`. On generated logs of
+  20,000+ lines: pytest 678,732 bytes → 35 lines (1,986 bytes), eslint 1,383,437 bytes → 68 lines
+  (4,513 bytes). The pytest 9.1.0 and eslint 9.39 fixtures are real output; the jest and `go test`
+  fixtures were written from the documented format (those tools were not installed here).
+- **`cortex bench-agent --tache peek`**: agent benchmark for "why does this test fail?", 10 tasks
+  (vitest, cargo, pytest, eslint, go, a French log, three tasks on 20,000-line logs, a passing run),
+  no index and no network. Full `Read` against `peek`, tokens = characters / 4: 10/10 tasks and
+  32/32 expected facts; 1,075,835 → 5,197 tokens (×207 overall, ×677 on the three 20,000-line
+  tasks, whose logs are generated with a fixed seed), 37 tool calls → 10. On short logs (19 to 86
+  lines) the saving is only ×1.0 to ×1.6. The first version of `peek` scored 8/10 tasks (27/32
+  facts) on the same tasks.
+- **`read <id> --autour "<question>"`** (MCP `cortex_read`: `around`, `max_lines`): for a big symbol
+  (more than 80 lines), its signature plus the ranked windows that answer the question, with
+  absolute line numbers and `… N lines omitted`, capped at min(60, a quarter of the symbol) lines.
+  Measured on 6 questions about symbols of this repository: the expected line was in the output
+  6 times out of 6, for 3,022 tokens instead of 15,488 to read the whole symbols (×5.1). Small sample.
+- **MCP freshness probe**: before answering, the server `stat`s the files the call names (path,
+  `path:line`, identifier, text to search) and re-checks the project if one changed, instead of
+  waiting for the periodic check: a file saved a second ago is seen. A named path the atlas never
+  follows is not probed again for 5 seconds. 50 `cortex_find` calls on the 8,000-file private
+  monorepo: median 36.9 ms against 36.3 to 38.3 ms with the previous binary (61.0 ms against 65.4
+  to 66.8 ms when the question names a file), i.e. no measurable cost.
+- **French questions** (`src/semantic.rs`, `src/stem.rs`, `src/search.rs`), without changing the index
+  or the BM25F weights: a one-way French → code table (168 entries, at most 3 code words each; an
+  English question is never widened) for everyday words the code does not contain (« requête »,
+  « répertoire », « taille », « identifiant »…); base forms for conjugated and plural words
+  (« déclarées », « gabarits »); locutions (« en-tête », « mise à jour »); French question stop
+  words; negation (« sans X »: X is not searched); location verbs (« où est défini ») no longer
+  treated as content words. Every entry was kept or dropped by measurement (ablation per component,
+  then leave-one-out, then adding candidates one by one). `CORTEX_FR` turns them off to compare:
+  `CORTEX_FR=` (empty) disables all, a list of letters keeps some (`l` base forms, `p` locutions,
+  `s` stop words, `t` table, `n` negation, `w` location verbs; default `lpstnw`).
+- **French benchmark `bench/public-fr/`**: 100 questions written blind in French on the same pinned
+  flask, hono and ripgrep commits, dev 60 / test 40. Dev (the set the table was tuned on): top-1 /
+  top-5 / MRR 65.0 / 88.3 / 0.746 → 73.3 / 95.0 / 0.820 (0.822 right after the French lot). Test, run twice: 47.5 / 82.5 / 0.624 →
+  55.0 / 80.0 / 0.656 at the end of the French lot (top-1 +3 questions out of 40, **top-5 −1 question**),
+  then 55.0 / 82.5 / 0.661 with the release binary (top-5 unchanged); the French tables were not touched
+  in between, so the test set is no longer an untouched control. The gain is real but smaller than on
+  dev, which is where it was tuned. Replay: `cortex bench bench/public-fr/<file>.json
+  --project bench-<repo>`.
+- **Symbols for SQL, YAML, TOML and JSON files** (`src/confsym.rs`): hand-written scanners, no grammar
+  and no dependency (tree-sitter 0.22 blocks the recent ones), no index format change; such a file
+  used to yield no symbol. SQL: tables and their columns, views, functions, procedures, triggers,
+  indexes, enum and domain types, RLS policies, extensions, schemas (`find "policy RLS on table X"`
+  finds the migration). YAML (depth 3 at most): GitHub Actions, docker compose, OpenAPI and
+  Kubernetes files are recognised, one symbol per Kubernetes resource; TOML and JSON config keys.
+  Lockfiles, generated files and big data files are skipped; sizes and symbol counts are capped.
+  These symbols are ranked at ×0.5 unless the question names them (`table`, `policy`, `rls`,
+  `migration`, `workflow`, `yaml`, `column`, `trigger`, `schema`…): reachable, but they do not push
+  code out of the results. Private AstroQuest SQL benchmark (20 questions on 919 migrations, not
+  reproducible outside the company): top-1 30% → 90%, top-5 45% → 100%, MRR 0.369 → 0.942. Cost:
+  about +10.7 MB of index for 8,242 SQL symbols.
+- **Extraction version** (`EXTRACT_VERSION`, now 2): the manifest records which extractor built the
+  index. An index built by an older one is rebuilt ONCE from its sources, automatically, on the next
+  call (`find`, MCP, `update`, `update-all`), with one line on stderr. To be bumped whenever a change
+  makes a file yield other symbols.
+- **Kotlin** (`.kt`, `.kts`): classes, interfaces, objects, enums, functions and extension functions,
+  top-level and `const` properties, `typealias`, calls, parent types, imports (`src/kotlin.rs`,
+  tree-sitter-kotlin 0.3.8, MIT). The release binary grows by 4,040,192 bytes (25,609,728 →
+  29,649,920, +15.8%): the grammar table. On Clikt (Apache-2.0, 146 `.kt` files), 8 questions written
+  before the run: top-1 4/8, top-5 7/8, MRR 0.682 (small sample). The public benchmark is identical
+  before and after this step.
+- **Cortex Web (EXPERIMENTAL; Cargo feature `web`, disabled by default)**: documentation and web
+  search for agents, built with `cargo build --release --features web`; without the feature the
+  binary and the MCP tool list are unchanged. CLI:
+  `cortex web add|update|list|find|read|fetch|search|ingest|lib|bench`; MCP: `cortex_web_lib`,
+  `cortex_web_find`, `cortex_web_read`, `cortex_web_fetch`, `cortex_web_search`. Guarded fetching (private-address
+  refusal, size caps, manual redirects, header allow-list, robots.txt per RFC 9309, page text handed
+  to the agent as untrusted data), incremental crawl at one request per second per host, extraction
+  for 10 documentation families, `lib` reads the exact version from the project's lockfile, results
+  link back to the project's symbols. Design, security model and measurements:
+  [docs/WEB.md](docs/WEB.md). Documentation benchmark (10 real doc sites, 100 questions written
+  blind, dev 60 / test 40, test run once): page top-1 on test 72.2% (the current `cortex docs`
+  base: 22.2%), top-5 86.1%, median answer about 535 tokens; **section top-1 only 36.1%** (known
+  weak point). It answers « nothing reliable » when no collected page covers the question: 3 of 4
+  unanswerable test questions refused, 2 of 36 answerable ones refused by mistake (both docsify).
+  Limits: pages that need JavaScript are not read (docsify returns nothing); DuckDuckGo answered
+  HTTP 202 (a verification page) in a real test, so keyless general search falls back to Hacker News
+  and Wikipedia; the abstention threshold rests on 6 negative questions. Not ready for production use.
+
 ## [0.5.3] — 2026-11-08
 
 ### Added
@@ -239,7 +343,10 @@ First public release of **Cortex by AstroQuest**.
   `<P>_SSH_PORT`, `<P>_LOGIN`, `<P>_SSH_KEY_PATH`, `<P>_LABEL`) and never copies other keys.
 - `CORTEX_HOME` overrides the data directory (`~/.cortex`).
 
-[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.6.0
+[0.5.3]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.3
+[0.5.2]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.2
 [0.5.1]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.1
 [0.5.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.0
 [0.4.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.4.0

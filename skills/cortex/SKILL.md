@@ -16,13 +16,14 @@ reading whole files. Read a full file only when you are about to edit it.
 | a whole answer in one call (locate, explain, impact, path, module), token-bounded | `cortex_ask` | `cortex ask "<question>" -b 600` |
 | where is X? (natural language, English or French, or keywords) | `cortex_find` | `cortex find "<question>"` |
 | what is this symbol: signature, role, callees, callers with call line, tests | `cortex_card` | `cortex card <id>` |
-| the exact lines of a symbol, doc section or range | `cortex_read` | `cortex read <id>` |
+| the exact lines of a symbol, doc section or range; for a BIG symbol only the lines that answer a question | `cortex_read` (`around: "<q>"`, `max_lines`) | `cortex read <id>` · `--autour "<q>"` |
 | what a file contains (symbols with ranges, imports, importers, exports) | `cortex_outline` | `cortex outline <file>` |
 | how a folder works (roles, entry points, dependencies) | `cortex_overview` | `cortex overview <dir>` |
 | what breaks if I change X, and which tests to rerun | `cortex_impact` | `cortex impact <id>` |
 | how does A reach B (call chain with call lines) | `cortex_path` | `cortex path <a> <b>` |
 | what did I change, what calls it, which tests | `cortex_changed` | `cortex changed` |
 | exact text (error message, URL, i18n key, TODO) with the enclosing function | `cortex_grep`, `cortex_ui` (de ce qu'on voit à l'écran au code : texte, clé i18n, data-testid, composant) | `cortex grep "<text>"` |
+| the right spot of a BIG text file (test/cargo/server log, JSON; indexed or not) without reading it all | `cortex_peek` (`errors: true` = failure blocks only) | `cortex peek <file> "<q>"` · `--erreurs` · no question = summary (accents either way; vitest, cargo, pytest, jest, go test, eslint) |
 | a file by name fragment or glob | `cortex_files` | `cortex files "<fragment>"` |
 | offline docs of a library you scraped | `cortex_docs` | `cortex docs query "<q>" --source <Lib>` |
 
@@ -46,6 +47,12 @@ Add `-p <Project>` (MCP: `project`) when several projects are indexed, and `-b <
   the standard library are not recorded as calls. `VFS.Include("a/b.lua")` and `require` are imports.
   GLSL (`.glsl .vert .frag .geom .comp`, and shaders written in `[[ ... ]]` strings inside Lua):
   functions, `struct`, `uniform` and `#define` with value. Go, Java and shell: symbols only.
+- SQL, YAML, TOML and JSON files have symbols: SQL tables, columns, policies, functions,
+  triggers, indexes; CI, compose, OpenAPI and Kubernetes YAML. The kind (TABLE, POLICY…) is in the
+  signature. They rank below code unless the question says `table`, `policy`, `migration`,
+  `workflow`, `yaml`… Kotlin (`.kt`) has symbols, calls and imports. French questions are understood
+  (`CORTEX_FR=` disables the French handling). The `cortex_web_*` tools exist only in a build with the
+  experimental `web` feature (`docs/WEB.md`).
 - Line ranges are `L<start>-<end>`; in `card` and `impact`, callers carry the line of the call.
 - `✎` marks code that is not committed yet.
 - The last line, `next : <call>`, is the most useful next call (formerly "suite"). Follow it

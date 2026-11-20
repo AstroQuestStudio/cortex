@@ -3,7 +3,7 @@
   "name": "io.github.AstroQuestStudio/cortex",
   "title": "Cortex by AstroQuest",
   "description": "Code-context engine for AI agents: find, card, read, impact, path. Local, ~10x fewer tokens.",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "websiteUrl": "https://astroquest.fr/cortex",
   "repository": {
     "url": "https://github.com/AstroQuestStudio/cortex",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "astroquest-cortex",
-      "version": "0.3.0",
+      "version": "0.6.0",
       "transport": {
         "type": "stdio"
       },

@@ -1,0 +1,268 @@
+{
+  "alertes": [],
+  "banc": "bench-agent-peek",
+  "commit": "d653b7c",
+  "date": "2026-11-20",
+  "seuils": {
+    "ratio_gros": 10.0,
+    "reussite_pct": 100.0
+  },
+  "taches": [
+    {
+      "faits": 3,
+      "id": "vitest-echec",
+      "lignes": 64,
+      "octets": 2852,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/vitest-echec.log Pourquoi les tests du panier échouent-ils ?"
+        ],
+        "faits": 3,
+        "reussite": true,
+        "tokens": 414
+      },
+      "ratio": 1.5338164251207729,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 635,
+        "reussite": true,
+        "tokens": 635
+      },
+      "type": "vitest"
+    },
+    {
+      "faits": 4,
+      "id": "cargo-echec",
+      "lignes": 86,
+      "octets": 3505,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/cargo-echec.log Pourquoi cargo test échoue-t-il ?"
+        ],
+        "faits": 4,
+        "reussite": true,
+        "tokens": 649
+      },
+      "ratio": 1.5824345146379044,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 1027,
+        "reussite": true,
+        "tokens": 1027
+      },
+      "type": "cargo"
+    },
+    {
+      "faits": 4,
+      "id": "pytest-echec",
+      "lignes": 42,
+      "octets": 1504,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/pytest-echec.log Pourquoi les tests pytest échouent-ils ?"
+        ],
+        "faits": 4,
+        "reussite": true,
+        "tokens": 430
+      },
+      "ratio": 1.0465116279069768,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 450,
+        "reussite": true,
+        "tokens": 450
+      },
+      "type": "pytest"
+    },
+    {
+      "faits": 3,
+      "id": "eslint-echec",
+      "lignes": 19,
+      "octets": 764,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/eslint-echec.log Quelles erreurs eslint faut-il corriger ?"
+        ],
+        "faits": 3,
+        "reussite": true,
+        "tokens": 228
+      },
+      "ratio": 0.9824561403508771,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 224,
+        "reussite": true,
+        "tokens": 224
+      },
+      "type": "eslint"
+    },
+    {
+      "faits": 3,
+      "id": "go-echec",
+      "lignes": 35,
+      "octets": 1355,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/go-echec.log Pourquoi go test échoue-t-il ?"
+        ],
+        "faits": 3,
+        "reussite": true,
+        "tokens": 306
+      },
+      "ratio": 1.3071895424836601,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 400,
+        "reussite": true,
+        "tokens": 400
+      },
+      "type": "go"
+    },
+    {
+      "faits": 3,
+      "id": "fr-accents",
+      "lignes": 58,
+      "octets": 4441,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/fr-accents.log pourquoi echoue le test de paiement ?"
+        ],
+        "faits": 3,
+        "reussite": true,
+        "tokens": 752
+      },
+      "ratio": 1.5558510638297873,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 1170,
+        "reussite": true,
+        "tokens": 1170
+      },
+      "type": "francais"
+    },
+    {
+      "faits": 4,
+      "id": "gros-cargo",
+      "lignes": 20000,
+      "octets": 1314061,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/gros-cargo.log Pourquoi cargo test échoue-t-il ?"
+        ],
+        "faits": 4,
+        "reussite": true,
+        "tokens": 409
+      },
+      "ratio": 888.7921760391198,
+      "read_complet": {
+        "appels": 10,
+        "page1_reussite": false,
+        "page1_tokens": 33980,
+        "reussite": true,
+        "tokens": 363516
+      },
+      "type": "gros"
+    },
+    {
+      "faits": 3,
+      "id": "gros-cargo-erreurs",
+      "lignes": 20000,
+      "octets": 1314061,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/gros-cargo.log --erreurs"
+        ],
+        "faits": 3,
+        "reussite": true,
+        "tokens": 173
+      },
+      "ratio": 2101.248554913295,
+      "read_complet": {
+        "appels": 10,
+        "page1_reussite": false,
+        "page1_tokens": 33980,
+        "reussite": true,
+        "tokens": 363516
+      },
+      "type": "gros"
+    },
+    {
+      "faits": 3,
+      "id": "gros-vitest",
+      "lignes": 20000,
+      "octets": 1195743,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/gros-vitest.log Pourquoi les tests du verrou et des reessais échouent-ils ?"
+        ],
+        "faits": 3,
+        "reussite": true,
+        "tokens": 976
+      },
+      "ratio": 335.234631147541,
+      "read_complet": {
+        "appels": 10,
+        "page1_reussite": false,
+        "page1_tokens": 32410,
+        "reussite": true,
+        "tokens": 327189
+      },
+      "type": "gros"
+    },
+    {
+      "faits": 2,
+      "id": "vert-vitest",
+      "lignes": 1219,
+      "octets": 64718,
+      "peek": {
+        "appels": 1,
+        "etapes": [
+          "peek fixtures/vert-vitest.log Est-ce que tous les tests passent ?"
+        ],
+        "faits": 2,
+        "reussite": true,
+        "tokens": 860
+      },
+      "ratio": 20.590697674418603,
+      "read_complet": {
+        "appels": 1,
+        "page1_reussite": true,
+        "page1_tokens": 17708,
+        "reussite": true,
+        "tokens": 17708
+      },
+      "type": "vert"
+    }
+  ],
+  "total": {
+    "faits": 32,
+    "faits_peek": 32,
+    "peek": {
+      "appels": 10,
+      "tokens": 5197
+    },
+    "ratio": 207.01077544737348,
+    "ratio_gros": 676.6501925545572,
+    "read_complet": {
+      "appels": 37,
+      "tokens": 1075835
+    },
+    "reussies": 10,
+    "taches": 10
+  }
+}

@@ -1,0 +1,927 @@
+{
+ "schema": "cortex-web-bench-corpus/1",
+ "date": "2026-11-20",
+ "user_agent": "CortexBot-research",
+ "champs": {
+  "seeds": "URL de départ du crawl",
+  "allowed_hosts": "hôtes autorisés (SSRF/portée)",
+  "path_prefix": "préfixe de chemin commun à tout le crawl",
+  "include_paths": "(facultatif) sous-ensemble : un chemin n'est suivi que s'il commence par l'un de ces préfixes ; vide = tout path_prefix",
+  "exclude_paths": "(facultatif) préfixes jamais suivis (versions anciennes, langues, doublons)",
+  "max_pages": "plafond de pages par version",
+  "estimated_pages": "estimation de la taille réelle de la portée (non mesurée par crawl)",
+  "version": "version documentée de la portée principale ; other_versions = versions secondaires, même source, crawl séparé",
+  "family": "famille attendue (vocabulaire du brief) ; detecteur_famille_probable = variante de l'énumération Family de src/web/extract.rs",
+  "robots_ok": "true seulement si robots.txt autorise les graines ET toutes les URL de vérité terrain pour un robot générique (vérifié avec urllib.robotparser)",
+  "needs_js": "true si le contenu n'est pas dans le HTML initial",
+  "js_requis_mesure": "texte visible de la graine < 200 caractères",
+  "fingerprint_graine": "octets/texte visible/generator de la graine à la date du banc"
+ },
+ "sources": [
+  {
+   "name": "rust-book",
+   "seeds": [
+    "https://doc.rust-lang.org/book/",
+    "https://doc.rust-lang.org/book/ch01-01-installation.html"
+   ],
+   "allowed_hosts": [
+    "doc.rust-lang.org"
+   ],
+   "path_prefix": "/book/",
+   "exclude_paths": [
+    "/book/print.html",
+    "/book/first-edition/",
+    "/book/second-edition/"
+   ],
+   "max_pages": 130,
+   "estimated_pages": 115,
+   "version": null,
+   "family": "mdbook",
+   "detecteur_famille_probable": "Generic",
+   "robots_ok": true,
+   "robots_note": "Disallow seulement /1., /0., /book/first-edition/, /book/second-edition/ (+ variantes stable/beta/nightly) ; /book/ autorisé ; Sitemap: /sitemap.txt.",
+   "needs_js": false,
+   "js_note": "Contenu des chapitres dans le HTML initial. La barre latérale (table des matières) est chargée par toc.js : la page d'index /book/ n'a presque pas de texte, découvrir les chapitres par les liens précédent/suivant ou la graine ch01-01.",
+   "licence_doc": "MIT OR Apache-2.0 (dépôt rust-lang/book)",
+   "fingerprint_graine": {
+    "url": "https://doc.rust-lang.org/book/",
+    "http": 200,
+    "octets": 22496,
+    "texte_visible": 1244,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "other_versions": [],
+   "include_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "ureq",
+   "seeds": [
+    "https://docs.rs/ureq/2.10.1/ureq/"
+   ],
+   "allowed_hosts": [
+    "docs.rs"
+   ],
+   "path_prefix": "/ureq/2.10.1/ureq/",
+   "max_pages": 60,
+   "estimated_pages": 45,
+   "version": "2.10.1",
+   "other_versions": [
+    {
+     "version": "3.5.2",
+     "seeds": [
+      "https://docs.rs/ureq/3.5.2/ureq/"
+     ],
+     "path_prefix": "/ureq/3.5.2/ureq/",
+     "max_pages": 120,
+     "estimated_pages": 90
+    }
+   ],
+   "family": "rustdoc",
+   "detecteur_famille_probable": "RustDoc",
+   "robots_ok": true,
+   "robots_note": "docs.rs : Disallow /releases, */^, */%5E, */~ ; /<crate>/<version>/<crate>/ autorisé. /robots.txt répond par une redirection 307 vers la version à jour.",
+   "needs_js": false,
+   "js_note": "rustdoc statique : titres, signatures et ancres (method.xxx, variant.Xxx) sont dans le HTML initial ; la recherche est en JavaScript mais inutile au crawl.",
+   "licence_doc": "Apache-2.0 OR MIT (crate ureq) ; sortie rustdoc hébergée par docs.rs",
+   "fingerprint_graine": {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/",
+    "http": 200,
+    "octets": 52928,
+    "texte_visible": 12861,
+    "generator": "rustdoc"
+   },
+   "licence_verifiee": false,
+   "include_paths": [],
+   "exclude_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "python-library",
+   "seeds": [
+    "https://docs.python.org/3.13/library/json.html",
+    "https://docs.python.org/3.13/library/pathlib.html",
+    "https://docs.python.org/3.13/library/asyncio.html"
+   ],
+   "allowed_hosts": [
+    "docs.python.org"
+   ],
+   "path_prefix": "/3.13/library/",
+   "include_paths": [
+    "/3.13/library/json.html",
+    "/3.13/library/pathlib.html",
+    "/3.13/library/asyncio"
+   ],
+   "max_pages": 40,
+   "estimated_pages": 23,
+   "version": "3.13",
+   "other_versions": [
+    {
+     "version": "3.11",
+     "seeds": [
+      "https://docs.python.org/3.11/library/json.html",
+      "https://docs.python.org/3.11/library/pathlib.html",
+      "https://docs.python.org/3.11/library/asyncio.html"
+     ],
+     "path_prefix": "/3.11/library/",
+     "include_paths": [
+      "/3.11/library/json.html",
+      "/3.11/library/pathlib.html",
+      "/3.11/library/asyncio"
+     ],
+     "max_pages": 40,
+     "estimated_pages": 23
+    }
+   ],
+   "family": "sphinx",
+   "detecteur_famille_probable": "Sphinx",
+   "robots_ok": true,
+   "robots_note": "Disallow /dev, /release et les versions en fin de vie (/2.x/, /3.0/ à /3.10/) ; /3.13/ et /3.11/ autorisés. Le 3.10 est INTERDIT : ne pas l'utiliser.",
+   "needs_js": false,
+   "js_note": "Sphinx statique : tout le contenu dans le HTML initial.",
+   "licence_doc": "PSF License v2 (documentation Python) ; exemples sous 0BSD (à confirmer)",
+   "fingerprint_graine": {
+    "url": "https://docs.python.org/3.13/library/json.html",
+    "http": 200,
+    "octets": 110644,
+    "texte_visible": 25483,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "exclude_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "flask",
+   "seeds": [
+    "https://flask.palletsprojects.com/en/stable/"
+   ],
+   "allowed_hosts": [
+    "flask.palletsprojects.com"
+   ],
+   "path_prefix": "/en/stable/",
+   "max_pages": 130,
+   "estimated_pages": 95,
+   "version": "3.1.x",
+   "other_versions": [],
+   "family": "readthedocs",
+   "detecteur_famille_probable": "Sphinx",
+   "robots_ok": true,
+   "robots_note": "robots.txt généré par Read the Docs : seul /en/latest/ est interdit (version cachée). /en/stable/ autorisé. ATTENTION : /en/3.0.x/, /en/2.3.x/, /en/2.2.x/ redirigent vers /en/stable/ (versions anciennes non servies) ; /en/3.1.x/ répond 404. Les questions de version utilisent le journal des changements /en/stable/changes/.",
+   "needs_js": false,
+   "js_note": "Sphinx (thème Pallets) hébergé par Read the Docs ; contenu dans le HTML initial. La page /api/ pèse ~1 Mo.",
+   "licence_doc": "BSD-3-Clause (projet Flask / Pallets)",
+   "fingerprint_graine": {
+    "url": "https://flask.palletsprojects.com/en/stable/",
+    "http": 200,
+    "octets": 39704,
+    "texte_visible": 6976,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "include_paths": [],
+   "exclude_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "vitepress",
+   "seeds": [
+    "https://vitepress.dev/guide/what-is-vitepress",
+    "https://vitepress.dev/reference/site-config"
+   ],
+   "allowed_hosts": [
+    "vitepress.dev"
+   ],
+   "path_prefix": "/",
+   "include_paths": [
+    "/guide/",
+    "/reference/"
+   ],
+   "exclude_paths": [
+    "/es/",
+    "/fa/",
+    "/ja/",
+    "/ko/",
+    "/pt/",
+    "/ru/",
+    "/zh/"
+   ],
+   "max_pages": 50,
+   "estimated_pages": 33,
+   "version": "2.0.0-alpha.21",
+   "family": "vitepress",
+   "detecteur_famille_probable": "VitePress",
+   "robots_ok": true,
+   "robots_note": "User-agent: * ; Disallow: (vide) = tout autorisé ; Content-Signal: search=yes, ai-train=yes, ai-input=yes ; Sitemap fourni.",
+   "needs_js": false,
+   "js_note": "Rendu côté serveur (SSG) : contenu dans le HTML initial ; la page hydrate ensuite en Vue. Titres avec ancres lisibles ; un U+200B suit chaque titre.",
+   "licence_doc": "MIT (projet VitePress)",
+   "fingerprint_graine": {
+    "url": "https://vitepress.dev/guide/what-is-vitepress",
+    "http": 200,
+    "octets": 30745,
+    "texte_visible": 5234,
+    "generator": "VitePress v2.0.0-alpha.21"
+   },
+   "licence_verifiee": false,
+   "other_versions": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "docusaurus",
+   "seeds": [
+    "https://docusaurus.io/docs"
+   ],
+   "allowed_hosts": [
+    "docusaurus.io"
+   ],
+   "path_prefix": "/docs/",
+   "exclude_paths": [
+    "/docs/next/",
+    "/docs/3.",
+    "/docs/2.",
+    "/docs/1."
+   ],
+   "max_pages": 110,
+   "estimated_pages": 93,
+   "version": "3.10.2",
+   "family": "docusaurus",
+   "detecteur_famille_probable": "Docusaurus",
+   "robots_ok": true,
+   "robots_note": "robots.txt composé uniquement de commentaires (déclaration Content Signals sans directive) : aucune règle Disallow ; Sitemap fourni (1361 URL dont ~1270 de versions antérieures, d'où exclude_paths).",
+   "needs_js": false,
+   "js_note": "Rendu statique (SSG) : contenu dans le HTML initial ; meta docusaurus_version=3.10.2. Le site lui-même est généré par Docusaurus v4.0.0 (meta generator).",
+   "licence_doc": "CC BY 4.0 pour la documentation, MIT pour le code (à confirmer)",
+   "fingerprint_graine": {
+    "url": "https://docusaurus.io/docs",
+    "http": 200,
+    "octets": 50500,
+    "texte_visible": 11473,
+    "generator": "Docusaurus v4.0.0"
+   },
+   "licence_verifiee": false,
+   "other_versions": [],
+   "include_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "mkdocs-material",
+   "seeds": [
+    "https://squidfunk.github.io/mkdocs-material/"
+   ],
+   "allowed_hosts": [
+    "squidfunk.github.io"
+   ],
+   "path_prefix": "/mkdocs-material/",
+   "exclude_paths": [
+    "/mkdocs-material/blog/",
+    "/mkdocs-material/contributing/"
+   ],
+   "max_pages": 100,
+   "estimated_pages": 65,
+   "version": "9.x (generator mkdocs-material-9.8.1)",
+   "family": "mkdocs",
+   "detecteur_famille_probable": "MkDocs",
+   "robots_ok": true,
+   "robots_note": "/robots.txt répond 404 sur squidfunk.github.io : pas de règles = tout autorisé (RFC 9309 §2.3.1.3). À signaler : pas d'engagement explicite de l'éditeur.",
+   "needs_js": false,
+   "js_note": "Rendu statique par MkDocs ; contenu dans le HTML initial (navigation instantanée et recherche en JavaScript, inutiles au crawl).",
+   "licence_doc": "MIT (Material for MkDocs)",
+   "fingerprint_graine": {
+    "url": "https://squidfunk.github.io/mkdocs-material/",
+    "http": 200,
+    "octets": 78359,
+    "texte_visible": 7637,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "other_versions": [],
+   "include_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "mdn-fetch",
+   "seeds": [
+    "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch"
+   ],
+   "allowed_hosts": [
+    "developer.mozilla.org"
+   ],
+   "path_prefix": "/en-US/docs/Web/API/",
+   "include_paths": [
+    "/en-US/docs/Web/API/Window/fetch",
+    "/en-US/docs/Web/API/Fetch_API/",
+    "/en-US/docs/Web/API/Request/",
+    "/en-US/docs/Web/API/Response/",
+    "/en-US/docs/Web/API/Headers/",
+    "/en-US/docs/Web/API/AbortController",
+    "/en-US/docs/Web/API/AbortSignal/"
+   ],
+   "max_pages": 140,
+   "estimated_pages": 115,
+   "version": null,
+   "family": "mdn",
+   "detecteur_famille_probable": "Generic",
+   "robots_ok": true,
+   "robots_note": "User-agent: * ; Disallow /api/, /*/files/, /media ; Sitemap fourni. Les pages /en-US/docs/Web/API/... sont autorisées.",
+   "needs_js": false,
+   "js_note": "Contenu des articles dans le HTML initial (rendu serveur) ; le HTML est lourd (~150 Ko) car il embarque la navigation globale : attention à la fuite de navigation.",
+   "licence_doc": "CC BY-SA 2.5 pour le texte, CC0 pour les exemples de code (à confirmer)",
+   "fingerprint_graine": {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API",
+    "http": 200,
+    "octets": 153353,
+    "texte_visible": 5380,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "other_versions": [],
+   "exclude_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "postgresql",
+   "seeds": [
+    "https://www.postgresql.org/docs/16/ddl-rowsecurity.html",
+    "https://www.postgresql.org/docs/16/sql-createpolicy.html"
+   ],
+   "allowed_hosts": [
+    "www.postgresql.org"
+   ],
+   "path_prefix": "/docs/16/",
+   "include_paths": [
+    "/docs/16/ddl",
+    "/docs/16/sql-createpolicy",
+    "/docs/16/sql-alterpolicy",
+    "/docs/16/sql-droppolicy",
+    "/docs/16/sql-altertable",
+    "/docs/16/sql-grant",
+    "/docs/16/sql-merge",
+    "/docs/16/sql-copy"
+   ],
+   "max_pages": 40,
+   "estimated_pages": 30,
+   "version": "16",
+   "other_versions": [
+    {
+     "version": "17",
+     "seeds": [
+      "https://www.postgresql.org/docs/17/ddl-rowsecurity.html",
+      "https://www.postgresql.org/docs/17/sql-createpolicy.html"
+     ],
+     "path_prefix": "/docs/17/",
+     "include_paths": [
+      "/docs/17/ddl",
+      "/docs/17/sql-createpolicy",
+      "/docs/17/sql-alterpolicy",
+      "/docs/17/sql-droppolicy",
+      "/docs/17/sql-altertable",
+      "/docs/17/sql-grant",
+      "/docs/17/sql-merge",
+      "/docs/17/sql-copy"
+     ],
+     "max_pages": 40,
+     "estimated_pages": 30
+    }
+   ],
+   "family": "generic",
+   "detecteur_famille_probable": "Generic",
+   "robots_ok": true,
+   "robots_note": "Disallow /admin/, /account/, /docs/devel/, /list/, /search/, /message-id/... ; /docs/16/ et /docs/17/ autorisés. Ne PAS utiliser /docs/devel/ ni /docs/current/ en graine (current redirige).",
+   "needs_js": false,
+   "js_note": "DocBook statique : contenu dans le HTML initial. Ancres nommées à utiliser : SQL-CREATEPOLICY-INSERT, DDL-PRIV-MAINTAIN, SQL-ALTERTABLE-DESC-SET-EXPRESSION… ; les ancres id-1.x.y.z sont instables et jamais utilisées comme vérité terrain.",
+   "licence_doc": "PostgreSQL License (documentation) (à confirmer)",
+   "fingerprint_graine": {
+    "url": "https://www.postgresql.org/docs/16/ddl-rowsecurity.html",
+    "http": 200,
+    "octets": 31169,
+    "texte_visible": 16039,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "exclude_paths": [],
+   "js_requis_mesure": false
+  },
+  {
+   "name": "docsify",
+   "seeds": [
+    "https://docsify.js.org/"
+   ],
+   "allowed_hosts": [
+    "docsify.js.org"
+   ],
+   "path_prefix": "/",
+   "max_pages": 15,
+   "estimated_pages": 1,
+   "version": "5.x (docsify@5)",
+   "family": "generic",
+   "detecteur_famille_probable": "Generic",
+   "robots_ok": true,
+   "robots_note": "/robots.txt répond 404 (page GitHub Pages) : pas de règles = tout autorisé. /quickstart.md, /configuration.md, /deploy.md etc. répondent 200 en Markdown brut.",
+   "needs_js": true,
+   "js_note": "SPA : le HTML initial ne contient qu'un shell (body class=loading, texte visible ~9 caractères) ; docsify charge /README.md et les pages par XHR et les compile côté client (routes #/page?id=ancre). needs_js attendu. Le Markdown brut (/page.md) est accessible : un extracteur Markdown peut le lire sans navigateur (hypothèse à mesurer).",
+   "licence_doc": "MIT (projet docsify)",
+   "fingerprint_graine": {
+    "url": "https://docsify.js.org/",
+    "http": 200,
+    "octets": 7958,
+    "texte_visible": 8,
+    "generator": null
+   },
+   "licence_verifiee": false,
+   "other_versions": [],
+   "include_paths": [],
+   "exclude_paths": [],
+   "js_requis_mesure": true
+  }
+ ],
+ "empreintes": {
+  "https://developer.mozilla.org/en-US/docs/Web/API/AbortController": {
+   "http": 200,
+   "octets": 154230,
+   "sha256": "b43080355487c934ff075d15dd5c668ec496f58b73b465074e23be323d01db74"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static": {
+   "http": 200,
+   "octets": 155756,
+   "sha256": "9cc08cf1b0b8bdc30efc3039f49b521e1ae94f9b5e9eb2e76f1e9ccf0af9a58e"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API": {
+   "http": 200,
+   "octets": 153353,
+   "sha256": "38ec40333a6becb29b742c6ef49191e75d9fabb3c17b81fa248b0a6a68c7e890"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch": {
+   "http": 200,
+   "octets": 184064,
+   "sha256": "1a9d9ae4d09e4b199cde6026135e9ef701d9d64bf557c5e747405056e64d6e44"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/Headers/append": {
+   "http": 200,
+   "octets": 151421,
+   "sha256": "5ea28034ac25b05adfc302eb7fc6317917da117674292db5a1e9dd9dd9501688"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/Request/Request": {
+   "http": 200,
+   "octets": 159778,
+   "sha256": "5110abe91aeedcec20a94072d3759ea8a01fa754831deae8c094994514a50f6d"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/Response/json": {
+   "http": 200,
+   "octets": 154076,
+   "sha256": "769f4a5869d0c6947c54d68821d56d2fd006572b7084248bad405f347da6438c"
+  },
+  "https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch": {
+   "http": 200,
+   "octets": 181228,
+   "sha256": "7e9eb0efe4c598ac46e12c5e9341670a469ca402828469fb610fb444736bf26d"
+  },
+  "https://doc.rust-lang.org/book/": {
+   "http": 200,
+   "octets": 22496,
+   "sha256": "ce071fa7d8c010a30b957f79eab9ccbb49b16442134e23727bde1112a97b9c29"
+  },
+  "https://doc.rust-lang.org/book/ch01-01-installation.html": {
+   "http": 200,
+   "octets": 30726,
+   "sha256": "a36167aea30bd22e4adc3d9e0a5c8ae5040f4ac8f78b2ac7dad6f720d1686a1c"
+  },
+  "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html": {
+   "http": 200,
+   "octets": 55998,
+   "sha256": "828e1e8b8ca851cf2a5206f227c57441aee669265360a38fce659bcb4b68041a"
+  },
+  "https://doc.rust-lang.org/book/ch06-02-match.html": {
+   "http": 200,
+   "octets": 42791,
+   "sha256": "78757af4c98478679fbfe8695367061d08981f55adf49ee9205730d9012ec6ba"
+  },
+  "https://doc.rust-lang.org/book/ch08-02-strings.html": {
+   "http": 200,
+   "octets": 49822,
+   "sha256": "a29387f47d6a945266b0f351454ec73ce742337483efbd277086ae7a3325f5ef"
+  },
+  "https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html": {
+   "http": 200,
+   "octets": 59721,
+   "sha256": "4260542ec68744893b93846241dda79550fb2bd2a056e6ca305b47c8ef173816"
+  },
+  "https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html": {
+   "http": 200,
+   "octets": 68460,
+   "sha256": "58711b5d7d6cc4b23766adb7dd3b414de5ca60c184d84138187739ee4b352ee8"
+  },
+  "https://doc.rust-lang.org/book/ch11-01-writing-tests.html": {
+   "http": 200,
+   "octets": 69487,
+   "sha256": "3512116f32a89488b7f1020a41a2dd34c62754643b3e45c701373e5a2a7faf28"
+  },
+  "https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html": {
+   "http": 200,
+   "octets": 50765,
+   "sha256": "c9935337697a8f674c6bcaa65091a63a51e905597461e2302e00acff86231599"
+  },
+  "https://doc.rust-lang.org/book/ch15-04-rc.html": {
+   "http": 200,
+   "octets": 35880,
+   "sha256": "4dd60550cb06515b26c8d4e6dc0b0c5cf4940d4a89c9caf006bbbdde8ef5a9c5"
+  },
+  "https://doc.rust-lang.org/book/ch16-01-threads.html": {
+   "http": 200,
+   "octets": 40494,
+   "sha256": "cc41199fdf75a914cc5b08cd692d5c63dfc269f0c4eb9180444d1cc0121d2a5d"
+  },
+  "https://doc.rust-lang.org/book/ch16-03-shared-state.html": {
+   "http": 200,
+   "octets": 41328,
+   "sha256": "ef72b38ee2fed7ac36233a53031eba6998ead3d6fa19853ed9b1f0f843c23317"
+  },
+  "https://doc.rust-lang.org/book/print.html": {
+   "http": 200,
+   "octets": 1878442,
+   "sha256": "95c6b64992552c0cae995d74f49f518efcf7539725e87221682bb2ee87d396ac"
+  },
+  "https://docs.python.org/3.11/library/asyncio-queue.html": {
+   "http": 200,
+   "octets": 35194,
+   "sha256": "f27e6ef64070f5b74bc72b4f9ca73a981908a62c341ff5624cb20c3a8303f7f2"
+  },
+  "https://docs.python.org/3.11/library/asyncio-task.html": {
+   "http": 200,
+   "octets": 141542,
+   "sha256": "4fdb2bb3b67c235de14eedc8e6552ffae6ca93517d5f42824829d5999a62f84b"
+  },
+  "https://docs.python.org/3.11/library/asyncio.html": {
+   "http": 200,
+   "octets": 21257,
+   "sha256": "46f2cfbfe2d0f061fed2116b49d56e0a6369f77e8cd0d70e87d9164e7d46d829"
+  },
+  "https://docs.python.org/3.11/library/json.html": {
+   "http": 200,
+   "octets": 103163,
+   "sha256": "2411c1af7ac71fc1dc0fe4f525de951584e871a48310683dd4b90e7bcba1b8e8"
+  },
+  "https://docs.python.org/3.11/library/pathlib.html": {
+   "http": 200,
+   "octets": 178156,
+   "sha256": "fa93bee9a3f3ad613e01decbb31e35ad0f0903978dacdfbdd9996fe16bd82fe1"
+  },
+  "https://docs.python.org/3.13/library/asyncio-queue.html": {
+   "http": 200,
+   "octets": 42281,
+   "sha256": "b2df99c8a429caaa15caeb15225ca9878db09fbc8c0c2dcef96429e1b77d8738"
+  },
+  "https://docs.python.org/3.13/library/asyncio-subprocess.html": {
+   "http": 200,
+   "octets": 56879,
+   "sha256": "5ff1006d857c1b0cb8321a966aa436b40b28a6c89cd41d4474fb16d407e108da"
+  },
+  "https://docs.python.org/3.13/library/asyncio-sync.html": {
+   "http": 200,
+   "octets": 60441,
+   "sha256": "7845ffc489182fad2b685d65b9aa4c87cd9f7dac0869351bf5cd7a8a3ed1f035"
+  },
+  "https://docs.python.org/3.13/library/asyncio-task.html": {
+   "http": 200,
+   "octets": 167705,
+   "sha256": "bd7b9a435bc0f30afc28eb3237abcc489e131697f53d84a708bfd47480fc35be"
+  },
+  "https://docs.python.org/3.13/library/asyncio.html": {
+   "http": 200,
+   "octets": 22924,
+   "sha256": "ae9501cc117a30fae342f7719004ad3c1129b6fc7cb9764f55c1731355495f18"
+  },
+  "https://docs.python.org/3.13/library/json.html": {
+   "http": 200,
+   "octets": 110644,
+   "sha256": "f2e17fb3ae2eb9c04261a84022b3a1f978c846043aa33edaab1effae6881da3b"
+  },
+  "https://docs.python.org/3.13/library/pathlib.html": {
+   "http": 200,
+   "octets": 244770,
+   "sha256": "da02a59913db792408c91079876305d6568566844e19631f1b6d657947848267"
+  },
+  "https://docs.rs/ureq/2.10.1/ureq/": {
+   "http": 200,
+   "octets": 52928,
+   "sha256": "8e5c4b40fe8dd2a4b30933269fea02876429012b536916f42e0f7739af33fa1a"
+  },
+  "https://docs.rs/ureq/2.10.1/ureq/enum.Error.html": {
+   "http": 200,
+   "octets": 62692,
+   "sha256": "005d7cec6e21c43a99d88f8716ada6b4ddbc492c344ae074ebce3b5625973ef1"
+  },
+  "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html": {
+   "http": 200,
+   "octets": 65104,
+   "sha256": "b6ecd88e31c49e3bb1c4a24a727cb746ec275210117107f26fe5491e9bbe38ba"
+  },
+  "https://docs.rs/ureq/2.10.1/ureq/struct.Request.html": {
+   "http": 200,
+   "octets": 92984,
+   "sha256": "af5cd3280ff26507dc9eacf971daf43c7bf131ff444cec00d718b4ed23adf3e9"
+  },
+  "https://docs.rs/ureq/3.5.2/ureq/": {
+   "http": 200,
+   "octets": 64202,
+   "sha256": "0078ad371b56873831032fb8e2f364f68cfc24bacd152317e2e657f937e02844"
+  },
+  "https://docs.rs/ureq/3.5.2/ureq/config/struct.ConfigBuilder.html": {
+   "http": 200,
+   "octets": 82281,
+   "sha256": "90c3bf50c5685cbfee01901af335d0bc779334ac1dac5e1cc7091d9f203c6d91"
+  },
+  "https://docs.rs/ureq/3.5.2/ureq/struct.Body.html": {
+   "http": 200,
+   "octets": 69975,
+   "sha256": "f75959f2ffb866fc81b608603d33f221ce5dc75bf225e5d7f042d1bf60f2e244"
+  },
+  "https://docsify.js.org/": {
+   "http": 200,
+   "octets": 7958,
+   "sha256": "a2af70d34120b3d9084003af5df4aee60c5d5d505da936297d7a47eb4c32ca41"
+  },
+  "https://docsify.js.org/configuration.md": {
+   "http": 200,
+   "octets": 27962,
+   "sha256": "ba3a65de4b65e4ee5987db455ac6370bafd135b2a4f6930ed2718c3d49e49238"
+  },
+  "https://docsify.js.org/deploy.md": {
+   "http": 200,
+   "octets": 9466,
+   "sha256": "6921be5695752130a99f908d76ac67008495dc1012802a88eb664a797cbd1b79"
+  },
+  "https://docsify.js.org/quickstart.md": {
+   "http": 200,
+   "octets": 4296,
+   "sha256": "5e33cda3bf001bcccf83620252fad2f7e578602833224349165d4f45f6920377"
+  },
+  "https://docusaurus.io/docs": {
+   "http": 200,
+   "octets": 50500,
+   "sha256": "72096dd380453b3bd81c9813ff75378e6997f997b9f091b2e9a215675875886e"
+  },
+  "https://docusaurus.io/docs/api/docusaurus-config": {
+   "http": 200,
+   "octets": 239713,
+   "sha256": "af2e19edaee1fe8d149b03953e13405191f13e3dde8d6416bae5ff2f5f14f3b9"
+  },
+  "https://docusaurus.io/docs/blog": {
+   "http": 200,
+   "octets": 205584,
+   "sha256": "531e4c2f9032830911ceb381829314d96c77fec0f65c0616e1be2c4046fe679c"
+  },
+  "https://docusaurus.io/docs/configuration": {
+   "http": 200,
+   "octets": 94431,
+   "sha256": "97dbd8466d0199e7442e8419aeb72c20e2f52ef952193e81bde6c7c42eb3d6f3"
+  },
+  "https://docusaurus.io/docs/creating-pages": {
+   "http": 200,
+   "octets": 58291,
+   "sha256": "7ec7e0eb746deaa885a2d7390d0a0d239da24d69fd700689316dbf6e4c8288c7"
+  },
+  "https://docusaurus.io/docs/deployment": {
+   "http": 200,
+   "octets": 218591,
+   "sha256": "d3456ec78d7ed1bf6b9fa55849e9eb1d5401cf9371bb377b5a795f7dd361a766"
+  },
+  "https://docusaurus.io/docs/installation": {
+   "http": 200,
+   "octets": 66379,
+   "sha256": "4116bae1a07424c25a55fb6359e026d9e77375e798b39945d7dbe22848833766"
+  },
+  "https://docusaurus.io/docs/markdown-features/admonitions": {
+   "http": 200,
+   "octets": 119184,
+   "sha256": "5b4aa2cc1870687a2f1c26d1be3731e143ad222fa0e34237dcaae11e3fe762a7"
+  },
+  "https://docusaurus.io/docs/versioning": {
+   "http": 200,
+   "octets": 93555,
+   "sha256": "4a972147caeb688e1ea58e18adf3fa678b5ae8cdac80651457bf902ee4d9aa73"
+  },
+  "https://flask.palletsprojects.com/en/stable/": {
+   "http": 200,
+   "octets": 39704,
+   "sha256": "e76376f8b4b5a3bac1523fbc8da903b6d9be603595f5903c6d36d88f95961d03"
+  },
+  "https://flask.palletsprojects.com/en/stable/api/": {
+   "http": 200,
+   "octets": 1004587,
+   "sha256": "6e6b6f9e01b93f54b97e3c5e55cd6d223c0fe12ab102e3e55bbd63250888f372"
+  },
+  "https://flask.palletsprojects.com/en/stable/appcontext/": {
+   "http": 200,
+   "octets": 18219,
+   "sha256": "6ec85fd36ccfe33eb8fefd9d4cf1d8b402fda8793761990cbff83c7fc9769f5a"
+  },
+  "https://flask.palletsprojects.com/en/stable/blueprints/": {
+   "http": 200,
+   "octets": 34124,
+   "sha256": "40640cf4e6ebb82e30b0775964b0ed9dd02d1a83b47d5423a929d3d58dcd1cd6"
+  },
+  "https://flask.palletsprojects.com/en/stable/changes/": {
+   "http": 200,
+   "octets": 171910,
+   "sha256": "aeccab6e4a592af388361db1e573096681f38a315646d1ee4110fba211efaea7"
+  },
+  "https://flask.palletsprojects.com/en/stable/config/": {
+   "http": 200,
+   "octets": 80831,
+   "sha256": "2779fecd47dcbd20fd9ec38be71830343e6a118eb0e4137a14b9726d9d45775d"
+  },
+  "https://flask.palletsprojects.com/en/stable/deploying/": {
+   "http": 200,
+   "octets": 8959,
+   "sha256": "b0ac5685f3000aadc4ac204f57891769e760b77a7e720827ff52c3b77ff71035"
+  },
+  "https://flask.palletsprojects.com/en/stable/errorhandling/": {
+   "http": 200,
+   "octets": 53279,
+   "sha256": "232f3ab1c6afa63db7f648998cbfdcb8f6be838a4365541a20e723c9be0e8d69"
+  },
+  "https://flask.palletsprojects.com/en/stable/lifecycle/": {
+   "http": 200,
+   "octets": 23095,
+   "sha256": "3036c98e1a6970cee0fbde1bfe850bfdd4070059efd124a0cde398c1895cf574"
+  },
+  "https://flask.palletsprojects.com/en/stable/patterns/fileuploads/": {
+   "http": 200,
+   "octets": 23008,
+   "sha256": "0a97540f72be9b273abd148dfa7e5a48fb13cbf7d870e90d0b91b563e43ecb83"
+  },
+  "https://flask.palletsprojects.com/en/stable/patterns/sqlite3/": {
+   "http": 200,
+   "octets": 19708,
+   "sha256": "989cd2cbedc5a65c3a01da0d3d31d94ec6fbb3e517a63eaa8a61b270a211763e"
+  },
+  "https://flask.palletsprojects.com/en/stable/quickstart/": {
+   "http": 200,
+   "octets": 90801,
+   "sha256": "3f144d6f3bd557188597bfe1a860e13e232f23e64c6fbddaa83af2886f0a04b5"
+  },
+  "https://flask.palletsprojects.com/en/stable/testing/": {
+   "http": 200,
+   "octets": 35650,
+   "sha256": "5f77af12224e0f59b427a169b39c494ec051cd02b3a2f615ede4cdaa659bb5db"
+  },
+  "https://squidfunk.github.io/mkdocs-material/": {
+   "http": 200,
+   "octets": 78359,
+   "sha256": "6634a7c3f0e9da434642cf0514a493dae7af9fddccfc60d42a3ebc3aad1c1fbf"
+  },
+  "https://squidfunk.github.io/mkdocs-material/creating-your-site/": {
+   "http": 200,
+   "octets": 81850,
+   "sha256": "209bbcf6331798794d0780ffe760c9fb78ef4b26b3d594a96c5d93c14d909e1a"
+  },
+  "https://squidfunk.github.io/mkdocs-material/publishing-your-site/": {
+   "http": 200,
+   "octets": 82309,
+   "sha256": "871a35503eca278ef734c471a9068c9a4040aadf5754fdb35138d9a660d6b2bd"
+  },
+  "https://squidfunk.github.io/mkdocs-material/reference/admonitions/": {
+   "http": 200,
+   "octets": 115979,
+   "sha256": "0c7a22ecbf08dcc7ab758bfef1dce2857248a6ee4675b428daac5739bd19b3eb"
+  },
+  "https://squidfunk.github.io/mkdocs-material/reference/code-blocks/": {
+   "http": 200,
+   "octets": 126660,
+   "sha256": "d8d28f94543f5abcd296a3dbf7e9ba09cdcae1f7f650b3d85213297b84ab2a39"
+  },
+  "https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/": {
+   "http": 200,
+   "octets": 115988,
+   "sha256": "8c6bcab256d89e6555009c2a13b2f649c7ad6a6e92761051520db8d5c1edc6bc"
+  },
+  "https://squidfunk.github.io/mkdocs-material/setup/changing-the-language/": {
+   "http": 200,
+   "octets": 102107,
+   "sha256": "7630191dc7679a3ad6e2a6466af61a3735f9510eba93087bff8a161d059a4620"
+  },
+  "https://squidfunk.github.io/mkdocs-material/setup/setting-up-navigation/": {
+   "http": 200,
+   "octets": 142805,
+   "sha256": "4f5e6df127f357d0262b994018dea987ccf80c1ac113dca49aa7f1ba33194b64"
+  },
+  "https://squidfunk.github.io/mkdocs-material/setup/setting-up-site-search/": {
+   "http": 200,
+   "octets": 92702,
+   "sha256": "fd0866118f3c82049f4f72b577c59601ddde9c05f20f0b89dc0c591daeff5d5b"
+  },
+  "https://squidfunk.github.io/mkdocs-material/setup/setting-up-versioning/": {
+   "http": 200,
+   "octets": 78704,
+   "sha256": "e16623a53ee6f6db8948d7a2c7e64b81aaf60bc9e4a39077de3e228b0d049e62"
+  },
+  "https://vitepress.dev/guide/deploy": {
+   "http": 200,
+   "octets": 84247,
+   "sha256": "943ac15cab7bd53fdc7fb98d09ced69bb4040a22109a65f4c9700ad862e8aa4c"
+  },
+  "https://vitepress.dev/guide/getting-started": {
+   "http": 200,
+   "octets": 56192,
+   "sha256": "7872b8abe6e53e1931bc67454cc21bbc664e5b484826472fa4d33056f2de6a70"
+  },
+  "https://vitepress.dev/guide/i18n": {
+   "http": 200,
+   "octets": 49548,
+   "sha256": "6bc13d806e39dcfbbc15ee89e6c3f311397c004492ca4f9da4d2155d77f0bdfd"
+  },
+  "https://vitepress.dev/guide/markdown": {
+   "http": 200,
+   "octets": 210408,
+   "sha256": "cd85d4e6a04dc0b317fe33e2959c4cec3556ca3352157065d2d7206462ec40c7"
+  },
+  "https://vitepress.dev/guide/routing": {
+   "http": 200,
+   "octets": 83659,
+   "sha256": "927eeab136459b9a4553a9b2077c07d22ed7b9dfe115d873f17155ff9353d68b"
+  },
+  "https://vitepress.dev/guide/what-is-vitepress": {
+   "http": 200,
+   "octets": 30745,
+   "sha256": "4d89e45cda090cede93aa105a24d91da1b14e16146c2e5d65f7aa5229e3c2a61"
+  },
+  "https://vitepress.dev/reference/default-theme-search": {
+   "http": 200,
+   "octets": 131746,
+   "sha256": "a8406578958a299875e237c329b14f412d6f125ab799ae7504474dba8457a66e"
+  },
+  "https://vitepress.dev/reference/site-config": {
+   "http": 200,
+   "octets": 134532,
+   "sha256": "4e5baf52d175c35988c5c1d152b1c967d0cbf4b5ca1e00c72ec8d6a0c89ff600"
+  },
+  "https://www.postgresql.org/docs/16/ddl-priv.html": {
+   "http": 200,
+   "octets": 41746,
+   "sha256": "6834029d62a230a080aeea2a93df62c032410f0282d60fb930e6d3518271e987"
+  },
+  "https://www.postgresql.org/docs/16/ddl-rowsecurity.html": {
+   "http": 200,
+   "octets": 31169,
+   "sha256": "85fed7b1e8ab735096771a614a779ff142b320c20142afc609d93225b44741e0"
+  },
+  "https://www.postgresql.org/docs/16/sql-altertable.html": {
+   "http": 200,
+   "octets": 97279,
+   "sha256": "6f744e527261ee9602faf39ca9b1a3883e91913562d0bbb3f198009704f03d54"
+  },
+  "https://www.postgresql.org/docs/16/sql-copy.html": {
+   "http": 200,
+   "octets": 57795,
+   "sha256": "ee0a22ac5ed33becaaa2f642dcb479d91c5b714e0c4043368deaed3017ee239a"
+  },
+  "https://www.postgresql.org/docs/16/sql-createpolicy.html": {
+   "http": 200,
+   "octets": 46775,
+   "sha256": "f1721d43bf2f670fd9f6691e6515ad4828f317f636d958eb1ba1b8799575f7f2"
+  },
+  "https://www.postgresql.org/docs/16/sql-grant.html": {
+   "http": 200,
+   "octets": 37096,
+   "sha256": "c7ae47b00d41cbd4027693ab18dc0e3605b19a68429532ded5794e97ab1567b9"
+  },
+  "https://www.postgresql.org/docs/16/sql-merge.html": {
+   "http": 200,
+   "octets": 35098,
+   "sha256": "ffadc73447e2c9363f46a44f4f4cdde85192fcf8d432b14f526b4d3df6f05e64"
+  },
+  "https://www.postgresql.org/docs/17/ddl-priv.html": {
+   "http": 200,
+   "octets": 42985,
+   "sha256": "036c38c89d05c81b88d8172548ba0dbe7e7134ebe0d9895004c0bf37218a1b4a"
+  },
+  "https://www.postgresql.org/docs/17/ddl-rowsecurity.html": {
+   "http": 200,
+   "octets": 31172,
+   "sha256": "8c8bc59357146c1811dfdf593be1a18112c6063676024c9471115a2c35d0d4c3"
+  },
+  "https://www.postgresql.org/docs/17/sql-altertable.html": {
+   "http": 200,
+   "octets": 98841,
+   "sha256": "41d5d0f9bb24b02d6c81360cee7b35439a047bed4aec6258d7986ae99bb891ce"
+  },
+  "https://www.postgresql.org/docs/17/sql-copy.html": {
+   "http": 200,
+   "octets": 60301,
+   "sha256": "a9da5adfcceb3b4005da51b198def27a9e2c403fd784c2372027fc1d797cbd2e"
+  },
+  "https://www.postgresql.org/docs/17/sql-createpolicy.html": {
+   "http": 200,
+   "octets": 46901,
+   "sha256": "6d3491b9ff3509d4ae769bc33b0dd40a1524a94fbab7dceb48ade8d1c5ac7619"
+  },
+  "https://www.postgresql.org/docs/17/sql-merge.html": {
+   "http": 200,
+   "octets": 41655,
+   "sha256": "a8a40471ca96b9f09d22984422d1321a7eccd7565d491ab972c6823403f2adab"
+  }
+ }
+}

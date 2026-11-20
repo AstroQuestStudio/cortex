@@ -1,0 +1,42 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.6, pytest-9.1.0, pluggy-1.6.0
+rootdir: C:\proj
+plugins: anyio-4.14.0, jaxtyping-0.3.11, platformdirs-4.12.2, typeguard-4.6.0
+collected 6 items
+
+test_calc.py F.F..F                                                      [100%]
+
+================================== FAILURES ===================================
+_________________________________ test_total __________________________________
+
+    def test_total():
+>       assert total([1, 2]) == 4
+E       assert 3 == 4
+E        +  where 3 = total([1, 2])
+
+test_calc.py:9: AssertionError
+_________________________________ test_div[0] _________________________________
+
+n = 0
+
+    @pytest.mark.parametrize("n", range(3))
+    def test_div(n):
+>       assert 10 // n > 0
+               ^^^^^^^
+E       ZeroDivisionError: integer division or modulo by zero
+
+test_calc.py:18: ZeroDivisionError
+_________________________________ test_lookup _________________________________
+
+    def test_lookup():
+        d = {"a": 1}
+>       assert d["b"] == 2
+               ^^^^^^
+E       KeyError: 'b'
+
+test_calc.py:23: KeyError
+=========================== short test summary info ===========================
+FAILED test_calc.py::test_total - assert 3 == 4
+FAILED test_calc.py::test_div[0] - ZeroDivisionError: integer division or mod...
+FAILED test_calc.py::test_lookup - KeyError: 'b'
+========================= 3 failed, 3 passed in 0.39s =========================

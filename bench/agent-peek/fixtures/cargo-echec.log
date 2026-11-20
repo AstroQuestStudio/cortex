@@ -1,0 +1,86 @@
+   Compiling proc-macro2 v1.0.86
+   Compiling unicode-ident v1.0.12
+   Compiling quote v1.0.36
+   Compiling syn v2.0.72
+   Compiling serde_derive v1.0.204
+   Compiling serde v1.0.204
+   Compiling itoa v1.0.11
+   Compiling ryu v1.0.18
+   Compiling serde_json v1.0.120
+   Compiling ledger v0.3.1 (C:\proj\ledger)
+warning: unused variable: `devise`
+  --> src/conversion.rs:31:17
+   |
+31 |     let (taux, devise) = lire_taux(brut)?;
+   |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_devise`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: `ledger` (lib test) generated 1 warning (run `cargo fix --lib -p ledger --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.31s
+     Running unittests src/lib.rs (target\debug\deps\ledger-4f1c2a7d9b0e3a55.exe)
+
+running 14 tests
+test conversion::tests::arrondi_au_centime ... ok
+test conversion::tests::taux_inconnu_est_une_erreur ... ok
+test ecriture::tests::equilibre_debit_credit ... ok
+test ecriture::tests::refuse_montant_negatif ... ok
+test ecriture::tests::numero_incremental ... ok
+test journal::tests::ajoute_une_ligne ... ok
+test journal::tests::ordre_chronologique ... ok
+test journal::tests::solde_apres_cloture ... FAILED
+test journal::tests::export_csv_entetes ... ok
+test rapport::tests::total_par_compte ... ok
+test rapport::tests::total_par_mois ... FAILED
+test rapport::tests::pourcentages_somme_100 ... ok
+test tva::tests::taux_normal ... ok
+test tva::tests::taux_reduit ... ok
+
+failures:
+
+---- journal::tests::solde_apres_cloture stdout ----
+
+thread 'journal::tests::solde_apres_cloture' panicked at src/journal.rs:188:9:
+assertion `left == right` failed: le solde apres cloture doit etre nul
+  left: 1250
+ right: 0
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/051478957371ee0084a7c2b6b12b0ae28a5d8d1b/library/std/src/panicking.rs:665:5
+   1: core::panicking::panic_fmt
+             at /rustc/051478957371ee0084a7c2b6b12b0ae28a5d8d1b/library/core/src/panicking.rs:74:14
+   2: core::panicking::assert_failed_inner
+   3: core::panicking::assert_failed
+   4: ledger::journal::tests::solde_apres_cloture
+             at .\src\journal.rs:188:9
+   5: ledger::journal::tests::solde_apres_cloture::{{closure}}
+             at .\src\journal.rs:176:34
+   6: core::ops::function::FnOnce::call_once
+   7: core::ops::function::FnOnce::call_once
+             at /rustc/051478957371ee0084a7c2b6b12b0ae28a5d8d1b/library/core/src/ops/function.rs:250:5
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+
+---- rapport::tests::total_par_mois stdout ----
+
+thread 'rapport::tests::total_par_mois' panicked at src/rapport.rs:97:14:
+called `Option::unwrap()` on a `None` value
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/051478957371ee0084a7c2b6b12b0ae28a5d8d1b/library/std/src/panicking.rs:665:5
+   1: core::panicking::panic_fmt
+             at /rustc/051478957371ee0084a7c2b6b12b0ae28a5d8d1b/library/core/src/panicking.rs:74:14
+   2: core::panicking::panic
+   3: core::option::Option<T>::unwrap
+   4: ledger::rapport::total_par_mois
+             at .\src\rapport.rs:97:14
+   5: ledger::rapport::tests::total_par_mois
+             at .\src\rapport.rs:211:21
+
+
+failures:
+    journal::tests::solde_apres_cloture
+    rapport::tests::total_par_mois
+
+test result: FAILED. 12 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `--lib`

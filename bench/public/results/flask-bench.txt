@@ -5,7 +5,7 @@
 [ 5] rank  6  where does the test client keep cookies between requests so a login session persists across calls expected src/flask/testing.py
         1. src/flask/app.py
         2. src/flask/sessions.py
-        3. examples/tutorial/tests/conftest.py
+        3. tests/test_testing.py
 [ 6] rank  1  what code renders a Jinja template and fires the template_rendered signal expected src/flask/templating.py
 [ 7] rank  2  how are JSON responses serialized, e.g. what turns a dict returned from a view into a Response object expected src/flask/json/__init__.py | src/flask/json/provider.py
         1. src/flask/json/tag.py
@@ -24,24 +24,21 @@
         1. src/flask/app.py
         2. src/flask/blueprints.py
         3. src/flask/helpers.py
-[15] rank  2  comment Flask retrouve-t-il l'application à lancer quand on fait 'flask run' sans préciser de module expected src/flask/cli.py
+[15] rank  1  comment Flask retrouve-t-il l'application à lancer quand on fait 'flask run' sans préciser de module expected src/flask/cli.py
+[16] rank 10  où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence expected src/flask/signals.py
         1. src/flask/app.py
-        2. src/flask/cli.py
-        3. tests/test_cli.py
-[16] rank  4  où sont définis les signaux internes de Flask, comme celui envoyé quand une requête commence expected src/flask/signals.py
-        1. src/flask/app.py
-        2. src/flask/wrappers.py
-        3. tests/test_signals.py
+        2. src/flask/helpers.py
+        3. src/flask/ctx.py
 [17] rank  2  SECRET_KEY_FALLBACKS                             expected src/flask/sessions.py | src/flask/app.py
         1. tests/test_basic.py
         2. src/flask/sessions.py
-        3. src/flask/cli.py
+        3. tests/static/config.toml
 [18] rank  1  NoAppException Failed to find Flask application or factory expected src/flask/cli.py
 [19] rank  1  BlueprintSetupState.add_url_rule                 expected src/flask/sansio/blueprints.py
 [20] rank  1  DefaultJSONProvider                              expected src/flask/json/provider.py
 
-== atlas engine · 20 questions · 83 ms ==
-top-1 65.0%  top-5 95.0%  MRR 0.788
+== atlas engine · 20 questions · 73 ms ==
+top-1 70.0%  top-5 90.0%  MRR 0.805
   [en] n=12 top-1 75.0%  top-5 91.7%  MRR 0.847
-  [fr] n=4 top-1 25.0%  top-5 100.0%  MRR 0.521
+  [fr] n=4 top-1 50.0%  top-5 75.0%  MRR 0.608
   [tech] n=4 top-1 75.0%  top-5 100.0%  MRR 0.875

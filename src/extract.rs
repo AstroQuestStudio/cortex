@@ -33,6 +33,7 @@ enum Grammar {
     Go,
     Java,
     Bash,
+    Kotlin,
 }
 
 impl Grammar {
@@ -50,6 +51,7 @@ impl Grammar {
             Lang::Go => Some(Grammar::Go),
             Lang::Java => Some(Grammar::Java),
             Lang::Shell => Some(Grammar::Bash),
+            Lang::Kotlin => Some(Grammar::Kotlin),
             _ => None,
         }
     }
@@ -68,6 +70,7 @@ impl Grammar {
             Grammar::Go => tree_sitter_go::language(),
             Grammar::Java => tree_sitter_java::language(),
             Grammar::Bash => tree_sitter_bash::language(),
+            Grammar::Kotlin => tree_sitter_kotlin::language(),
         }
     }
 
@@ -79,6 +82,7 @@ impl Grammar {
             Grammar::CSharp => CS_QUERY,
             Grammar::Cpp => "",                 // C/C++ : parcours dédié, voir cpp.rs
             Grammar::Lua | Grammar::Glsl => "", // parcours dédiés, voir lua.rs et glsl.rs
+            Grammar::Kotlin => "",              // parcours dédié, voir kotlin.rs
             Grammar::Go => GO_QUERY,
             Grammar::Java => JAVA_QUERY,
             Grammar::Bash => BASH_QUERY,
@@ -86,7 +90,7 @@ impl Grammar {
     }
 }
 
-const N_GRAMMARS: usize = 12;
+const N_GRAMMARS: usize = 13;
 const QUERY_SLOT: OnceLock<Option<Query>> = OnceLock::new();
 /// Requêtes de symboles, une par grammaire.
 static SYMBOL_QUERIES: [OnceLock<Option<Query>>; N_GRAMMARS] = [QUERY_SLOT; N_GRAMMARS];
@@ -133,11 +137,19 @@ pub fn extract_symbols_and_refs(lang: Lang, source: &str) -> (Vec<Symbol>, FileR
     if lang == Lang::Markdown {
         return (extract_markdown(source), extract_refs_with(lang, source, None));
     }
+    if crate::confsym::handles(lang) {
+        // SQL, YAML, TOML, JSON : scanners à la main, pas de références.
+        return (crate::confsym::extract(lang, source), FileRefs::default());
+    }
     let Some(g) = Grammar::of(lang) else { return (Vec::new(), extract_refs_with(lang, source, None)) };
     if g == Grammar::Cpp {
         // Les macros Unreal sont effacées (même longueur) avant l'analyse.
         let tree = parse(g, &crate::cpp::blank_macros(source));
         return crate::cpp::extract(source, tree.as_ref());
+    }
+    if g == Grammar::Kotlin {
+        let tree = parse(g, source.as_bytes());
+        return crate::kotlin::extract(source, tree.as_ref());
     }
     if g == Grammar::Lua || g == Grammar::Glsl {
         let tree = parse(g, source.as_bytes());
@@ -652,6 +664,9 @@ pub fn extract_comments(lang: Lang, source: &str, symbols: &mut [Symbol]) -> (Ve
     if matches!(lang, Lang::Markdown) {
         return (Vec::new(), markdown_summary(source));
     }
+    if crate::confsym::handles(lang) {
+        return crate::confsym::comments(lang, source, symbols);
+    }
     let lines: Vec<&str> = source.lines().collect();
     let hash_comments = matches!(lang, Lang::Python | Lang::Shell);
     let dash = lang == Lang::Lua;
@@ -813,6 +828,7 @@ fn header_text(lines: &[&str], lang: Lang) -> String {
             || (lang == Lang::Cpp && t.starts_with('#'))
             || t.starts_with("/// <reference")
             || t.starts_with("#!")
+            || (lang == Lang::Kotlin && (t.starts_with("package ") || t.starts_with("@file:")))
             || t.starts_with("'use ")
             || t.starts_with("\"use ")
         {
@@ -857,7 +873,14 @@ fn header_text(lines: &[&str], lang: Lang) -> String {
             || (lang == Lang::Lua && (t.starts_with("VFS.Include") || t.starts_with("include(")))
             || (t.starts_with("const ") && t.contains("require("));
         if is_import {
-            if t.starts_with("import") && !t.contains(" from ") && !t.ends_with(';') && !t.ends_with('\'') && !t.ends_with('"') {
+            // Kotlin : un import tient sur une ligne, sans `;` (jamais d'import multi-ligne).
+            if lang != Lang::Kotlin
+                && t.starts_with("import")
+                && !t.contains(" from ")
+                && !t.ends_with(';')
+                && !t.ends_with('\'')
+                && !t.ends_with('"')
+            {
                 in_import = true;
             }
             continue;

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-v2 docs-doc-page docs-doc-id-routing" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.1.0">
+<title>Routing | FluxRouter</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="docusaurus_version" content="v2">
+<meta name="docusaurus_tag" content="docs-default-v2">
+<meta name="docsearch:version" content="2.4.1">
+<link rel="canonical" href="https://docs.fluxrouter.dev/docs/v2/routing">
+<link rel="stylesheet" href="/assets/css/styles.css">
+<script src="/assets/js/runtime.js" defer></script>
+</head>
+<body class="navigation-with-keyboard">
+<div id="__docusaurus">
+<a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a>
+<div class="announcementBar_mb4j" role="banner"><div class="content_knG7">Join our Discord community today</div></div>
+<nav aria-label="Main" class="navbar navbar--fixed-top">
+  <div class="navbar__inner"><a class="navbar__brand" href="/"><b class="navbar__title">FluxRouter</b></a>
+  <a class="navbar__item navbar__link" href="/docs/v2/intro">Docs</a><a class="navbar__item navbar__link" href="/blog">Blog</a>
+  <button type="button" class="DocSearch DocSearch-Button"><span>Search</span></button></div>
+</nav>
+<div class="main-wrapper docsWrapper_hBAB">
+<div class="docPage_P2Lg">
+<aside class="theme-doc-sidebar-container docSidebarContainer_b6E3">
+  <nav class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list">
+    <li class="menu__list-item"><a class="menu__link" href="/docs/v2/intro">Introduction</a></li>
+    <li class="menu__list-item"><a class="menu__link menu__link--active" href="/docs/v2/routing">Routing sidebar entry</a></li>
+    <li class="menu__list-item"><a class="menu__link" href="/docs/v2/middleware">Middleware</a></li>
+  </ul></nav>
+</aside>
+<main class="docMainContainer_gTbr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn">
+<div class="docItemContainer_Djhp">
+<article>
+<nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/">Home</a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Breadcrumb Guide</span></li></ul></nav>
+<span class="theme-doc-version-badge badge badge--secondary">Version: 2.x</span>
+<div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div>
+<div class="theme-doc-markdown markdown">
+<header><h1>Routing</h1></header>
+<p>FluxRouter maps incoming URLs to <strong>handlers</strong>. Register routes with <code>router.add()</code> and match them with <code>router.resolve()</code>.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="defining-routes">Defining routes<a href="#defining-routes" class="hash-link" aria-label="Direct link to Defining routes" title="Direct link to Defining routes">&#8203;</a></h2>
+<p>A route is a pattern plus a handler. The simplest router looks like this:</p>
+<div class="language-ts codeBlockContainer_Ckt0 theme-code-block">
+<div class="codeBlockTitle_Ktv7">src/router.ts</div>
+<div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-ts codeBlock_bY9V thin-scrollbar"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token keyword">import</span><span class="token plain"> { Router } </span><span class="token keyword">from</span><span class="token plain"> </span><span class="token string">'fluxrouter'</span><span class="token punctuation">;</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">const router = new Router({ strict: true });</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">router.add('/users/:id', (ctx) =&gt; ctx.json({ id: ctx.params.id }));</span><br></span></code></pre>
+<div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" class="clean-btn">Copy</button></div></div></div>
+<div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path d="M5.05.31"></path></svg></span>warning</div><div class="admonitionContent_BuS1"><p>Routes are matched in declaration order. Declare specific routes <em>before</em> catch-all patterns.</p></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="path-params">Path params<a href="#path-params" class="hash-link" aria-label="Direct link to Path params" title="Direct link to Path params">&#8203;</a></h2>
+<p>Segments starting with a colon are captured into <code>ctx.params</code>.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="optional-params">Optional params<a href="#optional-params" class="hash-link" aria-label="Direct link to Optional params" title="Direct link to Optional params">&#8203;</a></h3>
+<p>Add a question mark to make a segment optional:</p>
+<div class="theme-code-block language-js"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-js codeBlock_bY9V thin-scrollbar"><code class="codeBlockLines_e6Vv"><span class="token-line"><span class="token plain">router.add('/blog/:slug?', showBlog);</span><br></span></code></pre></div></div>
+<div class="tabs-container tabList__CuJ">
+<ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">npm</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">yarn</li></ul>
+<div class="margin-top--md">
+<div role="tabpanel" class="tabItem_Ymn6"><div class="language-bash codeBlockContainer_Ckt0 theme-code-block"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V"><code class="codeBlockLines_e6Vv"><span class="token-line"><span class="token plain">npm install fluxrouter@2</span><br></span></code></pre></div></div></div>
+<div role="tabpanel" class="tabItem_Ymn6" hidden><div class="language-bash codeBlockContainer_Ckt0 theme-code-block"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V"><code class="codeBlockLines_e6Vv"><span class="token-line"><span class="token plain">yarn add fluxrouter@2</span><br></span></code></pre></div></div></div>
+</div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="options">Options<a href="#options" class="hash-link" aria-label="Direct link to Options" title="Direct link to Options">&#8203;</a></h2>
+<table><thead><tr><th>Option</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>strict</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+<tr><td><code>basePath</code></td><td><code>string</code></td><td><code>"/"</code></td></tr>
+</tbody></table>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path d="M6.5 0"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>Use <code>basePath</code> when the app is served from a sub-directory.</p></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="options">Options<a href="#options" class="hash-link" aria-label="Direct link to Options" title="Direct link to Options">&#8203;</a></h2>
+<p>Second heading with the same title, to test the duplicate anchor rule.</p>
+</div>
+<footer class="theme-doc-footer docusaurus-mt-lg"><div class="theme-doc-footer-edit-meta-row row"><div class="col"><a href="https://github.com/fluxrouter/docs/edit/main/docs/routing.md" target="_blank" rel="noreferrer noopener" class="theme-edit-this-page">Edit this page</a></div><div class="col lastUpdated_vwxv"><span class="theme-last-updated">Last updated on <b>Mar 3, 2024</b> by <b>alice</b></span></div></div></footer>
+<nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/docs/v2/intro"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Introduction</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/docs/v2/middleware"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Middleware</div></a></nav>
+</article></div></div>
+<div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#defining-routes" class="table-of-contents__link toc-highlight">Defining routes</a></li><li><a href="#path-params" class="table-of-contents__link toc-highlight">Path params</a></li></ul></div></div>
+</div></div></main></div></div>
+<footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright (c) 2024 FluxRouter Labs. Built with Docusaurus.</div></div></div></footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,99 @@
+{
+  "banc": "peek",
+  "description": "Banc d'agent PEEK : « pourquoi ce test échoue ? » sur des logs figés. Read complet (tout le log, pages de 2000 lignes) contre `cortex peek`. Voir README.md.",
+  "seuils": { "reussite_pct": 100, "ratio_gros": 10 },
+  "tasks": [
+    {
+      "id": "vitest-echec",
+      "type": "vitest",
+      "question": "Pourquoi les tests du panier échouent-ils ?",
+      "vocabulaire": ["cart", "coupon", "total"],
+      "fichier": "fixtures/vitest-echec.log",
+      "facts": ["expected 108 to be 90", "src/lib/cart.test.ts:42:27", "expected 19.990000000000002 to be 19.99"],
+      "cortex": ["peek fixtures/vitest-echec.log Pourquoi les tests du panier échouent-ils ?"],
+      "sans_cortex": ["read fixtures/vitest-echec.log"]
+    },
+    {
+      "id": "cargo-echec",
+      "type": "cargo",
+      "question": "Pourquoi cargo test échoue-t-il ?",
+      "fichier": "fixtures/cargo-echec.log",
+      "facts": ["src/journal.rs:188:9", "left: 1250", "src/rapport.rs:97:14", "called `Option::unwrap()` on a `None` value"],
+      "cortex": ["peek fixtures/cargo-echec.log Pourquoi cargo test échoue-t-il ?"],
+      "sans_cortex": ["read fixtures/cargo-echec.log"]
+    },
+    {
+      "id": "pytest-echec",
+      "type": "pytest",
+      "question": "Pourquoi les tests pytest échouent-ils ?",
+      "fichier": "fixtures/pytest-echec.log",
+      "facts": ["assert 3 == 4", "ZeroDivisionError: integer division or modulo by zero", "KeyError: 'b'", "test_calc.py:23"],
+      "cortex": ["peek fixtures/pytest-echec.log Pourquoi les tests pytest échouent-ils ?"],
+      "sans_cortex": ["read fixtures/pytest-echec.log"]
+    },
+    {
+      "id": "eslint-echec",
+      "type": "eslint",
+      "question": "Quelles erreurs eslint faut-il corriger ?",
+      "fichier": "fixtures/eslint-echec.log",
+      "facts": ["Expected '===' and instead saw '=='", "'module' is not defined", "10 problems (8 errors, 2 warnings)"],
+      "cortex": ["peek fixtures/eslint-echec.log Quelles erreurs eslint faut-il corriger ?"],
+      "sans_cortex": ["read fixtures/eslint-echec.log"]
+    },
+    {
+      "id": "go-echec",
+      "type": "go",
+      "question": "Pourquoi go test échoue-t-il ?",
+      "fichier": "fixtures/go-echec.log",
+      "facts": ["index out of range [3] with length 3", "/proj/svc/queue/queue.go:74", "router_test.go:58"],
+      "cortex": ["peek fixtures/go-echec.log Pourquoi go test échoue-t-il ?"],
+      "sans_cortex": ["read fixtures/go-echec.log"]
+    },
+    {
+      "id": "fr-accents",
+      "type": "francais",
+      "question": "pourquoi echoue le test de paiement ?",
+      "fichier": "fixtures/fr-accents.log",
+      "facts": ["Erreur : délai dépassé après 5000 ms", "ne correspond pas au montant de la commande", "tests/paiement.test.js:64:21"],
+      "cortex": ["peek fixtures/fr-accents.log pourquoi echoue le test de paiement ?"],
+      "sans_cortex": ["read fixtures/fr-accents.log"]
+    },
+    {
+      "id": "gros-cargo",
+      "type": "gros",
+      "question": "Pourquoi cargo test échoue-t-il ?",
+      "fichier": "fixtures/gros-cargo.log",
+      "facts": ["src/segment/verif.rs:213:17", "checksum du segment 4412 invalide", "left: 0x9f3a1c", "src/journal/reprise.rs:88:14"],
+      "cortex": ["peek fixtures/gros-cargo.log Pourquoi cargo test échoue-t-il ?"],
+      "sans_cortex": ["read fixtures/gros-cargo.log"]
+    },
+    {
+      "id": "gros-cargo-erreurs",
+      "type": "gros",
+      "question": "Quels tests ont échoué dans ce log cargo ?",
+      "fichier": "fixtures/gros-cargo.log",
+      "facts": ["checksum_segment_4412", "reprise_apres_coupure", "src/segment/verif.rs:213:17"],
+      "cortex": ["peek fixtures/gros-cargo.log --erreurs"],
+      "sans_cortex": ["read fixtures/gros-cargo.log"]
+    },
+    {
+      "id": "gros-vitest",
+      "type": "gros",
+      "question": "Pourquoi les tests du verrou et des reessais échouent-ils ?",
+      "vocabulaire": ["bail", "expirer"],
+      "fichier": "fixtures/gros-vitest.log",
+      "facts": ["expected true to be false", "src/lib/verrou-bail-251.test.ts:88:34", "delai depasse apres 5000 ms"],
+      "cortex": ["peek fixtures/gros-vitest.log Pourquoi les tests du verrou et des reessais échouent-ils ?"],
+      "sans_cortex": ["read fixtures/gros-vitest.log"]
+    },
+    {
+      "id": "vert-vitest",
+      "type": "vert",
+      "question": "Est-ce que tous les tests passent ?",
+      "fichier": "fixtures/vert-vitest.log",
+      "facts": ["Test Files  38 passed (38)", "Tests  1169 passed | 3 skipped (1172)"],
+      "cortex": ["peek fixtures/vert-vitest.log Est-ce que tous les tests passent ?"],
+      "sans_cortex": ["read fixtures/vert-vitest.log"]
+    }
+  ]
+}

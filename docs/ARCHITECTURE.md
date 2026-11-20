@@ -80,6 +80,11 @@ waiting on the SQL and git ingesters.
 - A segment is NEVER rewritten (a fresh name on every write): a process holding it mmap'd (the
   MCP server) keeps reading it; orphans are deleted later. A **write lock** (`write.lock`)
   serializes writers (CLI and MCP); readers don't need it.
+- **Extraction version**: `manifest.json` also carries `extract_version` (`EXTRACT_VERSION`, 2 today;
+  a manifest without the field reads as 0). An atlas opened with an older value is rebuilt once from
+  its sources (`fresh::reextract_if_stale`, called by `find`, the MCP server, `update` and
+  `update-all`), so a change in what the extractors produce (a new language, SQL / YAML symbols)
+  never leaves stale symbols behind. To be bumped whenever the same file would yield other symbols.
 
 Targets: open < 5 ms, query < 20 ms, single-file update < 30 ms.
 
@@ -184,12 +189,14 @@ remains dominated by interning and sequential postings (§12).
 | `find <question>` | "where is X?" (BM25F, §7) | grep, find | done (`query`: alias) |
 | `card <id\|name>` | "what is it, who calls it, what does it call, is it tested?" | explain + files + grep | done (`explain`: alias; `context`: + docs mentioning it) |
 | `outline <file>` | "what's in this file?" (role, imports, importers, nested symbols, ranges, exports) | reading the file | done |
-| `read <id>` | "show me the code of THIS function" (exact numbered lines, ±N) | Read with a guessed offset | done |
+| `read <id>` | "show me the code of THIS function" (exact numbered lines, ±N) | Read with a guessed offset | done; for a symbol over 80 lines `--autour "<q>"` (MCP `around`, `max_lines`): signature + ranked line windows, absolute numbers, capped at min(60, a quarter of the symbol) |
 | `overview <folder>` | "how does this module work?" (roles, entry points, dependencies, packages) | 10 reads | done |
 | `impact <id>` | "what breaks if I change this?" (transitive dependents, tests) | repeated grep | done (without git co-changes: I5) |
 | `path <a> <b>` | "how does A reach B?" | reading step by step | done |
 | `changed` | "what have I modified?" (touched functions, impact) | git diff | done (seed of I4) |
 | `grep <text>` | exact text, grouped by file **and enclosing symbol** (identifier) | rg | done |
+| `peek <file> [question]` | the right spot of any big text file, indexed or not (BM25 per line + failure signals, windows merged, deduplicated, capped; `--erreurs` = failure blocks; no question = summary). Accents folded both ways; vitest, cargo, pytest, jest, `go test`, eslint block and summary formats (`Spec` signals: trigger + line check, `debut_bloc` / `cle_bloc`); a passing test line is never an answer to a failure question; Rust panics with their message. `ask` routes a question naming a log file (`.log .txt .out .json`, or outside the index) to it. `src/peek.rs`, no atlas needed | reading a whole log | done |
+| `web …` / `cortex_web_*` | documentation of the exact library version and web search, with proof (`docs/WEB.md`) | WebFetch, WebSearch | experimental (Cargo feature `web`, off by default) |
 | `why <id>` | "why is this written this way?" | git log and blame | to do (git ingester) |
 | `schema <table>` | columns, RLS policies, who reads, who writes | SQL and grep | to do (SQL ingester) |
 
@@ -332,6 +339,28 @@ surfaces via its first symbol (excluding imports). Weights are overridable witho
   expansion weighs 0.55. Extended with 17 groups of everyday vocabulary (window, desktop,
   employee, HR, data, GDPR, address/URL, password, reminder, payroll, bank, tab, title,
   guest…).
+- **French questions** (`semantic.rs`, `stem.rs`, `search.rs`; no index change, BM25F weights
+  untouched). A one-way table `FR_VERS_CODE` (168 entries, at most 3 code words each) maps everyday
+  French words the code never contains to code vocabulary; base forms for conjugations and plurals
+  (`lemme_fr`), locutions (« en-tête » → header), French question stop words, negation (« sans X »:
+  X is dropped from the query) and location verbs (« où est défini ») are handled before scoring.
+  Every entry was kept or dropped on the dev part of `bench/public-fr` (ablation, leave-one-out,
+  adding one at a time). Rejected by measurement: base forms without a guard (noise), removing the
+  generic words function / method / class / file from questions (worse), the French lexicon of the
+  generalisation module (neutral to negative). `CORTEX_FR` switches parts off without recompiling
+  (empty = all off; letters `l` base forms, `p` locutions, `s` stop words, `t` table, `n` negation,
+  `w` location verbs; default `lpstnw`). Results and limits: BENCHMARKS.md section 4.2.
+- **Configuration and schema files** (`confsym.rs`). SQL, YAML, TOML and JSON are read by
+  hand-written scanners (no grammar, no dependency) into the existing `SymbolKind`s (table and view
+  → struct; function, procedure, trigger → function; enum; policy, column, index and config key →
+  const); the real kind (TABLE, POLICY…) lives in the signature and the summary, and the search
+  aliases (policy, politique, rls, table, colonne…) in the `doc` field (weight 0.4) so they do not
+  compete with code names. At query time their score is multiplied by `CONFIG_PENALTY` = 0.5 unless
+  the question contains a word of `MOTS_CONFIG` (table, policy, rls, migration, workflow, yaml,
+  column, trigger, schema…). Caps: 3,000 symbols per SQL file and 200 for the others; 16 MiB (SQL),
+  512 KiB (YAML), 256 KiB (JSON, TOML) per file; lockfiles and big data files are ignored.
+  Measured: BENCHMARKS.md section 4.3 (private SQL benchmark top-1 30% → 90%; about +10.7 MB of
+  index for 8,242 symbols).
 - **Search**: allocation-free candidates (strings borrowed from the mmap), only the top `limit`
   are selected then sorted; the order is total, so it is exactly the prefix of the full ranking
   (test `search_limit_is_prefix_of_full_ranking`).
@@ -593,6 +622,26 @@ build. Optional: Cortex stays complete without a language server.
 Parallel agents each work in their own git worktree. Each worktree gets its own atlas (keyed by
 worktree root), and worktrees of the same repo share the segments of identical files (same
 blake3 fingerprint): a new worktree only costs its modified files.
+
+### Languages blocked by tree-sitter 0.22
+Cortex pins tree-sitter 0.22, whose grammars are loaded with `language()`. Kotlin fits
+(`tree-sitter-kotlin` 0.3.8, ABI 14, MIT; `src/kotlin.rs`; +4.0 MB of binary). Still blocked without
+a shim (crates.io, 2026-11-20): Swift, PHP, Dart, Scala and SQL (grammars at ABI 15); Ruby, Zig,
+YAML, JSON, TOML, Svelte and Kotlin-ng (they need `tree-sitter-language`, i.e. tree-sitter ≥ 0.23);
+Vue and WGSL (grammars for tree-sitter 0.20). YAML, JSON, TOML and SQL are already covered by the
+scanners of `confsym.rs`. Moving to 0.25 touches 13 `language()` calls, 2 query loops (streaming
+iterators since 0.24, one more MIT/Apache dependency) and the node names of every query (Lua and
+Bash are the most exposed; `kotlin.rs` would be rewritten for Kotlin-ng). Estimate, not measured:
+0.5 to 1 day mechanical, 1 to 2 days for queries and replaying the benchmarks; to be decided after
+a trial with three witness grammars.
+
+### Cortex Web (experimental)
+Behind the `web` Cargo feature (off by default; without it the binary and the MCP tool list are
+unchanged), modules in `src/web/` (guard, robots, untrusted, extract, sitemap, store, index, crawl,
+resolve, link, search, bench). Documentation and web search for agents, with the exact library
+version taken from the project's lockfile. Design, security model and results: `docs/WEB.md` and
+BENCHMARKS.md section 4.7. Open: section-level ranking (top-1 36.1% on test), JavaScript pages,
+a tested keyed search provider.
 
 ### Comparative benchmark and parallelism (step 2)
 - **Against other approaches**: done, see §11 (`cortex bench-compare`).

@@ -95,11 +95,23 @@ approach. Anyone can rerun it: [`bench/public/run.sh`](bench/public/run.sh).
 | **graphify 0.8.38** (`graphify query`, best of 5 settings tried) | 13.3% | 35.0% | 0.238 | no ranked list: ~1,500 tokens of graph per question |
 | grep by keywords (`rg`, files ranked by distinct words) | 16.7% | 58.3% | 0.345 | 5,141 – 31,710 |
 | BM25 over whole files | 50.0% | 78.3% | 0.625 | 8 – 22 |
-| **Cortex 0.5.1** | **63.3%** | **86.7%** | **0.737** | **14 – 29** |
+| **Cortex 0.6.0** | **65.0%** | **88.3%** | **0.750** | not re-measured (14 – 29 with 0.5.1) |
+| Cortex 0.5.1 | 63.3% | 86.7% | 0.737 | 14 – 29 |
 | Cortex 0.5.0 | 56.7% | 86.7% | 0.702 | 14 – 29 |
 
 The dense and hybrid RAG baselines (38.3% / 68.3% and 41.7% / 81.7% with Cortex 0.3.0; they need a
 506 MiB model) are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+
+**What changed in 0.6.0.** The French-question lot, SQL / YAML / TOML / JSON symbols and Kotlin
+give, on the same 60 questions, a mean of **65.0% top-1 / 88.3% top-5 / MRR 0.750** (0.5.1:
+63.3% / 86.7% / 0.737). The rise comes from the French-question lot (65.0 / 88.3 / 0.751 on its
+own); the configuration symbols added after it moved the mean MRR by 0.001 (hono 0.774 → 0.770,
+top-1 and top-5 unchanged), which is noise at 20 questions per repository. Per repository the gain
+is uneven: flask lost one top-5 question (95% → 90%), ripgrep gained two (75% → 85%). On the
+100-question French benchmark (`bench/public-fr`, written blind): dev 65.0% → 73.3% top-1 (the set
+it was tuned on), test 47.5% → 55.0% (top-5 unchanged at 82.5%; the test set was run twice, see
+[docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 4.2). Details, including what is private and what
+is not: [docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 4.
 
 ### Cortex vs graphify, head to head
 
@@ -250,13 +262,14 @@ instruction block you can paste into `AGENTS.md`, `CLAUDE.md` or your rules file
 | `ask` / `cortex_ask` | Everything useful for a question in ONE call, under a token budget (`-b`, default 600): ids, signatures, callers, callees, tests, key lines | find then card then read |
 | `find` / `cortex_find` | Where is X? (natural language, English or French, or keywords) | grep, find |
 | `card` / `cortex_card` | What is this symbol: signature, role, callees, callers with call line, tests? | grep + reads |
-| `read` / `cortex_read` | Show me exactly this function (or doc section, or line range) | Read with a guessed offset |
+| `read` / `cortex_read` | Show me exactly this function (or doc section, or line range); for a big symbol, `--autour "<question>"` (MCP `around`, `max_lines`) returns only the lines that answer it | Read with a guessed offset |
 | `outline` / `cortex_outline` | What does this file contain (symbols, ranges, imports, importers, exports)? | reading the file |
 | `overview` / `cortex_overview` | How does this folder work (entry points, dependencies, packages)? | ten reads |
 | `impact` / `cortex_impact` | What breaks if I change this, and which tests to rerun? | repeated grep |
 | `path` / `cortex_path` | How does A reach B (call chain with call lines)? | reading hop by hop |
 | `changed` / `cortex_changed` | What did I change, who calls it, which tests? | git diff + grep |
 | `grep` / `cortex_grep` | Exact text, grouped by file and enclosing function | rg |
+| `peek` / `cortex_peek` | The right spot of ANY big text file (test log, cargo output, server log, JSON), indexed or not: `cortex peek <file> "<question>"`, `--erreurs` for failure blocks only, no question for a summary. Reads accented and unaccented text alike and the output of vitest, cargo, pytest, jest, `go test` and eslint; `ask` hands it the log files it is asked about | reading the whole log, tail, grep -C |
 | `files` / `cortex_files` | A file by name fragment or glob | find, Glob |
 | `docs` / `cortex_docs` | Offline docs of a library you scraped (`cortex docs add <url>`) | web search |
 
@@ -316,12 +329,25 @@ Unreal Engine macros included), Lua (`.lua`: Recoil / Beyond All Reason widgets 
 tables, GLSL embedded in strings), GLSL (`.glsl .vert .frag .geom .comp`), Go, Java, shell scripts
 (symbols only for the last three), Markdown (tree-sitter).
 
+New in 0.6.0: Kotlin (`.kt .kts`, +4 MB of binary) and symbols for
+SQL (tables, columns, RLS policies, functions, triggers, indexes, views), YAML (CI, compose,
+OpenAPI, Kubernetes), TOML and JSON config files, ranked at half weight unless the question names
+them (on AstroQuest's private SQL benchmark, 20 questions: top-1 30% → 90%; about +10.7 MB of index
+for 8,242 SQL symbols). tree-sitter 0.22 still blocks the Swift, PHP, Dart, Scala, Ruby, Zig and
+Svelte grammars; upgrading is estimated at 1.5 to 3 days (not measured), see
+[docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 4.6.
+
 ## More
 
 - **Offline docs**: `cortex docs add https://react.dev/reference --name React` scrapes a doc site
   into local markdown, searchable with `cortex docs query` / `cortex_docs`. Batch mode with a live
   dashboard: `cortex docs batch examples/docs-example.txt`.
 - **3D viewer**: `cortex viewer` renders every indexed project and doc set as a galaxy.
+- **Cortex Web (experimental, off by default)**: `cargo build --release --features web` adds
+  `cortex web …` and five `cortex_web_*` MCP tools (the docs of the exact library version in your
+  lockfile, linked to your code; web search). Not ready for production: section-level top-1 is 36.1%
+  on our benchmark, pages that need JavaScript are not read, and DuckDuckGo answers with a
+  verification page. See [docs/WEB.md](docs/WEB.md).
 - **Multi-project**: every tool searches all enabled projects, or one with `-p <Project>`;
   `cortex config disable <Project>` keeps a project out of global searches.
 - **Data**: `~/.cortex/` (override with `CORTEX_HOME`), one atlas per project: immutable
@@ -340,7 +366,7 @@ Public, in the order we expect to build it. Every item ships with a benchmark th
 - **I5 — predictive impact**: call graph × co-change history, ranked by risk.
 - **I8 — verifiable facts**: each fact carries a content hash so an agent can check it is still
   true without re-reading the file.
-- **Languages**: PHP, Ruby, Kotlin, Swift; call graph for Go, Java and shell.
+- **Languages**: PHP, Ruby, Swift (Kotlin shipped in 0.6.0; the others need tree-sitter 0.25, see [docs/BENCHMARKS.md](docs/BENCHMARKS.md) section 4.6); call graph for Go, Java and shell.
 - **English output labels** and a stable v1.0 of the [specification](docs/SPEC.md).
 
 ## The specification

@@ -1,0 +1,121 @@
+{
+  "project": "bench-flask",
+  "repo": "https://github.com/pallets/flask",
+  "commit": "22d924701a6ae2e4cd01e9a15bbaf3946094af65",
+  "written": "2026-11-19, avant toute exécution de Cortex sur ces questions",
+  "queries": [
+    {
+      "q": "Comment le programme en ligne de commande retrouve-t-il l'application à démarrer quand on ne lui donne qu'un module ?",
+      "expect": [
+        "src/flask/cli.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/cli.py:41 find_best_app cherche les noms app/application dans le module"
+    },
+    {
+      "q": "comment est cree le journal par defaut de l'application avec son gestionnaire de sortie",
+      "expect": [
+        "src/flask/logging.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/logging.py:58 create_logger ajoute default_handler si aucun handler"
+    },
+    {
+      "q": "Où sont encodés en JSON les dates et les identifiants UUID quand on les range dans la session ?",
+      "expect": [
+        "src/flask/json/tag.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/json/tag.py:191 TagUUID et :205 TagDateTime"
+    },
+    {
+      "q": "ou decide-t-on si l'echappement automatique du HTML s'applique a un fichier de gabarit",
+      "expect": [
+        "src/flask/sansio/app.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/sansio/app.py:536 select_jinja_autoescape : extensions .html/.htm/.xml/.xhtml/.svg"
+    },
+    {
+      "q": "Comment FlaskCliRunner exécute-t-il une commande en ligne de commande avec l'application chargée ?",
+      "expect": [
+        "src/flask/testing.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/testing.py:265 FlaskCliRunner, invoke :271 passe un ScriptInfo"
+    },
+    {
+      "q": "Pourquoi NullSession lève-t-elle une RuntimeError quand on écrit dans la session sans clé secrète ?",
+      "expect": [
+        "src/flask/sessions.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/sessions.py:83 NullSession._fail lève RuntimeError « no secret key was set »"
+    },
+    {
+      "q": "ou est teste si l'on se trouve actuellement dans une requete en cours de traitement",
+      "expect": [
+        "src/flask/ctx.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/ctx.py:196 has_request_context"
+    },
+    {
+      "q": "Où FormDataRoutingRedirect prévient-il le développeur qu'une redirection de routage ferait perdre le corps d'un formulaire posté ?",
+      "expect": [
+        "src/flask/debughelpers.py",
+        "src/flask/app.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/debughelpers.py:50 FormDataRoutingRedirect ; app.py:478 raise_routing_exception la lève en mode debug"
+    },
+    {
+      "q": "À quoi sert attach_enctype_error_multidict quand un fichier est envoyé sans enctype multipart ?",
+      "expect": [
+        "src/flask/debughelpers.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/debughelpers.py:81 attach_enctype_error_multidict"
+    },
+    {
+      "q": "Comment Flask choisit-il le gestionnaire d'erreur selon le code HTTP ou la classe de l'exception, en regardant d'abord le module courant ?",
+      "expect": [
+        "src/flask/sansio/app.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/sansio/app.py:823 _find_error_handler (ordre blueprint/app, code/classe)"
+    },
+    {
+      "q": "Où get_debug_flag lit-il la variable d'environnement qui active le mode débogage ?",
+      "expect": [
+        "src/flask/helpers.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/helpers.py:28 get_debug_flag lit FLASK_DEBUG"
+    },
+    {
+      "q": "Comment l'enregistrement d'un module d'application recopie ses gestionnaires d'erreurs et ses fonctions avant/après requête dans l'application ?",
+      "expect": [
+        "src/flask/sansio/blueprints.py"
+      ],
+      "tag": "fr-nl",
+      "why": "src/flask/sansio/blueprints.py:273 register ; :379 _merge_blueprint_funcs"
+    },
+    {
+      "q": "Comment ConfigAttribute expose-t-il une clé de configuration comme attribut de l'application ?",
+      "expect": [
+        "src/flask/config.py"
+      ],
+      "tag": "fr-tech",
+      "why": "src/flask/config.py:20 ConfigAttribute (__get__/__set__ sur app.config)"
+    },
+    {
+      "q": "ou sont charges les plugins de commandes externes declares par des paquets tiers pour la ligne de commande",
+      "expect": [
+        "src/flask/cli.py"
+      ],
+      "tag": "fr-conj",
+      "why": "src/flask/cli.py:600 _load_plugin_commands lit les entry points flask.commands"
+    }
+  ]
+}

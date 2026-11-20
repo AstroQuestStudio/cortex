@@ -1,0 +1,169 @@
+{
+  "project": "bench-ripgrep",
+  "repo": "https://github.com/BurntSushi/ripgrep",
+  "commit": "e89fff89ac9af12e8d4ce9d5fd07beb408ca730f",
+  "written": "2026-11-19, avant toute exécution de Cortex sur ces questions",
+  "queries": [
+    {
+      "q": "Comment unescape convertit-il les séquences comme \\n ou \\x41 saisies par l'utilisateur en octets réels ?",
+      "expect": [
+        "crates/cli/src/escape.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/cli/src/escape.rs:67 unescape (escape ligne 26)"
+    },
+    {
+      "q": "Comment is_readable_stdin décide-t-il si l'entrée standard contient des données à chercher ou si c'est seulement un terminal ?",
+      "expect": [
+        "crates/cli/src/lib.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/cli/src/lib.rs:170 is_readable_stdin"
+    },
+    {
+      "q": "comment la sortie standard est-elle bufferisee ligne par ligne ou par bloc selon que l'on ecrit dans un terminal",
+      "expect": [
+        "crates/cli/src/wtr.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/cli/src/wtr.rs:39 stdout_buffered_line et :54 stdout_buffered_block"
+    },
+    {
+      "q": "Comment sont fabriqués le texte de l'aide courte et celui de l'aide longue à partir des définitions des options ?",
+      "expect": [
+        "crates/core/flags/doc/help.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/flags/doc/help.rs:24 generate_short et :111 generate_long"
+    },
+    {
+      "q": "comment est genere le manuel au format roff a partir de la liste des options",
+      "expect": [
+        "crates/core/flags/doc/man.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/core/flags/doc/man.rs:27 generate (generate_flag ligne 46)"
+    },
+    {
+      "q": "Comment le programme propose-t-il un nom d'option proche quand l'utilisateur se trompe d'orthographe ?",
+      "expect": [
+        "crates/core/flags/parse.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/flags/parse.rs:404 suggest et :418 find_similar_names"
+    },
+    {
+      "q": "Comment HiArgs::walk_builder configure-t-il le parcours des dossiers à partir des options de haut niveau ?",
+      "expect": [
+        "crates/core/flags/hiargs.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/core/flags/hiargs.rs:874 walk_builder"
+    },
+    {
+      "q": "Quelle structure représente un fichier à chercher et sait s'il a été nommé explicitement sur la ligne de commande ?",
+      "expect": [
+        "crates/core/haystack.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/haystack.rs:131 Haystack::is_explicit"
+    },
+    {
+      "q": "Où la recherche est-elle répartie entre plusieurs threads qui traitent chacun des fichiers différents ?",
+      "expect": [
+        "crates/core/main.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/core/main.rs:160 search_parallel"
+    },
+    {
+      "q": "comment sont combines plusieurs motifs de glob en un seul ensemble pour tester un chemin d'un seul coup",
+      "expect": [
+        "crates/globset/src/lib.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/globset/src/lib.rs:309 GlobSet et :566 GlobSetBuilder"
+    },
+    {
+      "q": "Comment Types::matched décide-t-il qu'un fichier est sélectionné ou exclu selon son type nommé (python, rust...) ?",
+      "expect": [
+        "crates/ignore/src/types.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/ignore/src/types.rs:261 Types::matched"
+    },
+    {
+      "q": "ou sont combinees les regles .gitignore des repertoires parents avec .ignore et les regles globales pour un dossier",
+      "expect": [
+        "crates/ignore/src/dir.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/ignore/src/dir.rs:192 add_parents ; add_child ligne 268 ; matched_dir_entry ligne 485"
+    },
+    {
+      "q": "Comment interpolate remplace-t-il les références $1 ou ${nom} par les groupes capturés dans la chaîne de remplacement ?",
+      "expect": [
+        "crates/matcher/src/interpolate.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/matcher/src/interpolate.rs:14 interpolate ; find_cap_ref ligne 97"
+    },
+    {
+      "q": "Quelle erreur est renvoyée quand l'expression PCRE2 ne compile pas ?",
+      "expect": [
+        "crates/pcre2/src/error.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/pcre2/src/error.rs:7 Error et :25 ErrorKind"
+    },
+    {
+      "q": "Comment les liens cliquables vers les fichiers sont-ils construits à partir d'un format personnalisable avec des variables comme le chemin ?",
+      "expect": [
+        "crates/printer/src/hyperlink/mod.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/printer/src/hyperlink/mod.rs:71 HyperlinkFormat"
+    },
+    {
+      "q": "Comment l'imprimante Standard colore-t-elle les correspondances et affiche-t-elle les lignes de contexte avant et après ?",
+      "expect": [
+        "crates/printer/src/standard.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/printer/src/standard.rs:793 Sink::context écrit les lignes de contexte ; correspondances colorées dans StandardImpl"
+    },
+    {
+      "q": "Comment case_smart décide-t-il que la recherche est insensible à la casse selon les majuscules présentes dans le motif ?",
+      "expect": [
+        "crates/regex/src/config.rs",
+        "crates/regex/src/ast.rs"
+      ],
+      "tag": "fr-tech",
+      "why": "crates/regex/src/config.rs:84 is_case_insensitive ; crates/regex/src/ast.rs:39 any_uppercase"
+    },
+    {
+      "q": "Comment découpe-t-on un tampon d'octets en lignes et retrouve-t-on les lignes précédentes pour le contexte ?",
+      "expect": [
+        "crates/searcher/src/lines.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/searcher/src/lines.rs:17 LineIter, :74 LineStep::next, preceding_by_pos ligne 170"
+    },
+    {
+      "q": "Quelle énumération représente une erreur partielle ou une boucle de liens symboliques rencontrée pendant le parcours des dossiers ?",
+      "expect": [
+        "crates/ignore/src/lib.rs"
+      ],
+      "tag": "fr-nl",
+      "why": "crates/ignore/src/lib.rs:66 enum Error : Partial ligne 69, Loop ligne 94"
+    },
+    {
+      "q": "quelle structure affiche une duree ecoulee sous une forme lisible avec un nombre fixe de decimales",
+      "expect": [
+        "crates/printer/src/util.rs"
+      ],
+      "tag": "fr-conj",
+      "why": "crates/printer/src/util.rs:372 NiceDuration (impl Display)"
+    }
+  ]
+}

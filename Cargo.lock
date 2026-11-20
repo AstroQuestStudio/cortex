@@ -112,12 +112,14 @@ checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
 
 [[package]]
 name = "astroquest-cortex"
-version = "0.5.3"
+version = "0.6.0"
 dependencies = [
+ "aho-corasick",
  "blake3",
  "clap",
  "crossterm",
  "ego-tree",
+ "flate2",
  "fst",
  "ignore",
  "memchr",
@@ -137,6 +139,7 @@ dependencies = [
  "tree-sitter-go",
  "tree-sitter-java",
  "tree-sitter-javascript",
+ "tree-sitter-kotlin",
  "tree-sitter-lua",
  "tree-sitter-md",
  "tree-sitter-python",
@@ -2094,6 +2097,16 @@ name = "tree-sitter-javascript"
 version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8710a71bc6779e33811a8067bdda3ed08bed1733296ff915e44faf60f8c533d7"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-kotlin"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54ff60aeb036f5762515ceb31404512ea4f9599764bcd3857074bb82867bdd34"
 dependencies = [
  "cc",
  "tree-sitter",

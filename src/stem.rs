@@ -93,9 +93,133 @@ pub fn stem(t: &str) -> String {
     w.to_string()
 }
 
+/// Terminaisons françaises d'un mot FLÉCHI (conjugaison, participe, pluriel, féminin) avec les
+/// finales à ajouter au radical pour retrouver le mot de base (infinitif ou singulier).
+/// Du plus long au plus court : la première terminaison qui donne un mot CONNU gagne.
+const FR_FLEXIONS: &[(&str, &[&str])] = &[
+    ("eraient", &["er"]),
+    ("erions", &["er"]),
+    ("eront", &["er"]),
+    ("erons", &["er"]),
+    ("erait", &["er"]),
+    ("erez", &["er"]),
+    ("erai", &["er"]),
+    ("aient", &["er", "ir", "re"]),
+    ("issent", &["ir"]),
+    ("issons", &["ir"]),
+    ("issez", &["ir"]),
+    ("ions", &["er", "ir", "re"]),
+    ("ants", &["er", "ir", "re"]),
+    ("ante", &["er", "ir", "re"]),
+    ("era", &["er"]),
+    ("ent", &["er", "ir", "re"]),
+    ("ons", &["er", "ir", "re"]),
+    ("iez", &["er", "ir", "re"]),
+    ("ait", &["er", "ir", "re"]),
+    ("ais", &["er", "ir", "re"]),
+    ("ant", &["er", "ir", "re"]),
+    ("ees", &["er", "e"]),
+    ("ez", &["er", "ir", "re"]),
+    ("ee", &["er", "e"]),
+    ("es", &["er", "e", ""]),
+    ("ies", &["ir", "ie"]),
+    ("ie", &["ir"]),
+    ("is", &["ir", "re", "ire"]),
+    ("it", &["ir", "ire", "re"]),
+    ("us", &["re", "ure"]),
+    ("ue", &["re", "ure"]),
+    ("ux", &["l"]),
+    ("u", &["re", "ure"]),
+    ("i", &["ir"]),
+    ("e", &["er", "ir", "re", ""]),
+    ("s", &["", "er", "ir", "re"]),
+    ("x", &[""]),
+];
+
+/// Formes de base possibles d'un mot français fléchi (minuscules, accents repliés), la forme
+/// saisie exclue. L'appelant ne retient un candidat que s'il est un mot CONNU (table de
+/// vocabulaire) : aucune forme n'est jamais inventée.
+pub fn candidats_lemme(t: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    if t.len() < 4 || !t.bytes().all(|c| c.is_ascii_lowercase()) {
+        return out;
+    }
+    // Participes irréguliers courants du vocabulaire de développement.
+    const IRREGULIERS: &[(&str, &str)] = &[
+        ("ecrit", "ecrire"),
+        ("ouvert", "ouvrir"),
+        ("construit", "construire"),
+        ("produit", "produire"),
+        ("inclus", "inclure"),
+        ("exclu", "exclure"),
+        ("mis", "mettre"),
+        ("pris", "prendre"),
+        ("fait", "faire"),
+        ("contenu", "contenir"),
+        ("retenu", "retenir"),
+        ("obtenu", "obtenir"),
+        ("resolu", "resoudre"),
+        ("repondu", "repondre"),
+        ("rendu", "rendre"),
+        ("attendu", "attendre"),
+        ("entendu", "entendre"),
+        ("defini", "definir"),
+        ("soumis", "soumettre"),
+        ("permis", "permettre"),
+        ("transmis", "transmettre"),
+        ("omis", "omettre"),
+        ("admis", "admettre"),
+        ("compris", "comprendre"),
+        ("repris", "reprendre"),
+        ("inscrit", "inscrire"),
+        ("decrit", "decrire"),
+        ("detruit", "detruire"),
+        ("reduit", "reduire"),
+        ("traduit", "traduire"),
+        ("connu", "connaitre"),
+        ("reconnu", "reconnaitre"),
+    ];
+    for &(f, base) in IRREGULIERS {
+        if t == f {
+            out.push(base.to_string());
+        }
+    }
+    for &(suf, ajouts) in FR_FLEXIONS {
+        if t.len() >= suf.len() + 3 && t.ends_with(suf) {
+            let radical = &t[..t.len() - suf.len()];
+            for &a in ajouts {
+                let c = format!("{radical}{a}");
+                if c != t && !out.contains(&c) {
+                    out.push(c);
+                }
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
-    use super::stem;
+    use super::{candidats_lemme, stem};
+
+    #[test]
+    fn candidats_de_lemme_francais() {
+        let a = |t: &str, base: &str| assert!(candidats_lemme(t).iter().any(|c| c == base), "{t} -> {base} : {:?}", candidats_lemme(t));
+        a("declarees", "declarer");
+        a("transforment", "transformer");
+        a("cherches", "chercher");
+        a("envoyees", "envoyer");
+        a("chargeront", "charger");
+        a("verifiant", "verifier");
+        a("routes", "route");
+        a("journaux", "journal");
+        a("rendu", "rendre");
+        a("ecrit", "ecrire");
+        a("finie", "finir");
+        // Trop court ou non alphabétique : aucun candidat.
+        assert!(candidats_lemme("ab").is_empty());
+        assert!(candidats_lemme("utf8").is_empty());
+    }
 
     fn same(a: &str, b: &str) {
         assert_eq!(stem(a), stem(b), "{} / {} : {} ≠ {}", a, b, stem(a), stem(b));

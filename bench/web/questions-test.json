@@ -1,0 +1,578 @@
+[
+ {
+  "id": "t001",
+  "q": "PostgreSQL 17 MAINTAIN privilege which commands does it allow",
+  "lang": "en",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/17/ddl-priv.html",
+    "anchor": "DDL-PRIV-MAINTAIN"
+   }
+  ],
+  "tag": "version",
+  "why": "Le privilège MAINTAIN est nouveau en 17 ; la page 16 des privilèges ne le liste pas. Extrait vérifié le 2026-11-20 : « Allows VACUUM, ANALYZE, CLUSTER, REFRESH MATERIALIZED VIEW, REINDEX, and LOCK TABLE on a relation ».",
+  "version_attendue": "17",
+  "version_piege": {
+   "version": "16",
+   "url": "https://www.postgresql.org/docs/16/ddl-priv.html"
+  }
+ },
+ {
+  "id": "t002",
+  "q": "How do I limit the connection pool size of a ureq 2.x agent",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.AgentBuilder.html",
+    "anchor": "method.max_idle_connections"
+   }
+  ],
+  "tag": "api",
+  "why": "AgentBuilder::max_idle_connections règle la taille du pool (défaut 100 dans la 2.10.1). Extrait vérifié le 2026-11-20 : « Setting this to zero would disable connection pooling »."
+ },
+ {
+  "id": "t003",
+  "q": "Comment limiter la taille mémoire des champs de formulaire non fichier dans Flask ?",
+  "lang": "fr",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/config/",
+    "anchor": "MAX_FORM_MEMORY_SIZE"
+   }
+  ],
+  "tag": "api",
+  "why": "Clé de configuration MAX_FORM_MEMORY_SIZE : dépassement => RequestEntityTooLarge 413. Extrait vérifié le 2026-11-20 : « The maximum size in bytes any non-file form field may be »."
+ },
+ {
+  "id": "t004",
+  "q": "How can I remap source file locations to different URLs in VitePress",
+  "lang": "en",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/guide/routing",
+    "anchor": "route-rewrites"
+   }
+  ],
+  "tag": "concept",
+  "why": "Section « Route Rewrites » : option rewrites pour les monorepos. Extrait vérifié le 2026-11-20 : « customize the mapping between the source directory structure and the generated pages »."
+ },
+ {
+  "id": "t005",
+  "q": "In ureq 3, how do I stop 404 and 500 responses from being returned as errors",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/3.5.2/ureq/config/struct.ConfigBuilder.html",
+    "anchor": "method.http_status_as_error"
+   }
+  ],
+  "tag": "version",
+  "why": "En 3.5.2, http_status_as_error(false) laisse passer les 4xx/5xx ; en 2.10.1 l'erreur était Error::Status avec la réponse. Extrait vérifié le 2026-11-20 : « Defaults to true ».",
+  "version_attendue": "3.5.2",
+  "version_piege": {
+   "version": "2.10.1",
+   "url": "https://docs.rs/ureq/2.10.1/ureq/enum.Error.html"
+  }
+ },
+ {
+  "id": "t006",
+  "q": "What counts as a credential in the Fetch API and when are cookies sent with a cross-origin request",
+  "lang": "en",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "anchor": "including_credentials"
+   }
+  ],
+  "tag": "concept",
+  "why": "Section « Including credentials » : option credentials ('include', 'same-origin', 'omit'). Extrait vérifié le 2026-11-20 : « a credential is an extra piece of data sent along with the request »."
+ },
+ {
+  "id": "t007",
+  "q": "How do I cross-compile a Rust program for Android with cargo-ndk",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [],
+  "tag": "howto",
+  "why": "Le Rust Book ne traite pas la compilation croisée pour Android : la bonne réponse est « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 1 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "t008",
+  "q": "How do I parse an XML file with ElementTree in Python",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [],
+  "tag": "howto",
+  "why": "ElementTree vit dans library/xml.etree.elementtree.html, hors du périmètre json/pathlib/asyncio du corpus : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 3 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "t009",
+  "q": "What is the url option in docusaurus.config.js and how does it relate to baseUrl",
+  "lang": "en",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/api/docusaurus-config",
+    "anchor": "url"
+   }
+  ],
+  "tag": "api",
+  "why": "Section « url » de la référence de docusaurus.config.js. Extrait vérifié le 2026-11-20 : « This field is related to the baseUrl field »."
+ },
+ {
+  "id": "t010",
+  "q": "Python 3.13 pathlib match a path against a glob pattern with ** using full_match",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/pathlib.html",
+    "anchor": "pathlib.PurePath.full_match"
+   }
+  ],
+  "tag": "version",
+  "why": "PurePath.full_match est nouveau en 3.13 ; la page 3.11 ne l'a pas. Extrait vérifié le 2026-11-20 : « Match this path against the provided glob-style pattern ».",
+  "version_attendue": "3.13",
+  "version_piege": {
+   "version": "3.11",
+   "url": "https://docs.python.org/3.11/library/pathlib.html"
+  }
+ },
+ {
+  "id": "t011",
+  "q": "Which Flask release deprecated the __version__ attribute in favor of importlib.metadata",
+  "lang": "en",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/changes/",
+    "anchor": "version-3-0-0"
+   }
+  ],
+  "tag": "version",
+  "why": "Flask 3.0.0 déprécie __version__ ; utiliser importlib.metadata.version(\"flask\"). Extrait vérifié le 2026-11-20 : « Deprecate the __version__ attribute ».",
+  "version_attendue": "3.0.0"
+ },
+ {
+  "id": "t012",
+  "q": "How do I deploy my Material for MkDocs documentation to GitHub Pages with a GitHub Actions workflow",
+  "lang": "en",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/publishing-your-site/",
+    "anchor": "with-github-actions"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « with GitHub Actions » de la page de publication. Extrait vérifié le 2026-11-20 : « Using GitHub Actions you can automate the deployment of your project documentation »."
+ },
+ {
+  "id": "t013",
+  "q": "Depuis quelle version de Flask peut-on utiliser SESSION_COOKIE_PARTITIONED pour l'attribut Partitioned des cookies ?",
+  "lang": "fr",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/changes/",
+    "anchor": "version-3-1-0"
+   }
+  ],
+  "tag": "version",
+  "why": "Ajouté dans Flask 3.1.0 (CHIPS) selon le journal des changements. Extrait vérifié le 2026-11-20 : « SESSION_COOKIE_PARTITIONED ».",
+  "version_attendue": "3.1.0"
+ },
+ {
+  "id": "t014",
+  "q": "run an external command asynchronously with asyncio and capture its stdout",
+  "lang": "en",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/asyncio-subprocess.html",
+    "anchor": "asyncio.create_subprocess_exec"
+   }
+  ],
+  "tag": "howto",
+  "why": "asyncio.create_subprocess_exec avec stdout=asyncio.subprocess.PIPE puis communicate(). Extrait vérifié le 2026-11-20 : « Create a subprocess »."
+ },
+ {
+  "id": "t015",
+  "q": "How do I add a tip or warning box in VitePress markdown",
+  "lang": "en",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/guide/markdown",
+    "anchor": "custom-containers"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Custom Containers » : ::: info / tip / warning / danger. Extrait vérifié le 2026-11-20 : « ::: warning »."
+ },
+ {
+  "id": "t016",
+  "q": "Comment accorder un droit sur toutes les tables d'un schéma avec GRANT ?",
+  "lang": "fr",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/16/sql-grant.html",
+    "anchor": "SQL-GRANT-DESCRIPTION-OBJECTS"
+   }
+  ],
+  "tag": "howto",
+  "why": "Page GRANT (PostgreSQL 16) : variante ALL TABLES IN SCHEMA schema_name. Extrait vérifié le 2026-11-20 : « all objects of the same type within one or more schemas »."
+ },
+ {
+  "id": "t017",
+  "q": "How do I read a ureq 3.5 response body into a String and what is the size limit",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/3.5.2/ureq/struct.Body.html",
+    "anchor": "method.read_to_string"
+   }
+  ],
+  "tag": "api",
+  "why": "Body::read_to_string est limité à 10 Mo par défaut ; Body::with_config pour changer la limite (3.5.2). Extrait vérifié le 2026-11-20 : « Response is limited to 10MB ».",
+  "version_attendue": "3.5.2"
+ },
+ {
+  "id": "t018",
+  "q": "Comment tester une application Flask avec le client de test sans lancer de serveur ?",
+  "lang": "fr",
+  "source": "flask",
+  "expect": [
+   {
+    "url": "https://flask.palletsprojects.com/en/stable/testing/",
+    "anchor": "sending-requests-with-the-test-client"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Sending Requests with the Test Client » : app.test_client(), client.get/post. Extrait vérifié le 2026-11-20 : « The test client makes requests to the application without running a live server »."
+ },
+ {
+  "id": "t019",
+  "q": "How do I share a counter between multiple threads safely with Mutex and Arc",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch16-03-shared-state.html",
+    "anchor": "atomic-reference-counting-with-arct"
+   }
+  ],
+  "tag": "howto",
+  "why": "La section sur Arc<T> corrige l'exemple Mutex<T> avec Rc<T> qui n'est pas Send. Extrait vérifié le 2026-11-20 : « Arc<T> »."
+ },
+ {
+  "id": "t020",
+  "q": "Comment activer la page de couverture (coverpage) dans docsify ?",
+  "lang": "fr",
+  "source": "docsify",
+  "expect": [
+   {
+    "url": "https://docsify.js.org/#/configuration",
+    "anchor": "coverpage"
+   }
+  ],
+  "tag": "api",
+  "why": "Section « coverpage » de la configuration : coverpage: true charge _coverpage.md. Extrait vérifié le 2026-11-20 : « If true, it will load from `_coverpage.md` ».",
+  "needs_js": true,
+  "raw_markdown": "https://docsify.js.org/configuration.md"
+ },
+ {
+  "id": "t021",
+  "q": "Comment ajouter un bouton pour copier le contenu des blocs de code ?",
+  "lang": "fr",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/reference/code-blocks/",
+    "anchor": "code-copy-button"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Code copy button » : feature content.code.copy. Extrait vérifié le 2026-11-20 : « content.code.copy »."
+ },
+ {
+  "id": "t022",
+  "q": "Comment envoyer un corps JSON ou un fichier avec fetch en POST ?",
+  "lang": "fr",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "anchor": "setting_a_body"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Setting a body » : option body, impossible avec GET. Extrait vérifié le 2026-11-20 : « The request body is the payload of the request »."
+ },
+ {
+  "id": "t023",
+  "q": "Comment créer un index HNSW pgvector pour la recherche vectorielle dans PostgreSQL ?",
+  "lang": "fr",
+  "source": "postgresql",
+  "expect": [],
+  "tag": "howto",
+  "why": "pgvector est une extension tierce absente de la documentation officielle : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 4 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "t024",
+  "q": "How do I give a custom title to an admonition like note or tip",
+  "lang": "en",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/markdown-features/admonitions",
+    "anchor": "specifying-title"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Specifying title » : :::note[Titre] ... :::. Extrait vérifié le 2026-11-20 : « :::note[Your Title »."
+ },
+ {
+  "id": "t025",
+  "q": "Comment lancer plusieurs coroutines en parallèle et récupérer les exceptions sans tout annuler ?",
+  "lang": "fr",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/asyncio-task.html",
+    "anchor": "asyncio.gather"
+   }
+  ],
+  "tag": "howto",
+  "why": "asyncio.gather(*aws, return_exceptions=True) agrège résultats et exceptions dans la liste renvoyée. Extrait vérifié le 2026-11-20 : « return_exceptions »."
+ },
+ {
+  "id": "t026",
+  "q": "Why does reading a fetch Response body twice fail with body already read, how do I avoid it",
+  "lang": "en",
+  "source": "mdn-fetch",
+  "expect": [
+   {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "anchor": "locked_and_disturbed_streams"
+   }
+  ],
+  "tag": "erreur",
+  "why": "Section « Locked and disturbed streams » : un corps déjà lu ou verrouillé ne se relit pas (cloner la réponse). Extrait vérifié le 2026-11-20 : « it's not possible to read the same response (or request) body more than once »."
+ },
+ {
+  "id": "t027",
+  "q": "Mes liens renvoient des redirections ou 404 après déploiement, que règle trailingSlash ?",
+  "lang": "fr",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/deployment",
+    "anchor": "trailing-slashes"
+   }
+  ],
+  "tag": "erreur",
+  "why": "Section « Trailing slash configuration » : le comportement dépend de l'hébergeur statique. Extrait vérifié le 2026-11-20 : « trailingSlash »."
+ },
+ {
+  "id": "t028",
+  "q": "Comment envoyer un corps JSON dans une requête POST avec ureq ?",
+  "lang": "fr",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.Request.html",
+    "anchor": "method.send_json"
+   }
+  ],
+  "tag": "howto",
+  "why": "Request::send_json (feature json) sérialise la donnée et fixe Content-Length ; version 2.10.1. Extrait vérifié le 2026-11-20 : « Available on crate feature json only »."
+ },
+ {
+  "id": "t029",
+  "q": "Comment déployer un site docsify sur GitHub Pages ?",
+  "lang": "fr",
+  "source": "docsify",
+  "expect": [
+   {
+    "url": "https://docsify.js.org/#/deploy",
+    "anchor": "github-pages"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « GitHub Pages » du guide de déploiement : dossier docs de la branche main + fichier .nojekyll. Extrait vérifié le 2026-11-20 : « main branch /docs folder ».",
+  "needs_js": true,
+  "raw_markdown": "https://docsify.js.org/deploy.md"
+ },
+ {
+  "id": "t030",
+  "q": "show top level sections as tabs under the header in mkdocs material",
+  "lang": "en",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/setup/setting-up-navigation/",
+    "anchor": "navigation-tabs"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Navigation tabs » : feature navigation.tabs. Extrait vérifié le 2026-11-20 : « navigation.tabs »."
+ },
+ {
+  "id": "t031",
+  "q": "Comment déclarer les langues disponibles (i18n) dans docusaurus.config.js ?",
+  "lang": "fr",
+  "source": "docusaurus",
+  "expect": [
+   {
+    "url": "https://docusaurus.io/docs/api/docusaurus-config",
+    "anchor": "i18n"
+   }
+  ],
+  "tag": "api",
+  "why": "Section « i18n » de la référence : defaultLocale, locales, localeConfigs. Extrait vérifié le 2026-11-20 : « defaultLocale »."
+ },
+ {
+  "id": "t032",
+  "q": "Comment limiter le temps d'attente d'une coroutine et quelle exception est levée ?",
+  "lang": "fr",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/asyncio-task.html",
+    "anchor": "asyncio.wait_for"
+   }
+  ],
+  "tag": "erreur",
+  "why": "asyncio.wait_for annule l'attendable et lève TimeoutError ; asyncio.timeout est la forme contexte. Extrait vérifié le 2026-11-20 : « raises TimeoutError »."
+ },
+ {
+  "id": "t033",
+  "q": "En Python 3.13, comment démarrer les tâches asyncio de façon eager (sans attendre la boucle) ?",
+  "lang": "fr",
+  "source": "python-library",
+  "expect": [
+   {
+    "url": "https://docs.python.org/3.13/library/asyncio-task.html",
+    "anchor": "asyncio.eager_task_factory"
+   }
+  ],
+  "tag": "version",
+  "why": "asyncio.eager_task_factory est documentée à partir de 3.12 ; la page 3.11 ne la contient pas. Extrait vérifié le 2026-11-20 : « eager ».",
+  "version_attendue": "3.13",
+  "version_piege": {
+   "version": "3.11",
+   "url": "https://docs.python.org/3.11/library/asyncio-task.html"
+  }
+ },
+ {
+  "id": "t034",
+  "q": "How do I set a custom request header with ureq, for example Accept text/plain",
+  "lang": "en",
+  "source": "ureq",
+  "expect": [
+   {
+    "url": "https://docs.rs/ureq/2.10.1/ureq/struct.Request.html",
+    "anchor": "method.set"
+   }
+  ],
+  "tag": "api",
+  "why": "Request::set(header, value) dans ureq 2.10.1. Extrait vérifié le 2026-11-20 : « Set a header field »."
+ },
+ {
+  "id": "t035",
+  "q": "How do I enable local full-text search in the VitePress default theme",
+  "lang": "en",
+  "source": "vitepress",
+  "expect": [
+   {
+    "url": "https://vitepress.dev/reference/default-theme-search",
+    "anchor": "local-search"
+   }
+  ],
+  "tag": "howto",
+  "why": "Section « Local Search » : themeConfig.search.provider = 'local' (minisearch). Extrait vérifié le 2026-11-20 : « themeConfig.search.provider »."
+ },
+ {
+  "id": "t036",
+  "q": "Comment ouvrir une connexion WebSocket bidirectionnelle en JavaScript ?",
+  "lang": "fr",
+  "source": "mdn-fetch",
+  "expect": [],
+  "tag": "howto",
+  "why": "L'API WebSocket est hors du périmètre fetch/Request/Response/Headers/AbortController du corpus ; aucune des pages vérifiées ne la mentionne : réponse attendue « rien de fiable ». Preuve d'absence (2026-11-20) : motif introuvable dans 5 page(s) lue(s).",
+  "no_answer": true
+ },
+ {
+  "id": "t037",
+  "q": "How do I publish my crate to crates.io and what metadata is required",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html",
+    "anchor": "adding-metadata-to-a-new-crate"
+   }
+  ],
+  "tag": "howto",
+  "why": "La section sur les métadonnées de crate précise la licence obligatoire avant cargo publish. Extrait vérifié le 2026-11-20 : « license »."
+ },
+ {
+  "id": "t038",
+  "q": "Quelle option du thème Material définit la couleur principale (en-tête, liens) ?",
+  "lang": "fr",
+  "source": "mkdocs-material",
+  "expect": [
+   {
+    "url": "https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/",
+    "anchor": "primary-color"
+   }
+  ],
+  "tag": "api",
+  "why": "Section « Primary color » : theme.palette.primary. Extrait vérifié le 2026-11-20 : « palette: primary: indigo »."
+ },
+ {
+  "id": "t039",
+  "q": "PostgreSQL 17 : comment remplacer l'expression d'une colonne générée sans supprimer la colonne ?",
+  "lang": "fr",
+  "source": "postgresql",
+  "expect": [
+   {
+    "url": "https://www.postgresql.org/docs/17/sql-altertable.html",
+    "anchor": "SQL-ALTERTABLE-DESC-SET-EXPRESSION"
+   }
+  ],
+  "tag": "version",
+  "why": "ALTER TABLE ... ALTER COLUMN ... SET EXPRESSION AS (...) apparaît en 17 ; absent de la page 16. Extrait vérifié le 2026-11-20 : « This form replaces the expression of a generated column ».",
+  "version_attendue": "17",
+  "version_piege": {
+   "version": "16",
+   "url": "https://www.postgresql.org/docs/16/sql-altertable.html"
+  }
+ },
+ {
+  "id": "t040",
+  "q": "How does Rc::clone increase the reference count and how can I read the count",
+  "lang": "en",
+  "source": "rust-book",
+  "expect": [
+   {
+    "url": "https://doc.rust-lang.org/book/ch15-04-rc.html",
+    "anchor": "cloning-to-increase-the-reference-count"
+   }
+  ],
+  "tag": "api",
+  "why": "La section sur le clonage montre Rc::clone et Rc::strong_count. Extrait vérifié le 2026-11-20 : « Rc::strong_count »."
+ }
+]

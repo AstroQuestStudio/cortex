@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.3">
+<link rel="canonical" href="https://squidtools.example.net/en/stable/getting-started/installation/">
+<title>Installation - Squid CLI</title>
+<link rel="stylesheet" href="../assets/stylesheets/main.css">
+</head>
+<body dir="ltr" data-md-color-scheme="default">
+<input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+<a href="#installation" class="md-skip">Skip to content</a>
+<header class="md-header" data-md-component="header"><nav class="md-header__inner md-grid" aria-label="Header"><a href="../.." title="Squid CLI" class="md-header__button md-logo">Logo</a><div class="md-header__title"><span class="md-ellipsis">Squid CLI</span></div><label class="md-header__button md-icon" for="__search">Search</label></nav></header>
+<div class="md-container" data-md-component="container">
+<nav class="md-tabs" aria-label="Tabs"><ul class="md-tabs__list"><li class="md-tabs__item"><a href="../../" class="md-tabs__link">Home</a></li></ul></nav>
+<main class="md-main" data-md-component="main"><div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation"><div class="md-sidebar__scrollwrap"><nav class="md-nav md-nav--primary" aria-label="Navigation"><ul class="md-nav__list"><li class="md-nav__item"><a href="../quickstart/" class="md-nav__link">Quickstart sidebar link</a></li></ul></nav></div></div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc"><nav class="md-nav md-nav--secondary" aria-label="Table of contents"><label class="md-nav__title" for="__toc">Table of contents</label></nav></div>
+<div class="md-content" data-md-component="content"><article class="md-content__inner md-typeset">
+<a href="https://github.com/squidtools/docs/edit/master/docs/getting-started/installation.md" title="Edit this page" class="md-content__button md-icon">Edit this page</a>
+<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<p>Squid ships as a single static binary. Pick the method that fits your platform.</p>
+<h2 id="from-a-package-manager">From a package manager<a class="headerlink" href="#from-a-package-manager" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio"><input id="__tabbed_1_2" name="__tabbed_1" type="radio"><div class="tabbed-labels"><label for="__tabbed_1_1">pip</label><label for="__tabbed_1_2">conda</label></div><div class="tabbed-content">
+<div class="tabbed-block"><div class="language-bash highlight"><pre><span></span><code><span class="linenos"> </span>pip install squid-cli==3.4.0
+</code></pre></div></div>
+<div class="tabbed-block"><div class="language-bash highlight"><pre><span></span><code>conda install -c squid squid-cli=3.4.0
+</code></pre></div></div>
+</div></div>
+<div class="admonition warning"><p class="admonition-title">Warning</p><p>Version <code>3.3</code> and older are not supported on Python 3.12.</p></div>
+<h2 id="from-source">From source<a class="headerlink" href="#from-source" title="Permanent link">&para;</a></h2>
+<p>Clone the repository and build with <code>cargo</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1"></a>git clone https://example.net/squid.git
+<a id="__codelineno-2-2" name="__codelineno-2-2"></a><span class="nb">cd</span> squid
+<a id="__codelineno-2-3" name="__codelineno-2-3"></a>cargo build --release
+</code></pre></div>
+<div class="admonition note"><p class="admonition-title">Note</p><p>A recent Rust toolchain (1.75 or newer) is required.</p></div>
+<div class="admonition tip"><p class="admonition-title">Custom prefix</p><p>Pass <code>--prefix</code> to the install script to change the target directory.</p></div>
+<h3 id="supported-platforms">Supported platforms<a class="headerlink" href="#supported-platforms" title="Permanent link">&para;</a></h3>
+<div class="md-typeset__scrollwrap"><div class="md-typeset__table"><table><thead><tr><th>Platform</th><th>Architecture</th></tr></thead><tbody><tr><td>Linux</td><td>x86_64, aarch64</td></tr><tr><td>macOS</td><td>arm64</td></tr><tr><td>Windows</td><td>x86_64</td></tr></tbody></table></div></div>
+<details class="note"><summary>Offline installation</summary><p>Download the archive on a connected machine and copy it over.</p></details>
+</article></div>
+<button type="button" class="md-top md-icon" hidden>Back to top</button>
+</div></main>
+<footer class="md-footer"><nav class="md-footer__inner md-grid" aria-label="Footer"><a href="../quickstart/" class="md-footer__link md-footer__link--next"><span class="md-footer__direction">Next</span><span class="md-ellipsis">Quickstart</span></a></nav><div class="md-footer-meta md-typeset"><div class="md-copyright">Copyright &copy; 2024 Squid Tools &ndash; Made with Material for MkDocs</div></div></footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+[2026-11-18 08:02:11] INFO  Démarrage de la suite d'intégration « boutique-en-ligne » (environnement : recette)
+[2026-11-18 08:02:11] INFO  Base de données de test réinitialisée en 312 ms
+[2026-11-18 08:02:12] INFO  Chargement des jeux de données : clients (120), produits (86), commandes (240)
+[2026-11-18 08:02:12] DEBUG Connexion au service d'envoi de courriels : smtp.recette.example.fr:587
+[2026-11-18 08:02:12] DEBUG Certificat vérifié, négociation TLS terminée
+[2026-11-18 08:02:13] INFO  ✓ catalogue > affiche les produits triés par prix (18 ms)
+[2026-11-18 08:02:13] INFO  ✓ catalogue > filtre par catégorie « été » (11 ms)
+[2026-11-18 08:02:13] INFO  ✓ catalogue > pagination à 20 éléments (9 ms)
+[2026-11-18 08:02:13] INFO  ✓ panier > ajoute un article (6 ms)
+[2026-11-18 08:02:13] INFO  ✓ panier > supprime un article (4 ms)
+[2026-11-18 08:02:13] INFO  ✓ panier > recalcule le total après remise (7 ms)
+[2026-11-18 08:02:13] INFO  ✓ panier > conserve le contenu après déconnexion (22 ms)
+[2026-11-18 08:02:14] INFO  ✓ compte > crée un utilisateur avec e-mail accentué (« zoé@example.fr ») (31 ms)
+[2026-11-18 08:02:14] INFO  ✓ compte > refuse un mot de passe trop court (5 ms)
+[2026-11-18 08:02:14] INFO  ✓ compte > envoie le courriel de réinitialisation (44 ms)
+[2026-11-18 08:02:14] INFO  ✓ livraison > calcule les frais pour la Corse (8 ms)
+[2026-11-18 08:02:14] INFO  ✓ livraison > propose le retrait en magasin (6 ms)
+[2026-11-18 08:02:14] INFO  ✓ livraison > refuse une adresse sans code postal (4 ms)
+[2026-11-18 08:02:15] DEBUG Appel au prestataire de paiement : POST /v2/paiements (clé d'idempotence 7f3a-91c2)
+[2026-11-18 08:02:15] DEBUG Réponse du prestataire : 200 OK en 142 ms
+[2026-11-18 08:02:15] INFO  ✓ paiement > accepte une carte valide (151 ms)
+[2026-11-18 08:02:15] DEBUG Appel au prestataire de paiement : POST /v2/paiements (clé d'idempotence 1b8e-04d7)
+[2026-11-18 08:02:15] DEBUG Réponse du prestataire : 402 Paiement requis en 98 ms
+[2026-11-18 08:02:15] INFO  ✓ paiement > refuse une carte expirée (105 ms)
+[2026-11-18 08:02:16] DEBUG Appel au prestataire de paiement : POST /v2/paiements (clé d'idempotence c44d-5a10)
+[2026-11-18 08:02:21] WARN  Aucune réponse du prestataire après 5000 ms, nouvelle tentative 1/1
+[2026-11-18 08:02:26] ERROR Aucune réponse du prestataire après 5000 ms, abandon
+[2026-11-18 08:02:26] ERROR ✗ paiement > débite le montant exact en euros (10012 ms)
+[2026-11-18 08:02:26] INFO  ✓ paiement > rembourse une commande annulée (87 ms)
+[2026-11-18 08:02:26] INFO  ✓ facture > génère le PDF avec le logo (212 ms)
+[2026-11-18 08:02:26] INFO  ✓ facture > numérotation continue sans trou (9 ms)
+[2026-11-18 08:02:27] INFO  ✓ facture > affiche la TVA à 20 % et à 5,5 % (13 ms)
+[2026-11-18 08:02:27] INFO  ✓ stock > décrémente après une commande validée (17 ms)
+[2026-11-18 08:02:27] INFO  ✓ stock > alerte sous le seuil de réapprovisionnement (11 ms)
+[2026-11-18 08:02:27] INFO  ✓ stock > réserve les articles pendant 15 minutes (24 ms)
+[2026-11-18 08:02:28] DEBUG Vérification de l'accessibilité des pages de confirmation
+[2026-11-18 08:02:28] INFO  ✓ accessibilité > le bouton « Payer » a un nom accessible (62 ms)
+[2026-11-18 08:02:28] INFO  ✓ accessibilité > les erreurs de formulaire sont annoncées (58 ms)
+[2026-11-18 08:02:29] INFO  ✓ export > fichier CSV encodé en UTF-8 avec BOM (19 ms)
+[2026-11-18 08:02:29] ERROR ✗ export > conserve les caractères accentués dans les noms (23 ms)
+[2026-11-18 08:02:29] INFO  ✓ export > sépare les colonnes par des points-virgules (6 ms)
+
+ÉCHEC  paiement > débite le montant exact en euros
+Erreur : délai dépassé après 5000 ms en attendant la confirmation du prestataire
+    Attendu : statut « confirmé »
+    Reçu    : statut « en attente »
+    à Object.<anonyme> (tests/paiement.test.js:64:21)
+    à processTicksAndRejections (node:internal/process/task_queues:95:5)
+Le montant débité (118,40 €) ne correspond pas au montant de la commande (120,00 €).
+
+ÉCHEC  export > conserve les caractères accentués dans les noms
+AssertionError : « Élodie Dupré » attendu, mais « Ã‰lodie DuprÃ© » reçu
+    Attendu : "Élodie Dupré"
+    Reçu    : "Ã‰lodie DuprÃ©"
+    à Object.<anonyme> (tests/export.test.js:41:30)
+
+Résumé : 2 échecs, 21 réussites sur 23 tests
+Durée totale : 14,2 s

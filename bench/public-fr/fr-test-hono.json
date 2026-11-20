@@ -1,0 +1,113 @@
+{
+  "project": "bench-hono",
+  "repo": "https://github.com/honojs/hono",
+  "commit": "7c3b0df96dbf3e767968ff5afe4c0d999257b8ee",
+  "written": "2026-11-19, avant toute exécution de Cortex sur ces questions",
+  "queries": [
+    {
+      "q": "comment une adresse IPv6 abregee est-elle etendue puis convertie en nombre pour etre comparee a une plage",
+      "expect": [
+        "src/utils/ipaddr.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/utils/ipaddr.ts:13 expandIPv6 et :158 convertIPv6ToBinary"
+    },
+    {
+      "q": "Quelle fonction vérifie qu'un jeton porteur est présent dans l'en-tête d'autorisation de la requête ?",
+      "expect": [
+        "src/middleware/bearer-auth/index.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/middleware/bearer-auth/index.ts:104 bearerAuth (PREFIX Bearer, HEADER Authorization lignes 13-14)"
+    },
+    {
+      "q": "Comment sign() produit-il un jeton JWT signé avec l'algorithme HS256 ?",
+      "expect": [
+        "src/utils/jwt/jwt.ts",
+        "src/utils/jwt/jws.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/utils/jwt/jwt.ts:56 sign ; src/utils/jwt/jws.ts:29 signing"
+    },
+    {
+      "q": "Comment le framework affiche-t-il la méthode, le chemin, le statut et la durée de chaque requête dans la console ?",
+      "expect": [
+        "src/middleware/logger/index.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/middleware/logger/index.ts:81 logger journalise entrée et sortie avec time(start)"
+    },
+    {
+      "q": "quel code redirige /chemin/ vers /chemin pour normaliser les barres obliques finales",
+      "expect": [
+        "src/middleware/trailing-slash/index.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/trailing-slash/index.ts:44 trimTrailingSlash, redirection 301 ligne 55 ; :128 appendTrailingSlash"
+    },
+    {
+      "q": "Comment getContext retrouve-t-il le Context de la requête en cours depuis une fonction sans le recevoir en argument ?",
+      "expect": [
+        "src/middleware/context-storage/index.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/middleware/context-storage/index.ts:43 contextStorage et :53 getContext"
+    },
+    {
+      "q": "Comment les types acceptés dans l'en-tête Accept sont-ils découpés puis classés par qualité ?",
+      "expect": [
+        "src/utils/accept.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/utils/accept.ts:211 parseAccept, parseQuality ligne 242"
+    },
+    {
+      "q": "ou supprime-t-on un cookie en renvoyant un en-tete qui le fait expirer",
+      "expect": [
+        "src/helper/cookie/index.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/helper/cookie/index.ts:141 deleteCookie"
+    },
+    {
+      "q": "Comment savoir si le code tourne sous Bun, Deno ou Cloudflare Workers ?",
+      "expect": [
+        "src/helper/adapter/index.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/helper/adapter/index.ts:50 getRuntimeKey"
+    },
+    {
+      "q": "Comment c.redirect fabrique-t-il une réponse de redirection avec un code 301 ou 302 ?",
+      "expect": [
+        "src/context.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/context.ts:767 redirect"
+    },
+    {
+      "q": "Où est choisi le gestionnaire notFound qui répond quand aucune route ne correspond à l'adresse demandée ?",
+      "expect": [
+        "src/hono-base.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/hono-base.ts:31 notFoundHandler par défaut, :294 notFound, utilisé ligne 436-452"
+    },
+    {
+      "q": "Comment un adaptateur pour les fonctions AWS convertit-il l'événement reçu en requête standard puis la réponse en retour, en base64 si besoin ?",
+      "expect": [
+        "src/adapter/aws-lambda/handler.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/adapter/aws-lambda/handler.ts:243 handle ; isBase64Encoded lignes 338 et 356"
+    },
+    {
+      "q": "ou sont servis les fichiers statiques lorsque l'application tourne sous Bun",
+      "expect": [
+        "src/adapter/bun/serve-static.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/adapter/bun/serve-static.ts:8 serveStatic utilise Bun.file puis baseServeStatic"
+    }
+  ]
+}

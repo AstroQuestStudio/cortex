@@ -593,11 +593,63 @@ fn rendre(faits: &[Fait], pris: &[usize], graines: &[Graine], budget: usize, int
     out.fin(suite)
 }
 
+// ─── Routage vers peek ──────────────────────────────────────────────────────
+
+/// Extensions de fichiers de sortie (log, trace, rapport) : on les lit avec `peek`.
+const EXT_SORTIE: &[&str] = &["log", "txt", "out", "json"];
+
+/// Un fichier nommé dans la question que `peek` doit lire.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Routage {
+    pub fichier: String,
+    /// La question sans le nom du fichier (vide : résumé du fichier).
+    pub question: String,
+    pub raison: &'static str,
+}
+
+/// Si la question nomme un chemin de fichier qui existe sur disque et qui n'est pas dans
+/// l'index (`indexe`), ou dont l'extension est celle d'une sortie (`.log .txt .out .json`),
+/// rend le fichier à confier à `peek`. Sans réseau, sans index.
+pub fn routage_peek(question: &str, indexe: &dyn Fn(&str) -> bool) -> Option<Routage> {
+    for tok in jetons_code(question) {
+        let chemin = std::path::Path::new(&tok);
+        if !chemin.is_file() {
+            continue;
+        }
+        let ext = chemin.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase()).unwrap_or_default();
+        let sortie = EXT_SORTIE.contains(&ext.as_str());
+        if !sortie && indexe(&tok) {
+            continue;
+        }
+        let reste = question.replacen(&tok, " ", 1).split_whitespace().collect::<Vec<_>>().join(" ");
+        return Some(Routage { fichier: tok, question: reste, raison: if sortie { "fichier de sortie" } else { "hors index" } });
+    }
+    None
+}
+
+/// `ask` sur un fichier de sortie ou hors index : `peek` avec la question, en une ligne d'annonce.
+/// `None` si rien à router, ou si `peek` ne sait pas lire le fichier (binaire…) : `ask` continue.
+pub fn ask_via_peek(question: &str, budget: usize, indexe: &dyn Fn(&str) -> bool) -> Option<String> {
+    let r = routage_peek(question, indexe)?;
+    let opt = crate::peek::Options {
+        question: r.question.clone(),
+        erreurs: false,
+        // ~12 jetons par ligne affichée : le budget de `ask` borne aussi `peek`.
+        max_lignes: (budget / 12).clamp(8, crate::peek::MAX_LIGNES_DEFAUT),
+        contexte: None,
+    };
+    let sortie = crate::peek::peek_fichier(&r.fichier, &opt).ok()?;
+    Some(format!("(cortex) routé vers peek : {} ({})\n{}", r.fichier, r.raison, sortie))
+}
+
 // ─── Point d'entrée ─────────────────────────────────────────────────────────
 
 /// `ask <question> -b <budget>`.
 pub fn ask(handles: &[Handle], question: &str, budget: usize) -> String {
     let question = question.trim();
+    if let Some(sortie) = ask_via_peek(question, budget, &|t| handles.iter().any(|h| matches!(fichier(h, t), Ok(Some(_))))) {
+        return sortie;
+    }
     let it = intention(handles, question);
     match &it {
         Intention::Impact(c) => return graphe::impact(handles, c, 3, budget),
@@ -649,6 +701,43 @@ mod tests {
         assert_eq!(jetons_code("Que contient le module src/lib/drawing/recognition ?"), vec!["src/lib/drawing/recognition"]);
         // Des mots ordinaires, une phrase qui finit par un point, un nombre : aucun jeton de code.
         assert!(jetons_code("Où est vérifié l'URL Nexus. Version 1.2 ?").is_empty());
+    }
+
+    #[test]
+    fn routage_vers_peek_sans_reseau() {
+        let dir = std::env::temp_dir().join(format!("cortex-p1-routage-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let log = dir.join("build.log");
+        let mut contenu = String::new();
+        for i in 0..400 {
+            contenu.push_str(&format!("[{}] job ok\n", i));
+        }
+        contenu.push_str(" FAIL  src/a.test.ts > zorglub\nAssertionError: expected 1 to be 2\n");
+        std::fs::write(&log, contenu).unwrap();
+        let rs = dir.join("lib.rs");
+        std::fs::write(&rs, "fn a() {}\n").unwrap();
+        let (log_s, rs_s) = (log.to_string_lossy().to_string(), rs.to_string_lossy().to_string());
+
+        // Fichier hors index : routé, le nom du fichier sort de la question.
+        let r = routage_peek(&format!("pourquoi {} a échoué ?", log_s), &|_| false).expect("routé");
+        assert_eq!(r.fichier, log_s);
+        assert_eq!(r.question, "pourquoi a échoué ?");
+        // Sortie (.log) : routée même si l'index le connaît.
+        assert!(routage_peek(&format!("erreurs de {}", log_s), &|_| true).is_some());
+        // Fichier de code déjà indexé : pas de routage (ask normal) ; hors index : routé.
+        assert!(routage_peek(&format!("que fait {} ?", rs_s), &|_| true).is_none());
+        assert_eq!(routage_peek(&format!("que fait {} ?", rs_s), &|_| false).unwrap().raison, "hors index");
+        // Fichier absent ou question sans chemin : rien.
+        assert!(routage_peek("que fait src/inexistant_p1.log ?", &|_| false).is_none());
+        assert!(routage_peek("où est la validation des formulaires ?", &|_| false).is_none());
+
+        // Bout en bout : l'annonce en une ligne, puis la sortie de peek avec l'échec.
+        let o = ask_via_peek(&format!("zorglub dans {}", log_s), BUDGET_DEFAUT, &|_| false).expect("peek");
+        assert!(o.starts_with("(cortex) routé vers peek : "), "{o}");
+        assert_eq!(o.lines().next().unwrap().matches("routé vers peek").count(), 1);
+        assert!(o.contains("FAIL  src/a.test.ts > zorglub"), "{o}");
+        assert!(ask_via_peek("rien de spécial ici", BUDGET_DEFAUT, &|_| false).is_none());
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

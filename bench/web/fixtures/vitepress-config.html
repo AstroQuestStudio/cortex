@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="generator" content="VitePress v1.3.4">
+<title>Configuration | Quillbase</title>
+<meta name="description" content="How to configure Quillbase">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="https://quillbase.example.org/v0.21.3/guide/configuration.html">
+</head>
+<body>
+<div id="app"><div class="Layout" data-v-a3f1">
+<span tabindex="-1"></span><a href="#VPContent" class="VPSkipLink visually-hidden" data-v-b2c3>Skip to content</a>
+<header class="VPNav"><div class="VPNavBar"><a class="VPLink link title" href="/">Quillbase</a><div class="VPNavBarSearch search"><button type="button" class="DocSearch">Search</button></div><nav class="VPNavBarMenu menu"><a class="VPLink link VPNavBarMenuLink" href="/v0.21.3/guide/">Guide</a><a class="VPLink link VPNavBarMenuLink" href="/v0.21.3/api/">API Reference</a></nav></div></header>
+<div class="VPLocalNav"><button class="menu">Menu</button><div class="VPLocalNavOutlineDropdown">Return to top</div></div>
+<aside class="VPSidebar"><nav class="nav" id="VPSidebarNav"><div class="group"><section class="VPSidebarItem level-0"><h2 class="text">Getting Started</h2><a class="VPLink link link" href="/v0.21.3/guide/install.html">Installation</a></section></div></nav></aside>
+<div class="VPContent" id="VPContent"><div class="VPDoc has-sidebar has-aside"><div class="container"><div class="aside"><div class="aside-curtain"></div><div class="aside-container"><div class="aside-content"><div class="VPDocAside"><div class="VPDocAsideOutline"><div class="content"><div class="outline-title">On this page</div><nav aria-labelledby="doc-outline-aria-label"><ul class="VPDocOutlineItem root"><li><a class="outline-link" href="#files">Files</a></li></ul></nav></div></div></div></div></div></div>
+<div class="content"><div class="content-container"><main class="main"><div style="position:relative;" class="vp-doc _v0_21_3_guide_configuration" data-v-c1d2>
+<div><h1 id="configuration" tabindex="-1">Configuration <a class="header-anchor" href="#configuration" aria-label="Permalink to &quot;Configuration&quot;">&ZeroWidthSpace;</a></h1>
+<p>Quillbase reads its settings from a <code>quillbase.config.ts</code> file in the project root. All fields are optional.</p>
+<h2 id="files" tabindex="-1">Files <a class="header-anchor" href="#files" aria-label="Permalink to &quot;Files&quot;">&ZeroWidthSpace;</a></h2>
+<p>Create the file with the helper <code>defineConfig</code> to get type checking:</p>
+<div class="language-ts vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">ts</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#D73A49;">import</span><span style="--shiki-light:#24292E;"> { defineConfig } </span><span style="--shiki-light:#D73A49;">from</span><span style="--shiki-light:#032F62;"> 'quillbase'</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;">export</span><span style="--shiki-light:#D73A49;"> default</span><span style="--shiki-light:#6F42C1;"> defineConfig</span><span style="--shiki-light:#24292E;">({</span></span>
+<span class="line"><span style="--shiki-light:#24292E;">  outDir: 'dist',</span></span>
+<span class="line"><span style="--shiki-light:#24292E;">  cleanUrls: true,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;">})</span></span></code></pre></div>
+<div class="warning custom-block"><p class="custom-block-title">WARNING</p><p>Changing <code>outDir</code> after the first build leaves stale files behind. Delete the old directory by hand.</p></div>
+<div class="tip custom-block"><p class="custom-block-title">TIP</p><p>The config file is reloaded automatically in dev mode.</p></div>
+<h2 id="environment-variables" tabindex="-1">Environment variables <a class="header-anchor" href="#environment-variables" aria-label="Permalink to &quot;Environment variables&quot;">&ZeroWidthSpace;</a></h2>
+<p>Variables prefixed with <code>QB_</code> are exposed to the config:</p>
+<div class="vp-code-group vp-adaptive-theme"><div class="tabs"><input type="radio" name="group-1" id="tab-a1" checked><label data-title="bash" for="tab-a1">bash</label><input type="radio" name="group-1" id="tab-a2"><label data-title="powershell" for="tab-a2">powershell</label></div><div class="blocks"><div class="language-sh vp-adaptive-theme active"><button title="Copy Code" class="copy"></button><span class="lang">sh</span><pre class="shiki" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;">export QB_TOKEN=abc123</span></span></code></pre></div><div class="language-powershell vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">powershell</span><pre class="shiki" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;">$env:QB_TOKEN = "abc123"</span></span></code></pre></div></div></div>
+<h3 id="reserved-names" tabindex="-1">Reserved names <a class="header-anchor" href="#reserved-names" aria-label="Permalink to &quot;Reserved names&quot;">&ZeroWidthSpace;</a></h3>
+<ul><li><code>QB_HOME</code>: the data directory</li><li><code>QB_LOG</code>: the log level, one of <code>debug</code>, <code>info</code>, <code>warn</code></li></ul>
+<details class="details custom-block"><summary>Why a config file?</summary><p>Code-based configuration lets editors complete option names.</p></details>
+</div></div>
+<footer class="VPDocFooter"><div class="edit-info"><div class="edit-link"><a class="VPLink link vp-external-link-icon edit-link-button" href="https://github.com/quillbase/docs/edit/main/guide/configuration.md" target="_blank" rel="noreferrer">Edit this page on GitHub</a></div><div class="last-updated"><p class="VPLastUpdated">Last updated: <time datetime="2024-05-02T10:00:00.000Z">5/2/2024, 10:00:00 AM</time></p></div></div><nav class="prev-next" aria-labelledby="doc-footer-aria-label"><div class="pager"><a class="VPLink link pager-link prev" href="/v0.21.3/guide/install.html"><span class="desc">Previous page</span><span class="title">Installation</span></a></div><div class="pager"><a class="VPLink link pager-link next" href="/v0.21.3/guide/plugins.html"><span class="desc">Next page</span><span class="title">Plugins</span></a></div></nav></footer>
+</main></div></div></div></div></div>
+<footer class="VPFooter has-sidebar"><div class="container"><p class="message">Released under the MIT License.</p><p class="copyright">Copyright 2024 Quillbase contributors</p></div></footer>
+</div></div>
+</body>
+</html>

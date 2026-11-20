@@ -45,6 +45,13 @@ pub enum Appel {
         cible: String,
         contexte: u32,
     },
+    /// `read --autour "<question>"` : un GROS symbole réduit aux lignes pertinentes.
+    ReadAutour {
+        cible: String,
+        contexte: u32,
+        question: String,
+        max_lignes: Option<usize>,
+    },
     Overview {
         dossier: String,
     },
@@ -66,6 +73,14 @@ pub enum Appel {
         question: String,
         budget: Option<usize>,
     },
+    /// `peek <fichier> [question]` : le bon passage d'un gros fichier texte (log de tests, sortie
+    /// de build…) sans le lire en entier. Ne touche à aucun atlas (marche sans projet indexé).
+    Peek {
+        fichier: String,
+        question: String,
+        erreurs: bool,
+        max_lignes: Option<usize>,
+    },
 }
 
 impl Appel {
@@ -75,7 +90,7 @@ impl Appel {
             Appel::Find { .. } => 1000,
             Appel::Card { .. } | Appel::Context { .. } => 800,
             Appel::Ask { .. } => ask::BUDGET_DEFAUT,
-            Appel::Read { .. } => 4000,
+            Appel::Read { .. } | Appel::ReadAutour { .. } => 4000,
             Appel::Path { .. } => 800,
             _ => 1500,
         }
@@ -117,6 +132,14 @@ impl Appel {
                 Appel::Path { de: a, vers: b }
             }
             "changed" => Appel::Changed,
+            "peek" => {
+                // peek <fichier> [-e|--erreurs] [-n N] question…
+                let n = option("-n").map(|n| n as usize);
+                let erreurs = mots.iter().any(|m| *m == "-e" || *m == "--erreurs");
+                mots.retain(|m| *m != "-e" && *m != "--erreurs");
+                let fichier = mots.first()?.to_string();
+                Appel::Peek { fichier, question: mots[1..].join(" "), erreurs, max_lignes: n }
+            }
             _ => return None,
         })
     }
@@ -128,6 +151,11 @@ pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> Str
         (None, Appel::Ask { budget: Some(b), .. }) => Some(*b),
         (b, _) => b,
     };
+    if let Appel::Peek { fichier, question, erreurs, max_lignes } = appel {
+        let opt =
+            crate::peek::Options { question: question.clone(), erreurs: *erreurs, max_lignes: max_lignes.unwrap_or(60), contexte: None };
+        return crate::peek::peek_fichier(fichier, &opt).unwrap_or_else(|e| format!("(cortex) peek: {}\n", e));
+    }
     let budget = budget.unwrap_or_else(|| appel.budget_defaut()).max(50);
     if handles.is_empty() {
         return "(cortex) no indexed project: cortex index <path> --name <Project>\n".into();
@@ -139,10 +167,14 @@ pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> Str
         Appel::Ask { question, .. } => ask::ask(handles, question, budget),
         Appel::Outline { cible } => lecture::outline(handles, cible, budget),
         Appel::Read { cible, contexte } => lecture::read(handles, cible, *contexte, budget),
+        Appel::ReadAutour { cible, contexte, question, max_lignes } => {
+            lecture::read_autour(handles, cible, *contexte, budget, question, *max_lignes)
+        }
         Appel::Overview { dossier } => graphe::overview(handles, dossier, budget),
         Appel::Impact { cible, profondeur } => graphe::impact(handles, cible, (*profondeur).clamp(1, 6), budget),
         Appel::Path { de, vers } => graphe::path(handles, de, vers, budget),
         Appel::Changed => overlay::changed(handles, budget),
+        Appel::Peek { .. } => unreachable!("peek est traité avant l'ouverture des atlas"),
     }
 }
 

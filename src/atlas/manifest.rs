@@ -40,6 +40,14 @@ pub struct Manifest {
     /// refait un parcours complet et l'enregistre.
     #[serde(default)]
     pub walk: Option<WalkState>,
+    /// Version de l'EXTRACTION des symboles qui a produit ce segment (voir
+    /// `EXTRACT_VERSION`). `#[serde(default)]` = 0 : un manifeste antérieur
+    /// (sans ce champ) est plus ancien que toute version courante et déclenche
+    /// UNE ré-extraction complète. Un binaire ancien ignore ce champ à la lecture
+    /// (serde) et le perd s'il réécrit le manifeste : le binaire neuf
+    /// réindexera alors une fois de plus, jamais l'inverse.
+    #[serde(default)]
+    pub extract_version: u32,
 }
 
 /// Ce qu'un parcours sait au-delà des fichiers indexés — passé avec eux à
@@ -87,6 +95,22 @@ pub struct ValidatedSegment {
     pub size: u64,
     pub mtime: u64,
 }
+
+/// Version de l'EXTRACTION des symboles, distincte de `schema::FORMAT_VERSION`
+/// (la forme des octets d'un segment). Un changement de format rend les anciens
+/// segments illisibles, donc `Handle::open` les refuse ; un changement
+/// d'EXTRACTION (nouveaux langages, nouveaux `kind`, règles de capture) laisse
+/// les segments lisibles mais périmés : les fichiers n'ayant pas bougé, ni la
+/// mise à jour incrémentale ni `update-all` ne les ré-extraient. Un manifeste
+/// dont `extract_version` est inférieure force donc UNE ré-extraction complète
+/// du projet (`fresh::reextract_if_stale`, appelée par `ensure_and_open`, donc
+/// par find, le MCP, `update` et `update-all`).
+///
+/// À INCRÉMENTER dès que `extract.rs` / `lang.rs` / `confsym` produisent
+/// d'autres symboles pour un même fichier.
+/// - 1 : état d'avant la grande mission (manifestes sans champ = 0).
+/// - 2 : confsym — symboles SQL / YAML / TOML / JSON (fichiers de configuration).
+pub const EXTRACT_VERSION: u32 = 2;
 
 /// Seuil de compaction : au-delà de ce nombre de segments actifs (tronc +
 /// deltas), la mise à jour qui l'a franchi refond tout en un tronc neuf (voir
@@ -188,6 +212,7 @@ impl Manifest {
             validated: Vec::new(),
             skipped: Vec::new(),
             walk: None,
+            extract_version: EXTRACT_VERSION,
         }
     }
 

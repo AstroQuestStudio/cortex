@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="generator" content="Mintlify">
+<title>Authentication - Hexa API</title>
+<link rel="canonical" href="https://docs.hexa.example/api-reference/authentication">
+</head>
+<body>
+<div id="__next"><div class="mintlify-nav relative"><nav id="navbar" class="sticky"><a href="/" class="logo">Hexa</a><a href="/changelog">Changelog</a><button id="search-bar-entry">Search...</button></nav></div>
+<div id="sidebar" class="sidebar-group-container"><ul><li><a href="/introduction">Introduction sidebar</a></li></ul></div>
+<div id="content-area" class="relative"><div class="max-w-xl"><span class="eyebrow">API Reference</span><h1 id="authentication" class="page-title">Authentication</h1><p class="page-description">Authenticate your requests with an API key.</p></div>
+<div class="mdx-content relative">
+<p>Send your key in the <code>Authorization</code> header of every request.</p>
+<h2 id="creating-a-key" class="flex whitespace-pre-wrap group"><div class="absolute"><a href="#creating-a-key" class="-ml-10" aria-label="Navigate to header"><svg></svg></a></div><span class="cursor-pointer">Creating a key</span></h2>
+<p>Open <strong>Settings</strong> then <strong>API keys</strong> and click <em>Create</em>.</p>
+<div class="callout my-4 px-5 py-4 overflow-hidden rounded-2xl flex gap-3 border border-amber-500/20 bg-amber-50/50" data-callout-type="warning"><div class="mt-0.5 w-4"><svg></svg></div><div class="text-sm prose min-w-0 w-full"><p>Keep your key secret. Anyone with the key can act on your behalf.</p></div></div>
+<h2 id="making-a-request" class="flex whitespace-pre-wrap group"><span>Making a request</span></h2>
+<div class="code-group" data-code-group="true"><div class="tabs"><button role="tab" aria-selected="true">cURL</button><button role="tab">Node</button></div>
+<div role="tabpanel"><pre data-language="bash"><code>curl https://api.hexa.example/v1/me \
+  -H "Authorization: Bearer $HEXA_KEY"</code></pre></div>
+<div role="tabpanel" hidden><pre data-language="javascript"><code>const res = await fetch("https://api.hexa.example/v1/me", {
+  headers: { Authorization: `Bearer ${process.env.HEXA_KEY}` },
+});</code></pre></div></div>
+<div class="callout my-4" data-callout-type="info"><div class="text-sm prose"><p>Keys never expire, but you can rotate them at any time.</p></div></div>
+<h3 id="response-codes" class="flex whitespace-pre-wrap group"><span>Response codes</span></h3>
+<table><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody><tr><td>401</td><td>Missing or invalid key</td></tr><tr><td>403</td><td>Key lacks the required scope</td></tr></tbody></table>
+</div>
+<div class="feedback-toolbar"><span>Was this page helpful?</span><button>Yes</button><button>No</button></div>
+<a href="/api-reference/pagination" class="next-prev">Next: Pagination</a>
+</div></div>
+</body>
+</html>

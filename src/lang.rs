@@ -17,6 +17,7 @@ pub enum Lang {
     Go,
     Java,
     Shell,
+    Kotlin,
     Markdown,
     Sql,
     Json,
@@ -47,6 +48,7 @@ impl Lang {
             "go" => Lang::Go,
             "java" => Lang::Java,
             "sh" | "bash" | "zsh" => Lang::Shell,
+            "kt" | "kts" => Lang::Kotlin,
             "md" | "mdx" | "markdown" => Lang::Markdown,
             "sql" => Lang::Sql,
             "json" => Lang::Json,
@@ -81,7 +83,13 @@ impl Lang {
                 | Lang::Go
                 | Lang::Java
                 | Lang::Shell
+                | Lang::Kotlin
                 | Lang::Markdown
+                // Scanners à la main (src/confsym.rs), sans tree-sitter.
+                | Lang::Sql
+                | Lang::Yaml
+                | Lang::Toml
+                | Lang::Json
         )
     }
 
@@ -109,6 +117,7 @@ impl Lang {
             Lang::Go => 18,
             Lang::Java => 19,
             Lang::Shell => 20,
+            Lang::Kotlin => 21,
         }
     }
 
@@ -134,6 +143,7 @@ impl Lang {
             18 => Lang::Go,
             19 => Lang::Java,
             20 => Lang::Shell,
+            21 => Lang::Kotlin,
             _ => Lang::Other,
         }
     }
@@ -153,6 +163,7 @@ impl Lang {
             Lang::Go => "go",
             Lang::Java => "java",
             Lang::Shell => "shell",
+            Lang::Kotlin => "kotlin",
             Lang::Markdown => "markdown",
             Lang::Sql => "sql",
             Lang::Json => "json",

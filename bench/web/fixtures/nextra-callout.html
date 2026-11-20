@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>Data Fetching – Pixelkit</title>
+<meta name="next-head-count" content="4">
+<link rel="canonical" href="https://pixelkit.example.dev/docs/next/data-fetching">
+</head>
+<body>
+<div id="__next"><div class="nextra-nav-container nx-sticky"><nav class="nx-mx-auto"><a href="/" class="nx-flex">Pixelkit</a><a href="/docs">Documentation</a><button type="button" class="nextra-search">Search documentation...</button></nav></div>
+<div class="nx-mx-auto nx-flex"><aside class="nextra-sidebar-container nx-flex"><div class="nextra-scrollbar"><ul><li><a href="/docs/getting-started">Getting Started sidebar</a></li></ul></div></aside>
+<nav class="nextra-toc nx-order-last" aria-label="table of contents"><p class="nx-mb-4">On This Page</p><ul><li><a href="#loading-data">Loading data</a></li></ul></nav>
+<article class="nx-w-full nx-min-w-0 nx-break-words nextra-content nx-min-h-[calc(100vh-var(--nextra-navbar-height))]"><main class="nx-w-full nx-min-w-0 nx-max-w-6xl nx-px-6 nx-pt-4 md:nx-px-12">
+<h1 class="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight">Data Fetching</h1>
+<p class="nx-mt-6 nx-leading-7 first:nx-mt-0">Pixelkit components can load data on the server or in the browser.</p>
+<h2 class="nx-font-semibold nx-tracking-tight nx-mt-10 nx-border-b nx-text-3xl" id="loading-data">Loading data<span class="nx-absolute -nx-mt-20" id="loading-data"></span><a href="#loading-data" id="loading-data" class="subheading-anchor" aria-label="Permalink for this section"></a></h2>
+<p class="nx-mt-6 nx-leading-7">Call <code class="nx-border-black nx-rounded-md">useQuery</code> inside a component:</p>
+<div class="nx-bg-primary-700/5 nx-mb-4 nx-overflow-x-auto"><pre class="nx-bg-primary-700/5" data-language="tsx" data-theme="default"><code class="nx-border-black" data-language="tsx" data-theme="default"><span class="line"><span>const { data } = useQuery('/api/items');</span></span>
+<span class="line"><span>if (!data) return &lt;Spinner /&gt;;</span></span></code><button class="nextra-button nx-transition-all" title="Copy code">copy</button></pre></div>
+<div class="nextra-callout nx-overflow-x-auto nx-mt-6 nx-flex nx-rounded-lg nx-border nx-py-2 nx-pr-4 nx-border-orange-100 nx-bg-orange-50 nx-text-orange-800"><div class="nx-select-none nx-text-xl nx-pl-3 nx-pr-2" style="font-family:Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,Segoe UI Symbol,Android Emoji,EmojiSymbols">⚠️</div><div class="nx-w-full nx-min-w-0 nx-leading-7">Queries run twice in development because of React strict mode.</div></div>
+<div class="nextra-callout nx-mt-6 nx-flex nx-rounded-lg nx-border nx-py-2 nx-border-blue-200 nx-bg-blue-100"><div class="nx-select-none nx-text-xl nx-pl-3 nx-pr-2">ℹ️</div><div class="nx-w-full nx-min-w-0 nx-leading-7">Results are cached for 30 seconds by default.</div></div>
+<h3 class="nx-font-semibold nx-tracking-tight nx-mt-8 nx-text-2xl" id="error-states">Error states<a href="#error-states" id="error-states" class="subheading-anchor" aria-label="Permalink for this section"></a></h3>
+<p class="nx-mt-6 nx-leading-7">Check <code>error</code> on the returned object.</p>
+<div class="nx-mt-12 nx-mb-8 nx-block nx-text-xs nx-text-gray-500">Last updated on March 4, 2024</div>
+<div class="nx-mb-8 nx-flex nx-items-center nx-border-t nx-pt-8 nx-border-gray-200"><a href="/docs/getting-started" class="nx-flex nx-max-w-[50%]">← Getting Started</a><a href="/docs/mutations" class="nx-ml-auto">Mutations →</a></div>
+</main></article></div>
+<footer class="nx-bg-gray-100"><div class="nx-mx-auto">MIT 2024 © Pixelkit.</div></footer></div>
+<script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{}}}</script>
+</body>
+</html>

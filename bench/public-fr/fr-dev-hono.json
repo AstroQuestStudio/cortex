@@ -1,0 +1,169 @@
+{
+  "project": "bench-hono",
+  "repo": "https://github.com/honojs/hono",
+  "commit": "7c3b0df96dbf3e767968ff5afe4c0d999257b8ee",
+  "written": "2026-11-19, avant toute exécution de Cortex sur ces questions",
+  "queries": [
+    {
+      "q": "Où est géré le filtrage des clients par adresse IP, avec des plages réseau autorisées ou interdites ?",
+      "expect": [
+        "src/middleware/ip-restriction/index.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/middleware/ip-restriction/index.ts:218 ipRestriction ; :51 buildMatcher, notation CIDR ligne 40"
+    },
+    {
+      "q": "ou sont poses les en-tetes qui autorisent les appels venant d'une autre origine",
+      "expect": [
+        "src/middleware/cors/index.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/cors/index.ts:63 cors ; :107 set('Access-Control-Allow-Origin', allowOrigin)"
+    },
+    {
+      "q": "Où est refusé un jeton signé dont la date d'expiration est dépassée ?",
+      "expect": [
+        "src/utils/jwt/jwt.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/utils/jwt/jwt.ts:138 verify lève JwtTokenExpired quand exp est dépassé"
+    },
+    {
+      "q": "ou le middleware d'authentification par jeton va-t-il chercher le jeton quand il est stocke dans un cookie",
+      "expect": [
+        "src/middleware/jwt/jwt.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/jwt/jwt.ts:99 branche options.cookie, getCookie ligne 101"
+    },
+    {
+      "q": "comment une requete POST peut-elle etre transformee en PUT ou DELETE grace a un champ de formulaire",
+      "expect": [
+        "src/middleware/method-override/index.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/method-override/index.ts:60 methodOverride (champ _method, en-tête ou paramètre de requête)"
+    },
+    {
+      "q": "Comment le middleware cache() utilise-t-il l'API Cache pour stocker les réponses et tenir compte de l'en-tête Vary ?",
+      "expect": [
+        "src/middleware/cache/index.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/middleware/cache/index.ts:183 cache ; caches.open ligne 300, cache.put ligne 319, parseVaryDirectives ligne 42"
+    },
+    {
+      "q": "Comment combiner plusieurs middlewares pour que la requête passe dès qu'un seul d'entre eux réussit ?",
+      "expect": [
+        "src/middleware/combine/index.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/middleware/combine/index.ts:38 some (every ligne 99, except ligne 143)"
+    },
+    {
+      "q": "ou est renvoyee la reponse 405 avec la liste des methodes permises quand le verbe n'est pas supporte",
+      "expect": [
+        "src/middleware/method-not-allowed/index.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/method-not-allowed/index.ts:59 methodNotAllowed ; c.text('Method Not Allowed', 405, { Allow }) ligne 139"
+    },
+    {
+      "q": "Comment getMimeType déduit-il le type de contenu à partir de l'extension d'un fichier ?",
+      "expect": [
+        "src/utils/mime.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/utils/mime.ts:6 getMimeType"
+    },
+    {
+      "q": "Comment les champs d'un formulaire multipart sont-ils lus et regroupés en objet, y compris les noms imbriqués ?",
+      "expect": [
+        "src/utils/body.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/utils/body.ts:100 parseBody ; :225 handleParsingNestedValues"
+    },
+    {
+      "q": "Comment un gabarit HTML avec des valeurs insérées échappe-t-il automatiquement les caractères dangereux ?",
+      "expect": [
+        "src/helper/html/index.ts",
+        "src/utils/html.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/helper/html/index.ts:11 html (gabarit étiqueté) ; src/utils/html.ts:90 escapeToBuffer"
+    },
+    {
+      "q": "comment afficher dans le terminal la liste des routes declarees par l'application pour deboguer",
+      "expect": [
+        "src/helper/dev/index.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/helper/dev/index.ts:39 showRoutes (inspectRoutes ligne 27)"
+    },
+    {
+      "q": "comment est mesuree la duree de traitement puis ajoute l'en-tete de chronometrage serveur a chaque reponse",
+      "expect": [
+        "src/middleware/timing/timing.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/timing/timing.ts:76 timing (Server-Timing)"
+    },
+    {
+      "q": "ou est genere l'identifiant unique de chaque requete avant d'etre place dans l'en-tete de la reponse",
+      "expect": [
+        "src/middleware/request-id/request-id.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/middleware/request-id/request-id.ts:41 requestId : crypto.randomUUID ligne 44, c.header ligne 55"
+    },
+    {
+      "q": "Comment compose() enchaîne-t-il les middlewares et lève-t-il l'erreur « next() called multiple times » ?",
+      "expect": [
+        "src/compose.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/compose.ts:15 compose ; throw ligne 34"
+    },
+    {
+      "q": "Quelle classe HTTPException lance-t-on pour renvoyer directement une réponse avec un code de statut ?",
+      "expect": [
+        "src/http-exception.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/http-exception.ts:46 class HTTPException"
+    },
+    {
+      "q": "comment brancher une application externe qui traite des Request et Response sous un prefixe de chemin",
+      "expect": [
+        "src/hono-base.ts"
+      ],
+      "tag": "fr-conj",
+      "why": "src/hono-base.ts:331 mount"
+    },
+    {
+      "q": "Comment SSEStreamingApi.writeSSE formate-t-il un événement avec data, event, id et retry ?",
+      "expect": [
+        "src/helper/streaming/sse.ts"
+      ],
+      "tag": "fr-tech",
+      "why": "src/helper/streaming/sse.ts:18 writeSSE (event: ligne 36, retry: ligne 39)"
+    },
+    {
+      "q": "Où la validation des données d'entrée (JSON, paramètres de requête, formulaire) est-elle branchée avec une erreur 400 en cas d'échec ?",
+      "expect": [
+        "src/validator/validator.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/validator/validator.ts:46 validator ; HTTPException(400) lignes 102 et 125"
+    },
+    {
+      "q": "Où est géré le contenu de repli affiché pendant qu'un composant asynchrone est encore en cours de rendu en flux ?",
+      "expect": [
+        "src/jsx/streaming.ts"
+      ],
+      "tag": "fr-nl",
+      "why": "src/jsx/streaming.ts:51 Suspense avec fallback"
+    }
+  ]
+}

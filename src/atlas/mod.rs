@@ -120,12 +120,14 @@ pub fn project_root(project: &str) -> Option<String> {
     Manifest::load(project).ok().map(|m| m.root).or_else(|| legacy_root(project))
 }
 
-/// Ouvre l'atlas d'un projet ; s'il manque, est d'un autre format ou est
-/// illisible (segment absent/corrompu), le RECONSTRUIT depuis les sources
+/// Ouvre l'atlas d'un projet ; s'il manque, est d'un autre format, d'une
+/// extraction périmée (`EXTRACT_VERSION`) ou est illisible (segment absent/corrompu), le RECONSTRUIT depuis les sources
 /// (racine du manifeste, ou d'un ancien `index.bin`), une fois.
 pub fn ensure_and_open(project: &str) -> std::io::Result<Handle> {
     match Handle::open(project) {
-        Ok(h) => Ok(h),
+        // Extraction plus ancienne que `manifest::EXTRACT_VERSION` : ré-extraction
+        // complète, une fois (voir `fresh::reextract_if_stale`).
+        Ok(h) => fresh::reextract_if_stale(h),
         Err(e) => {
             let Some(root) = project_root(project) else { return Err(e) };
             let root_path = PathBuf::from(&root);
@@ -163,6 +165,18 @@ pub fn rebuild_full(project: &str, idx: &ProjectIndex, tracked: manifest::Tracke
 
 /// `rebuild_full` sous verrou d'écriture déjà pris.
 pub(crate) fn rebuild_full_locked(project: &str, idx: &ProjectIndex, tracked: manifest::Tracked) -> std::io::Result<()> {
+    rebuild_locked(project, idx, tracked, manifest::EXTRACT_VERSION)
+}
+
+/// Reconstruction à partir d'un index DÉRIVÉ de l'atlas existant (compaction,
+/// changement massif) : les symboles ne sont pas ré-extraits, donc la version
+/// d'extraction du manifeste actuel est conservée (jamais promue à la courante).
+pub(crate) fn rebuild_derived_locked(project: &str, idx: &ProjectIndex, tracked: manifest::Tracked) -> std::io::Result<()> {
+    let v = Manifest::load(project).map(|m| m.extract_version).unwrap_or(0);
+    rebuild_locked(project, idx, tracked, v)
+}
+
+fn rebuild_locked(project: &str, idx: &ProjectIndex, tracked: manifest::Tracked, extract_version: u32) -> std::io::Result<()> {
     let dbg = std::env::var("CORTEX_DEBUG_TIMING").is_ok();
     let seg = build::build_full(idx);
     let name = manifest::new_segment_name();
@@ -172,6 +186,7 @@ pub(crate) fn rebuild_full_locked(project: &str, idx: &ProjectIndex, tracked: ma
     let mut m = Manifest::new(&idx.root, vec![name.clone()]);
     m.skipped = tracked.skipped;
     m.walk = tracked.walk;
+    m.extract_version = extract_version;
     let t = std::time::Instant::now();
     // Validation sur les octets écrits, sans rouvrir le fichier (voir
     // `validate_bytes_and_record`).
@@ -243,7 +258,7 @@ pub(crate) fn compact_locked(project: &str) -> std::io::Result<()> {
     }
     let tracked = manifest::Tracked { skipped: h.manifest.skipped.clone(), walk: h.manifest.walk.clone() };
     drop(h);
-    let r = rebuild_full_locked(project, &idx, tracked);
+    let r = rebuild_derived_locked(project, &idx, tracked);
     let t1 = std::time::Instant::now();
     // ~1,5 M chaînes à libérer : en parallèle.
     {

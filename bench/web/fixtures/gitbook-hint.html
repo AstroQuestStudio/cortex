@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="generator" content="GitBook (git.io/gitbook)">
+<title>Webhooks | Lumen Docs</title>
+<link rel="canonical" href="https://lumen.gitbook.io/docs/webhooks">
+</head>
+<body class="gitbook-root">
+<div class="gitbook-root"><header class="site-header"><a href="/">Lumen Docs</a><button>Ask AI</button></header>
+<div class="flex"><aside class="page-sidebar"><nav><ul><li><a href="/docs/overview">Overview sidebar entry</a></li></ul></nav></aside>
+<main class="page-main">
+<div data-testid="page.contentEditor" class="page-content">
+<h1 id="webhooks" class="text-3xl">Webhooks</h1>
+<p>Lumen sends an HTTP POST to your endpoint when an event occurs.</p>
+<div id="register"><h2 class="text-2xl">Register an endpoint</h2></div>
+<p>Use the CLI:</p>
+<pre><code class="language-bash">lumen webhook add --url https://example.org/hook --event invoice.paid</code></pre>
+<div class="hint" data-style="warning"><div class="hint-icon"><svg></svg></div><div class="hint-body"><p>Endpoints must answer within <strong>5 seconds</strong> or the delivery is retried.</p></div></div>
+<div class="hint" data-style="success"><div class="hint-body"><p>Deliveries are signed with your endpoint secret.</p></div></div>
+<h3 id="payload">Payload</h3>
+<pre><code class="language-json">{
+  "event": "invoice.paid",
+  "id": "evt_123",
+  "data": { "amount": 4200 }
+}</code></pre>
+<ul><li>The <code>id</code> is unique per delivery.</li><li>Order of delivery is not guaranteed.</li></ul>
+</div></main></div>
+<footer class="page-footer"><a href="/docs/changelog">Last modified 3d ago</a><span>Powered by GitBook</span></footer></div>
+</body>
+</html>

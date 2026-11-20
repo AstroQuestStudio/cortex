@@ -770,6 +770,18 @@ impl Handle {
                 }
             }
         }
+        // Fichiers de configuration/schéma (SQL, YAML, TOML, JSON) : relégués dans la recherche par défaut,
+        // sauf si la question les nomme (table, policy, rls, migration, workflow, yaml…) ; voir `confsym.rs`.
+        if !crate::confsym::query_mentions_config(question) {
+            let pen = crate::confsym::CONFIG_PENALTY;
+            let mut memo: FxHashMap<&str, f32> = FxHashMap::default();
+            for c in cands.iter_mut() {
+                let m = *memo.entry(c.file).or_insert_with(|| if crate::confsym::is_config_path(c.file) { pen } else { 1.0 });
+                if m != 1.0 {
+                    c.score *= m;
+                }
+            }
+        }
         // Généralisation (voir `generalisation.rs`) : outillage pénalisé, rôle nommé favorisé.
         {
             let pen_tool = crate::generalisation::on('t') && !crate::generalisation::query_wants_tooling(&base_terms);

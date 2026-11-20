@@ -8,6 +8,7 @@
 //!   - cortex_ask / cortex_find / card / outline / read / overview / impact / path / changed
 //!   - cortex_query, cortex_explain, cortex_context : alias compatibles
 //!   - cortex_grep      : plein-texte dans les fichiers indexés
+//!   - cortex_peek      : le bon endroit d'un gros texte (log, sortie cargo, JSON), indexé ou non
 //!   - cortex_ui        : de ce qu'on voit à l'écran (texte, data-testid, composant) au code qui l'affiche
 //!   - cortex_files     : fichiers par nom/fragment/glob
 //!   - cortex_docs(_list): documentations externes scrapées offline
@@ -68,10 +69,63 @@ fn open_atlas(name: &str) -> Option<crate::atlas::Handle> {
             return None;
         }
     };
-    if should_refresh(name) {
+    let due = should_refresh(name);
+    let sale = !due && probe_sale(name, &h);
+    if due || sale {
         crate::atlas::fresh::refresh(&mut h);
+        if sale {
+            verifier_apres_sonde(name, &h);
+        }
     }
     Some(h)
+}
+
+/// Durée pendant laquelle la sonde se tait pour un projet dont un chemin cité reste « sale »
+/// APRÈS le contrôle complet (fichier que l'atlas ne suivra jamais) : borne le coût à un
+/// contrôle complet par intervalle au lieu d'un par appel.
+const MCP_PROBE_TETUE: std::time::Duration = std::time::Duration::from_secs(5);
+
+thread_local! {
+    /// Textes de l'appel en cours (cible, question, needle…) : la sonde y cherche des chemins.
+    static HINTS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+    /// Projets dont la sonde reste positive après un contrôle complet (voir `MCP_PROBE_TETUE`).
+    static SONDE_TETUE: RefCell<HashMap<String, Instant>> = RefCell::new(HashMap::new());
+}
+
+/// Mémorise les arguments texte de l'appel d'outil en cours (hors `project`).
+fn set_hints(args: &Value) {
+    let v: Vec<String> = match args.as_object() {
+        Some(o) => o.iter().filter(|(k, _)| k.as_str() != "project").filter_map(|(_, x)| x.as_str().map(String::from)).collect(),
+        None => Vec::new(),
+    };
+    HINTS.with(|h| *h.borrow_mut() = v);
+}
+
+/// Dans la fenêtre de `MCP_REFRESH_MIN_INTERVAL` (le contrôle complet a eu lieu il y a peu) :
+/// vrai si un fichier NOMMÉ par l'appel a changé sur disque depuis l'index (quelques `stat`,
+/// aucun parcours, rien au repos). Marque alors l'instant comme dernier contrôle.
+fn probe_sale(name: &str, h: &crate::atlas::Handle) -> bool {
+    let tait = SONDE_TETUE.with(|m| m.borrow().get(name).is_some_and(|t| t.elapsed() < MCP_PROBE_TETUE));
+    if tait {
+        return false;
+    }
+    let sale = HINTS.with(|x| {
+        let x = x.borrow();
+        !x.is_empty() && crate::atlas::fresh::probe_chemins(h, &x)
+    });
+    if sale {
+        LAST_REFRESH.with(|m| m.borrow_mut().insert(name.to_string(), Instant::now()));
+    }
+    sale
+}
+
+/// Après le contrôle complet déclenché par la sonde : si elle reste positive, le chemin cité
+/// n'entrera jamais dans l'atlas (exclu, binaire…) : on la fait taire `MCP_PROBE_TETUE`.
+fn verifier_apres_sonde(name: &str, h: &crate::atlas::Handle) {
+    let encore = HINTS.with(|x| crate::atlas::fresh::probe_chemins(h, &x.borrow()));
+    if encore {
+        SONDE_TETUE.with(|m| m.borrow_mut().insert(name.to_string(), Instant::now()));
+    }
 }
 
 /// Ouvre l'atlas de chaque projet demandé (un seul si `project` est donné,
@@ -176,7 +230,18 @@ const ID_DESC: &str = "Id copied from a Cortex output (S:path#symbol, D:path#anc
 
 const REGLE: &str = " Output: stable ids to copy as-is into the next call, provenance (path + L<start>-<end>), ✎ = uncommitted, last line \"next : \" = the most useful call to make next.";
 
+/// Liste des outils : ceux de toujours, plus (feature `web`) les 5 outils `cortex_web_*`.
 fn tools_list() -> Value {
+    #[allow(unused_mut)]
+    let mut v = tools_list_base();
+    #[cfg(feature = "web")]
+    if let Some(a) = v.get_mut("tools").and_then(|t| t.as_array_mut()) {
+        a.extend(crate::web::cli::mcp_tools());
+    }
+    v
+}
+
+fn tools_list_base() -> Value {
     json!({
         "tools": [
             {
@@ -202,7 +267,11 @@ fn tools_list() -> Value {
             {
                 "name": "cortex_read",
                 "description": format!("SHOW THE CODE: the exact lines of a symbol (or a doc section, a file, a path:12-40 range), numbered, read from disk, instead of a Read at a guessed offset.{}", REGLE),
-                "inputSchema": schema("cible", ID_DESC, json!({ "contexte": { "type": "integer", "description": "Context lines on each side (default 0)" } }))
+                "inputSchema": schema("cible", ID_DESC, json!({
+                    "contexte": { "type": "integer", "description": "Context lines on each side (default 0)" },
+                    "around": { "type": "string", "description": "For a BIG symbol (> 80 lines): a question; returns only the relevant lines (signature + ranked windows, absolute line numbers, '… N lines omitted')" },
+                    "max_lines": { "type": "integer", "description": "With around: cap on lines shown (default min(60, a quarter of the symbol))" }
+                }))
             },
             {
                 "name": "cortex_overview",
@@ -261,6 +330,20 @@ fn tools_list() -> Value {
                         "budget": { "type": "integer", "description": "Approximate token budget (default 1500)" }
                     },
                     "required": ["needle"]
+                }
+            },
+            {
+                "name": "cortex_peek",
+                "description": "READ THE RIGHT SPOT of a big text file (test/cargo/server log, JSON, source; indexed or not) instead of all of it: best numbered line windows for a question, failure signals included. No question = summary; errors=true = failure blocks only (test, assertion, file:line).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "file": { "type": "string", "description": "File path" },
+                        "question": { "type": "string", "description": "What to find (optional)" },
+                        "errors": { "type": "boolean", "description": "Failure blocks only" },
+                        "max_lines": { "type": "integer", "description": "Cap (default 60)" }
+                    },
+                    "required": ["file"]
                 }
             },
             {
@@ -336,6 +419,7 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
     let params = params.ok_or((-32602, "missing params".into()))?;
     let name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(json!({}));
+    set_hints(&args);
 
     let text = match name {
         "cortex_find" | "cortex_query" => run_outil(&args, Appel::Find { question: arg_str(&args, "question") }),
@@ -346,7 +430,16 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "cortex_outline" => run_outil(&args, Appel::Outline { cible: arg_str(&args, "cible") }),
         "cortex_read" => {
             let c = args.get("contexte").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-            run_outil(&args, Appel::Read { cible: arg_str(&args, "cible"), contexte: c })
+            match args.get("around").and_then(|v| v.as_str()).map(str::trim).filter(|s| !s.is_empty()) {
+                Some(q) => {
+                    let max = args.get("max_lines").and_then(|v| v.as_u64()).map(|m| m as usize);
+                    run_outil(
+                        &args,
+                        Appel::ReadAutour { cible: arg_str(&args, "cible"), contexte: c, question: q.to_string(), max_lignes: max },
+                    )
+                }
+                None => run_outil(&args, Appel::Read { cible: arg_str(&args, "cible"), contexte: c }),
+            }
         }
         "cortex_overview" => run_outil(&args, Appel::Overview { dossier: arg_str(&args, "dossier") }),
         "cortex_impact" => {
@@ -362,6 +455,15 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
             let max = args.get("max").and_then(|v| v.as_u64()).unwrap_or(60) as usize;
             let budget = args.get("budget").and_then(|v| v.as_u64()).unwrap_or(1500) as usize;
             run_grep(needle, project, cs, max, budget)
+        }
+        "cortex_peek" => {
+            let opt = crate::peek::Options {
+                question: arg_str(&args, "question"),
+                erreurs: args.get("errors").and_then(|v| v.as_bool()).unwrap_or(false),
+                max_lignes: args.get("max_lines").and_then(|v| v.as_u64()).unwrap_or(crate::peek::MAX_LIGNES_DEFAUT as u64) as usize,
+                contexte: None,
+            };
+            crate::peek::peek_fichier(&arg_str(&args, "file"), &opt).unwrap_or_else(|e| format!("(cortex peek) {}\n", e))
         }
         #[cfg(not(feature = "ui"))]
         "cortex_ui" => {
@@ -432,6 +534,12 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
             }
         }
         "cortex_list" => run_list(),
+        #[cfg(feature = "web")]
+        n if crate::web::cli::MCP_TOOLS.contains(&n) => {
+            let ctx = crate::web::cli::Ctx::from_env();
+            let open = |p: &str| open_atlas_handles(&Some(p.to_string()));
+            crate::web::cli::mcp_call(&ctx, n, &args, &open).map_err(|e| (-32602, e))?
+        }
         _ => return Err((-32602, format!("unknown tool '{}'", name))),
     };
 
@@ -471,4 +579,103 @@ fn run_list() -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::atlas::tests::clean;
+
+    fn projet(tag: &str) -> (String, std::path::PathBuf) {
+        let name = format!("cortex-test-mcp-{}", tag);
+        clean(&name);
+        let dir = std::env::temp_dir().join(format!("cortex-mcp-{}-{}", tag, std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.ts"), "export function alpha() {}\n").unwrap();
+        let (idx, tracked) = crate::index::build_index(&name, &dir).unwrap();
+        crate::atlas::rebuild_full(&name, &idx, tracked).unwrap();
+        (name, dir)
+    }
+
+    fn noms_outils() -> Vec<String> {
+        tools_list()["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap().to_string()).collect()
+    }
+
+    /// Sans la feature `web` : aucun outil de plus, et les noms `cortex_web_*` sont inconnus.
+    #[cfg(not(feature = "web"))]
+    #[test]
+    fn sans_feature_web_aucun_outil_web() {
+        let noms = noms_outils();
+        assert!(noms.iter().all(|n| !n.starts_with("cortex_web_")), "{noms:?}");
+        assert_eq!(noms.len(), tools_list_base()["tools"].as_array().unwrap().len());
+        let r = tools_call(Some(&json!({ "name": "cortex_web_fetch", "arguments": { "url": "https://example.org/" } })));
+        assert!(r.is_err());
+    }
+
+    /// Avec la feature `web` : exactement 5 outils de plus (les mêmes que `web::cli::MCP_TOOLS`).
+    #[cfg(feature = "web")]
+    #[test]
+    fn avec_feature_web_exactement_cinq_outils_de_plus() {
+        let noms = noms_outils();
+        let base = tools_list_base()["tools"].as_array().unwrap().len();
+        assert_eq!(noms.len(), base + 5);
+        let web: Vec<&String> = noms.iter().filter(|n| n.starts_with("cortex_web_")).collect();
+        assert_eq!(web.len(), 5);
+        for n in crate::web::cli::MCP_TOOLS {
+            assert!(noms.iter().any(|x| x == n), "{n}");
+        }
+        // Dispatch : un paramètre inconnu est refusé (erreur de paramètres JSON-RPC).
+        let r = tools_call(Some(
+            &json!({ "name": "cortex_web_fetch", "arguments": { "url": "https://example.org/", "allow_addrs": ["127.0.0.1:80"] } }),
+        ));
+        assert_eq!(r.unwrap_err().0, -32602);
+        // Une URL privée est refusée en texte (pas d'erreur de protocole), sans toucher au réseau.
+        let ok = tools_call(Some(&json!({ "name": "cortex_web_fetch", "arguments": { "url": "http://10.0.0.5/" } }))).unwrap();
+        let t = ok["content"][0]["text"].as_str().unwrap();
+        assert!(t.contains("refus") && t.contains("10.0.0.5"), "{t}");
+    }
+
+    fn voit(name: &str, mot: &str) -> bool {
+        let h = open_atlas(name).unwrap();
+        h.search(mot, 5).iter().any(|x| x.name.eq_ignore_ascii_case(mot))
+    }
+
+    /// Le défaut : juste après une écriture de l'agent (< 2 s après le dernier contrôle), la
+    /// requête voyait l'ancien état. Corrigé quand l'appel NOMME le fichier (sonde par stat) ;
+    /// sans fichier nommé, la fenêtre de 2 s protège le coût au repos (limite assumée).
+    #[test]
+    fn fraicheur_fichier_ecrit_puis_interroge_aussitot() {
+        let (name, dir) = projet("fraicheur");
+        set_hints(&json!({ "question": "alpha" }));
+        assert!(voit(&name, "alpha"), "1re requête : contrôle complet, index à jour");
+        // L'agent écrit un fichier nouveau et modifie l'ancien, puis interroge dans la fenêtre.
+        std::fs::write(dir.join("a.ts"), "export function alpha() {}\nexport function beta() {}\n").unwrap();
+        std::fs::write(dir.join("n.ts"), "export function gamma() {}\n").unwrap();
+        // Sans chemin dans l'appel : ancien état (la fenêtre évite un parcours à chaque appel).
+        set_hints(&json!({ "question": "beta gamma" }));
+        assert!(!voit(&name, "beta") && !voit(&name, "gamma"), "limite documentée : pas de fichier nommé");
+        // Avec le chemin du fichier modifié : vu aussitôt.
+        set_hints(&json!({ "cible": "S:a.ts#beta" }));
+        assert!(voit(&name, "beta"), "fichier modifié nommé : vu dans la fenêtre");
+        // Fichier nouveau nommé : vu aussitôt.
+        std::fs::write(dir.join("n.ts"), "export function gamma() {}\nexport function delta() {}\n").unwrap();
+        set_hints(&json!({ "cible": "n.ts:1-2" }));
+        assert!(voit(&name, "gamma") && voit(&name, "delta"));
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
+    }
+
+    /// Au repos : fichier nommé inchangé → la sonde ne force aucun contrôle.
+    #[test]
+    fn sonde_silencieuse_si_rien_ne_change() {
+        let (name, dir) = projet("repos");
+        set_hints(&json!({ "cible": "a.ts" }));
+        let h = open_atlas(&name).unwrap();
+        for _ in 0..20 {
+            assert!(!probe_sale(&name, &h));
+        }
+        std::fs::remove_dir_all(&dir).ok();
+        clean(&name);
+    }
 }

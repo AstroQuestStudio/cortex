@@ -325,6 +325,10 @@ fn couverts(t: &Tache, tr: &Trace) -> Vec<bool> {
 }
 
 pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<String>, budget_ask: usize) {
+    if est_banc_peek(file) {
+        run_peek(file, verbose, filtre);
+        return;
+    }
     let f: Fichier =
         match std::fs::read_to_string(file).map_err(|e| e.to_string()).and_then(|c| serde_json::from_str(&c).map_err(|e| e.to_string())) {
             Ok(f) => f,
@@ -475,9 +479,484 @@ pub fn run(file: &Path, project: Option<String>, verbose: bool, filtre: Option<S
     }
 }
 
+// ─── Banc « peek » : lire un gros log en entier, ou avec `cortex peek` ───────
+//
+// `cortex bench-agent --tache peek` rejoue `bench/agent-peek/taches.json` (fichier marqué
+// `"banc": "peek"`, reconnu automatiquement ; aucun projet indexé requis). Chaque tâche est
+// « pourquoi ce test échoue ? » sur un log FIGÉ (`fichier`, relatif au fichier de tâches) :
+// - `facts` : chaînes à retrouver dans la sortie (sous-chaîne exacte ; `ou:a||b` = l'une des deux) ;
+// - `cortex` : étapes `peek <fichier> [-e] [-n N] question…` (mêmes règles de vocabulaire que le
+//   banc d'agent : la question, son `vocabulaire`, le fichier, les sorties précédentes) ;
+// - `sans_cortex` : `read <fichier>` = TOUT lire, par pages de 2 000 lignes (limite d'un Read) :
+//   jetons de tout le fichier numéroté, un appel par page.
+// Rendu : par tâche et au total, jetons Read complet vs peek, ratio, réussite ; la 1re page
+// seule (ce que verrait un Read sans pagination) est donnée à titre indicatif. Seuils (dans le
+// fichier) : toute tâche réussie à 100 % ; ratio >= `ratio_gros` sur les tâches de type « gros ».
+// Une alerte fait sortir en code 2.
+
+#[derive(Deserialize)]
+struct FichierPeek {
+    tasks: Vec<TachePeek>,
+    #[serde(default)]
+    seuils: Seuils,
+}
+
+#[derive(Deserialize, Clone, Copy)]
+#[serde(default)]
+struct Seuils {
+    /// Part minimale de tâches réussies (100 = toutes).
+    reussite_pct: f64,
+    /// Ratio minimal (jetons Read complet / jetons peek) sur les tâches de type « gros ».
+    ratio_gros: f64,
+}
+
+impl Default for Seuils {
+    fn default() -> Self {
+        Seuils { reussite_pct: 100.0, ratio_gros: 10.0 }
+    }
+}
+
+#[derive(Deserialize)]
+struct TachePeek {
+    id: String,
+    #[serde(rename = "type", default)]
+    genre: String,
+    question: String,
+    #[serde(default)]
+    vocabulaire: Vec<String>,
+    fichier: String,
+    facts: Vec<String>,
+    cortex: Vec<String>,
+    sans_cortex: Vec<String>,
+    /// Défaut de peek DÉJÀ constaté (raison) : l'échec reste signalé, mais il est « connu »
+    /// (code de sortie 3 au lieu de 2, et toléré par `cargo test` : seule une régression d'une
+    /// tâche non marquée le fait échouer). À retirer quand peek est corrigé.
+    #[serde(default)]
+    connu_ko: Option<String>,
+}
+
+/// Lignes d'une page de Read (limite par défaut de l'outil Read).
+const PAGE_READ: usize = 2000;
+
+#[derive(Default)]
+struct MesurePeek {
+    appels: usize,
+    tokens: usize,
+    faits: Vec<bool>,
+    violations: Vec<String>,
+    /// (étape, sortie)
+    sorties: Vec<(String, String)>,
+}
+
+struct ResultatPeek {
+    id: String,
+    genre: String,
+    lignes: usize,
+    octets: usize,
+    lecture: MesurePeek,
+    /// Jetons et faits de la seule 1re page (Read sans pagination).
+    page1_tokens: usize,
+    page1_faits: Vec<bool>,
+    peek: MesurePeek,
+    facts: Vec<String>,
+    connu_ko: Option<String>,
+}
+
+impl ResultatPeek {
+    fn ratio(&self) -> f64 {
+        self.lecture.tokens as f64 / self.peek.tokens.max(1) as f64
+    }
+    fn reussi(&self) -> bool {
+        self.peek.faits.iter().all(|&b| b)
+    }
+}
+
+/// Une alerte du banc ; `connu` : l'échec correspond à un `connu_ko` du fichier de tâches.
+pub struct Alerte {
+    pub texte: String,
+    pub connu: bool,
+}
+
+pub struct RapportPeek {
+    taches: Vec<ResultatPeek>,
+    seuils: Seuils,
+    pub alertes: Vec<Alerte>,
+}
+
+fn est_banc_peek(file: &Path) -> bool {
+    std::fs::read_to_string(file)
+        .ok()
+        .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+        .is_some_and(|v| v.get("banc").and_then(|b| b.as_str()) == Some("peek"))
+}
+
+/// Un fait est retrouvé : sous-chaîne exacte, ou `ou:a||b` (l'une des alternatives).
+fn fait_trouve(fait: &str, sortie: &str) -> bool {
+    match fait.strip_prefix("ou:") {
+        Some(alts) => alts.split("||").any(|a| !a.is_empty() && sortie.contains(a)),
+        None => sortie.contains(fait),
+    }
+}
+
+fn faits_dans(facts: &[String], textes: &[&str]) -> Vec<bool> {
+    facts.iter().map(|f| textes.iter().any(|t| fait_trouve(f, t))).collect()
+}
+
+/// Fichier entier numéroté comme Read (`{:>6}\t{ligne}`), puis sa 1re page.
+fn numeroter(txt: &str) -> (String, String, usize) {
+    let (mut tout, mut page1, mut n) = (String::new(), String::new(), 0usize);
+    for (i, l) in txt.lines().enumerate() {
+        let ligne = format!("{:>6}\t{}\n", i + 1, l);
+        tout.push_str(&ligne);
+        if i < PAGE_READ {
+            page1.push_str(&ligne);
+        }
+        n = i + 1;
+    }
+    (tout, page1, n)
+}
+
+fn vocabulaire_vu(t: &TachePeek) -> String {
+    format!("{} {} {}", t.question, t.vocabulaire.join(" "), t.fichier)
+}
+
+/// `sans_cortex` : `read <fichier>` lit TOUT le log, page de 2 000 lignes par appel.
+fn jouer_lecture(dossier: &Path, t: &TachePeek) -> (MesurePeek, usize, Vec<bool>, usize, usize) {
+    let mut m = MesurePeek::default();
+    let (mut page1_tokens, mut page1_texte, mut lignes, mut octets) = (0usize, String::new(), 0usize, 0usize);
+    let vu = vocabulaire_vu(t);
+    for etape in &t.sans_cortex {
+        if let Err(e) = justifiee(etape, &vu) {
+            m.violations.push(format!("{} : {}", etape, e));
+            continue;
+        }
+        let mots: Vec<&str> = etape.split_whitespace().collect();
+        let ["read", chemin] = mots.as_slice() else {
+            m.violations.push(format!("{} : outil inconnu (seul `read <fichier>` existe ici)", etape));
+            continue;
+        };
+        let Ok(b) = std::fs::read(dossier.join(chemin)) else {
+            m.violations.push(format!("{} : fichier illisible", etape));
+            continue;
+        };
+        let txt = String::from_utf8_lossy(&b);
+        let (tout, page1, n) = numeroter(&txt);
+        m.appels += n.div_ceil(PAGE_READ).max(1);
+        m.tokens += tokens(&tout);
+        page1_tokens += tokens(&page1);
+        page1_texte.push_str(&page1);
+        lignes += n;
+        octets += b.len();
+        m.sorties.push((etape.clone(), tout));
+    }
+    let textes: Vec<&str> = m.sorties.iter().map(|(_, s)| s.as_str()).collect();
+    m.faits = faits_dans(&t.facts, &textes);
+    let page1_faits = faits_dans(&t.facts, &[page1_texte.as_str()]);
+    (m, page1_tokens, page1_faits, lignes, octets)
+}
+
+/// `cortex` : étapes `peek …`, exécutées dans le processus (aucun atlas).
+fn jouer_peek(dossier: &Path, t: &TachePeek) -> MesurePeek {
+    let mut m = MesurePeek::default();
+    let mut vu = vocabulaire_vu(t);
+    for etape in &t.cortex {
+        if let Err(e) = justifiee(etape, &vu) {
+            m.violations.push(format!("{} : {}", etape, e));
+            continue;
+        }
+        let Some(Appel::Peek { fichier, question, erreurs, max_lignes }) = Appel::analyser(etape) else {
+            m.violations.push(format!("{} : seul `peek <fichier> …` existe ici", etape));
+            continue;
+        };
+        let chemin = dossier.join(&fichier).to_string_lossy().to_string();
+        let sortie = outils::executer(&[], &Appel::Peek { fichier: chemin, question, erreurs, max_lignes }, None);
+        m.appels += 1;
+        m.tokens += tokens(&sortie);
+        vu.push('\n');
+        vu.push_str(&sortie);
+        m.sorties.push((etape.clone(), sortie));
+    }
+    let textes: Vec<&str> = m.sorties.iter().map(|(_, s)| s.as_str()).collect();
+    m.faits = faits_dans(&t.facts, &textes);
+    m
+}
+
+/// Les gros logs ne sont pas versionnés : `gen.mjs` (à côté du fichier de tâches) les regénère.
+fn assurer_fixtures(dossier: &Path, taches: &[&TachePeek]) -> Result<(), String> {
+    let manque = |d: &Path| taches.iter().filter(|t| !d.join(&t.fichier).is_file()).map(|t| t.fichier.clone()).collect::<Vec<_>>();
+    let absents = manque(dossier);
+    if absents.is_empty() {
+        return Ok(());
+    }
+    let gen = dossier.join("gen.mjs");
+    if gen.is_file() {
+        let ok = std::process::Command::new("node").arg(&gen).stdout(std::process::Stdio::null()).status().is_ok_and(|s| s.success());
+        if !ok {
+            return Err(format!("fixtures absentes ({}) et `node {}` a échoué (Node.js requis)", absents.join(", "), gen.display()));
+        }
+    }
+    let encore = manque(dossier);
+    if encore.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("fixtures absentes : {}", encore.join(", ")))
+    }
+}
+
+pub fn rejouer_peek(file: &Path, filtre: Option<&str>) -> Result<RapportPeek, String> {
+    let f: FichierPeek = std::fs::read_to_string(file)
+        .map_err(|e| e.to_string())
+        .and_then(|c| serde_json::from_str(&c).map_err(|e| e.to_string()))
+        .map_err(|e| format!("tâches illisibles ({}) : {}", file.display(), e))?;
+    let dossier = file.parent().unwrap_or(Path::new("."));
+    let choisies: Vec<&TachePeek> = f.tasks.iter().filter(|t| filtre.is_none_or(|x| x == "peek" || t.id.contains(x))).collect();
+    assurer_fixtures(dossier, &choisies)?;
+    let mut taches = Vec::new();
+    let mut alertes = Vec::new();
+    for t in choisies {
+        let (lecture, page1_tokens, page1_faits, lignes, octets) = jouer_lecture(dossier, t);
+        let peek = jouer_peek(dossier, t);
+        let r = ResultatPeek {
+            id: t.id.clone(),
+            genre: t.genre.clone(),
+            lignes,
+            octets,
+            lecture,
+            page1_tokens,
+            page1_faits,
+            peek,
+            facts: t.facts.clone(),
+            connu_ko: t.connu_ko.clone(),
+        };
+        let mut alerte = |texte: String, connu: bool| alertes.push(Alerte { texte, connu });
+        for v in r.lecture.violations.iter().chain(r.peek.violations.iter()) {
+            alerte(format!("[{}] étape non jouée : {}", r.id, v), false);
+        }
+        let absents: Vec<&String> = r.facts.iter().zip(&r.lecture.faits).filter(|(_, &ok)| !ok).map(|(f, _)| f).collect();
+        if !absents.is_empty() {
+            alerte(format!("[{}] tâche invalide : fait absent du log complet {:?}", r.id, absents), false);
+        }
+        let rates: Vec<&String> = r.facts.iter().zip(&r.peek.faits).filter(|(_, &ok)| !ok).map(|(f, _)| f).collect();
+        if !rates.is_empty() {
+            alerte(format!("[{}] peek rate : {:?} absent de la sortie", r.id, rates), r.connu_ko.is_some());
+        }
+        if r.genre == "gros" && r.ratio() < f.seuils.ratio_gros {
+            alerte(
+                format!("[{}] ratio ×{:.1} < ×{:.0} exigé sur les gros logs", r.id, r.ratio(), f.seuils.ratio_gros),
+                r.connu_ko.is_some(),
+            );
+        }
+        taches.push(r);
+    }
+    let reussies = taches.iter().filter(|r| r.reussi()).count();
+    let pct = 100.0 * reussies as f64 / taches.len().max(1) as f64;
+    if pct < f.seuils.reussite_pct {
+        let connu = taches.iter().filter(|r| !r.reussi()).all(|r| r.connu_ko.is_some());
+        alertes.push(Alerte {
+            texte: format!("réussite {:.0} % < {:.0} % exigé ({}/{} tâches)", pct, f.seuils.reussite_pct, reussies, taches.len()),
+            connu,
+        });
+    }
+    Ok(RapportPeek { taches, seuils: f.seuils, alertes })
+}
+
+fn run_peek(file: &Path, verbose: bool, filtre: Option<String>) {
+    let rapport = match rejouer_peek(file, filtre.as_deref()) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("cortex: {e}");
+            std::process::exit(1);
+        }
+    };
+    println!("== Banc d'agent PEEK — « pourquoi ce test échoue ? » ({} tâches) ==", rapport.taches.len());
+    println!(
+        "Read complet = tout le log numéroté, {} lignes par appel ; peek = `cortex peek <log> <question>` ; jetons = caractères / 4.",
+        PAGE_READ
+    );
+    println!(
+        "{:<20} {:>6} {:>8} | {:>6} {:>8} {:>5} | {:>6} {:>6} {:>5} | {:>8} {:>5} | {:>8}",
+        "tâche", "type", "lignes", "appels", "tokens", "ok", "appels", "tokens", "faits", "1re page", "ok", "ratio"
+    );
+    println!("{:<20} {:>6} {:>8} | {:^21} | {:^19} | {:^14} |", "", "", "", "Read complet", "cortex peek", "Read 1re page");
+    let (mut lt, mut la, mut pt, mut pa) = (0usize, 0usize, 0usize, 0usize);
+    let (mut faits, mut faits_ok, mut reussies, mut lecture_ok, mut page1_ok) = (0usize, 0usize, 0usize, 0usize, 0usize);
+    let (mut gros_l, mut gros_p) = (0usize, 0usize);
+    let mut json_taches = Vec::new();
+    for r in &rapport.taches {
+        let nf = r.facts.len();
+        let nok = r.peek.faits.iter().filter(|&&b| b).count();
+        let lok = r.lecture.faits.iter().all(|&b| b);
+        let p1 = r.page1_faits.iter().all(|&b| b);
+        println!(
+            "{:<20} {:>6} {:>8} | {:>6} {:>8} {:>5} | {:>6} {:>6} {:>2}/{:<2} | {:>8} {:>5} | {:>7.1}×",
+            r.id,
+            r.genre,
+            r.lignes,
+            r.lecture.appels,
+            r.lecture.tokens,
+            if lok { "oui" } else { "NON" },
+            r.peek.appels,
+            r.peek.tokens,
+            nok,
+            nf,
+            r.page1_tokens,
+            if p1 { "oui" } else { "non" },
+            r.ratio()
+        );
+        if verbose {
+            for (e, s) in &r.peek.sorties {
+                println!("\n--- {} ({} tokens)\n{}", e, tokens(s), s);
+            }
+        }
+        lt += r.lecture.tokens;
+        la += r.lecture.appels;
+        pt += r.peek.tokens;
+        pa += r.peek.appels;
+        faits += nf;
+        faits_ok += nok;
+        reussies += r.reussi() as usize;
+        lecture_ok += lok as usize;
+        page1_ok += p1 as usize;
+        if r.genre == "gros" {
+            gros_l += r.lecture.tokens;
+            gros_p += r.peek.tokens;
+        }
+        json_taches.push(serde_json::json!({
+            "id": r.id, "type": r.genre, "lignes": r.lignes, "octets": r.octets, "faits": nf,
+            "read_complet": { "appels": r.lecture.appels, "tokens": r.lecture.tokens, "reussite": lok,
+                              "page1_tokens": r.page1_tokens, "page1_reussite": p1 },
+            "peek": { "appels": r.peek.appels, "tokens": r.peek.tokens, "faits": nok, "reussite": r.reussi(),
+                      "etapes": r.peek.sorties.iter().map(|x| &x.0).collect::<Vec<_>>() },
+            "ratio": r.ratio(),
+        }));
+    }
+    let n = rapport.taches.len();
+    println!(
+        "{:<20} {:>6} {:>8} | {:>6} {:>8} {:>2}/{:<2} | {:>6} {:>6} {:>2}/{:<2} | {:>8} {:>2}/{:<2} | {:>7.1}×",
+        "TOTAL",
+        "",
+        "",
+        la,
+        lt,
+        lecture_ok,
+        n,
+        pa,
+        pt,
+        faits_ok,
+        faits,
+        "",
+        page1_ok,
+        n,
+        lt as f64 / pt.max(1) as f64
+    );
+    let ratio_gros = if gros_p > 0 { gros_l as f64 / gros_p as f64 } else { 0.0 };
+    println!(
+        "\nréussite peek : {}/{} tâches ({} faits sur {}) ; Read complet : {}/{} ; 1re page seule : {}/{}.",
+        reussies, n, faits_ok, faits, lecture_ok, n, page1_ok, n
+    );
+    println!(
+        "jetons : ×{:.1} de moins avec peek au total ; ×{:.1} sur les gros logs (seuil ×{:.0}) ; appels {} → {}.",
+        lt as f64 / pt.max(1) as f64,
+        ratio_gros,
+        rapport.seuils.ratio_gros,
+        la,
+        pa
+    );
+    if rapport.alertes.is_empty() {
+        println!("ALERTES : aucune.");
+    } else {
+        println!("ALERTES ({}) :", rapport.alertes.len());
+        for a in &rapport.alertes {
+            println!("  {}{}", a.texte, if a.connu { "  [échec connu]" } else { "" });
+        }
+        for r in rapport.taches.iter().filter(|r| r.connu_ko.is_some()) {
+            println!("  échec connu {} : {}", r.id, r.connu_ko.as_deref().unwrap_or(""));
+        }
+    }
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let (y, m, d) = crate::comparatif::civil((now / 86_400) as i64);
+    let commit = crate::comparatif::git_head();
+    let json = serde_json::json!({
+        "banc": "bench-agent-peek", "commit": commit, "date": format!("{y:04}-{m:02}-{d:02}"),
+        "seuils": { "reussite_pct": rapport.seuils.reussite_pct, "ratio_gros": rapport.seuils.ratio_gros },
+        "total": {
+            "taches": n, "reussies": reussies, "faits": faits, "faits_peek": faits_ok,
+            "read_complet": { "appels": la, "tokens": lt }, "peek": { "appels": pa, "tokens": pt },
+            "ratio": lt as f64 / pt.max(1) as f64, "ratio_gros": ratio_gros,
+        },
+        "alertes": rapport.alertes.iter().map(|a| serde_json::json!({ "texte": a.texte, "connu": a.connu })).collect::<Vec<_>>(),
+        "taches": json_taches,
+    });
+    let dir = crate::bench::results_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let out = dir.join(format!("agent-peek-{y:04}-{m:02}-{d:02}-{commit}.json"));
+    match std::fs::write(&out, serde_json::to_string_pretty(&json).unwrap_or_default()) {
+        Ok(()) => println!("\nrésultats : {}", out.display()),
+        Err(e) => eprintln!("cortex: écriture de {} impossible : {e}", out.display()),
+    }
+    // 0 : rien ; 2 : alerte inattendue (régression, tâche invalide) ; 3 : seulement des échecs connus.
+    if rapport.alertes.iter().any(|a| !a.connu) {
+        std::process::exit(2);
+    } else if !rapport.alertes.is_empty() {
+        std::process::exit(3);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn faits_peek_alternatives_et_numerotation() {
+        assert!(fait_trouve("expected 3", "x expected 3 y"));
+        assert!(!fait_trouve("expected 3", "Expected 3"));
+        assert!(fait_trouve("ou:abc||def", "un def"));
+        assert!(!fait_trouve("ou:abc||", "rien"));
+        let (tout, page1, n) = numeroter(&"l\n".repeat(2500));
+        assert_eq!(n, 2500);
+        assert_eq!(page1.lines().count(), PAGE_READ);
+        assert_eq!(tout.lines().count(), 2500);
+        assert!(tout.starts_with("     1\tl\n"));
+    }
+
+    #[test]
+    fn appel_peek_analyse_et_execute_sans_atlas() {
+        let Some(Appel::Peek { fichier, question, erreurs, max_lignes }) = Appel::analyser("peek dir/a.log -e -n 20 pourquoi ça échoue ?")
+        else {
+            panic!("peek non reconnu");
+        };
+        assert_eq!((fichier.as_str(), question.as_str(), erreurs, max_lignes), ("dir/a.log", "pourquoi ça échoue ?", true, Some(20)));
+        let Some(Appel::Peek { fichier, question, erreurs, max_lignes }) = Appel::analyser("peek x.log") else { panic!() };
+        assert_eq!((fichier.as_str(), question.as_str(), erreurs, max_lignes), ("x.log", "", false, None));
+        assert!(Appel::analyser("peek").is_none());
+        // fichier absent : message, pas de panique, aucun atlas requis
+        let s = outils::executer(
+            &[],
+            &Appel::Peek { fichier: "/n/existe/pas.log".into(), question: String::new(), erreurs: false, max_lignes: None },
+            None,
+        );
+        assert!(s.starts_with("(cortex) peek:"), "{s}");
+    }
+
+    /// Le banc peek complet sur les fixtures figées (les gros logs sont regénérés par `gen.mjs`
+    /// si Node est là, sinon le test est ignoré) : aucune alerte tolérée, hors tâches marquées
+    /// `connu_ko` (défauts de peek déjà constatés : leur échec ne fait pas échouer le test).
+    #[test]
+    fn banc_peek_sans_alerte() {
+        let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("bench/agent-peek/taches.json");
+        if !file.is_file() {
+            return;
+        }
+        let r = match rejouer_peek(&file, None) {
+            Ok(r) => r,
+            Err(e) if e.contains("Node.js requis") => return,
+            Err(e) => panic!("{e}"),
+        };
+        let inattendues: Vec<&str> = r.alertes.iter().filter(|a| !a.connu).map(|a| a.texte.as_str()).collect();
+        assert!(inattendues.is_empty(), "alertes inattendues : {:#?}", inattendues);
+        assert!(r.taches.len() >= 8);
+        assert!(r.taches.iter().any(|t| t.genre == "gros"));
+    }
 
     #[test]
     fn regle_des_etapes() {
