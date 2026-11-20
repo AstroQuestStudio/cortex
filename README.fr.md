@@ -235,6 +235,7 @@ Cortex est un serveur [MCP](https://modelcontextprotocol.io) en stdio : `cortex 
 | `changed` / `cortex_changed` | Qu'ai-je modifié, qui l'appelle, quels tests ? |
 | `grep`, `files`, `docs` | Texte exact avec la fonction englobante, fichiers par nom, docs hors ligne |
 | `peek` / `cortex_peek` | Le bon endroit de N'IMPORTE QUEL gros texte (log de tests, sortie cargo, log serveur, JSON), indexé ou non : `cortex peek <fichier> "<question>"`, `--erreurs` pour les seuls blocs d'échec, sans question un résumé. Lit pareil le texte accentué ou non et la sortie de vitest, cargo, pytest, jest, `go test` et eslint ; `ask` lui passe les fichiers de log dont on parle |
+| `edit` / `cortex_edit` | PLUSIEURS éditions en UN appel (le Code Mode pour tout agent qui a un shell, sous-agents compris) : remplacements exacts (ancre unique, tolérants à l'indentation), insertions de lignes, création de fichiers, remplacement d'un symbole par identifiant (`S:chemin#symbole`, avec les appelants à revérifier si la signature change), renommage mot entier dans tout le projet. Tout ou rien (toutes les erreurs d'un coup), CRLF/LF/BOM conservés fichier par fichier, régression de syntaxe et chemins secrets (`.env*`, `.secrets/`, `.git/`…) refusés, journalisé et annulable (`--annuler`), `--essai` pour prévisualiser. Format texte sans échappement (`@ fichier` / `< ancien` / `> nouveau`) ou JSON ; voir `docs/EDIT.md` | N appels `Edit` + un `Read` par fichier + des tours de correction |
 
 Nouveautés de la 0.6.0 :
 

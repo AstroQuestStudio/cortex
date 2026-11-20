@@ -9,6 +9,7 @@
 //!   - cortex_query, cortex_explain, cortex_context : alias compatibles
 //!   - cortex_grep      : plein-texte dans les fichiers indexés
 //!   - cortex_peek      : le bon endroit d'un gros texte (log, sortie cargo, JSON), indexé ou non
+//!   - cortex_edit      : un LOT d'éditions multi-fichiers, atomique, annulable (voir `edit`)
 //!   - cortex_ui        : de ce qu'on voit à l'écran (texte, data-testid, composant) au code qui l'affiche
 //!   - cortex_files     : fichiers par nom/fragment/glob
 //!   - cortex_docs(_list): documentations externes scrapées offline
@@ -347,6 +348,22 @@ fn tools_list_base() -> Value {
                 }
             },
             {
+                "name": "cortex_edit",
+                "description": "ATOMIC multi-file edits in ONE call (all or nothing, every error listed; CRLF/LF/BOM kept; syntax and secret guards; undoable). edits: {file,old,new,all?} {file,after|before,insert} {file,append} {file,create} {symbol:\"S:id\",replace} {symbol,old,new} {rename,to,in?}. Or text: '@ file' '< old' '> new' lines.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "edits": { "type": "array", "items": { "type": "object" } },
+                        "text": { "type": "string" },
+                        "project": { "type": "string" },
+                        "dry_run": { "type": "boolean" },
+                        "diff": { "type": "boolean" },
+                        "undo": { "type": "string", "description": "batch id or last" },
+                        "force": { "type": "string", "description": "reason" }
+                    }
+                }
+            },
+            {
                 "name": "cortex_ui",
                 "description": "WHERE IS THIS UI? From what you SEE on screen (button text, data-testid, aria-label, id, React component names) to the code that renders it. Resolves i18n keys and their usages, ignores comments/docs/tests, ranks real screens above design-system primitives. One line per candidate: stable id, file:line, why.",
                 "inputSchema": {
@@ -465,6 +482,7 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
             };
             crate::peek::peek_fichier(&arg_str(&args, "file"), &opt).unwrap_or_else(|e| format!("(cortex peek) {}\n", e))
         }
+        "cortex_edit" => crate::edit::appel_mcp(&args),
         #[cfg(not(feature = "ui"))]
         "cortex_ui" => {
             let get = |k: &str| args.get(k).and_then(|v| v.as_str()).map(String::from);

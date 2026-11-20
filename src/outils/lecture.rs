@@ -424,7 +424,7 @@ pub(super) fn lignes_fichier(h: &Handle, path: &str) -> Option<Vec<String>> {
 }
 
 /// Fin d'une section markdown : ligne avant le titre suivant de niveau ≤.
-fn fin_section(h: &Handle, f: u32, g: u32, n_lignes: u32) -> u32 {
+pub(crate) fn fin_section(h: &Handle, f: u32, g: u32, n_lignes: u32) -> u32 {
     let syms = h.symbols_of(f);
     let Some(i) = syms.iter().position(|s| s.g == g) else { return n_lignes };
     let lvl = niveau(syms[i].str(syms[i].n.signature));

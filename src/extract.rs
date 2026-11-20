@@ -120,6 +120,39 @@ fn parse(g: Grammar, source: &[u8]) -> Option<Tree> {
     })
 }
 
+/// Contrôle de syntaxe pour `cortex edit` : (nombre de nœuds ERROR/MISSING, ligne 1-based du
+/// premier). `None` : langage sans grammaire de contrôle fiable (C/C++ : macros). Le contrôle est
+/// toujours comparatif (avant/après une édition), jamais absolu.
+pub fn erreurs_syntaxe(lang: Lang, source: &str) -> Option<(usize, usize)> {
+    let g = Grammar::of(lang).filter(|g| *g != Grammar::Cpp)?;
+    let tree = parse(g, source.as_bytes())?;
+    if !tree.root_node().has_error() {
+        return Some((0, 0));
+    }
+    let (mut n, mut premiere) = (0usize, 0usize);
+    let mut cur = tree.walk();
+    loop {
+        let node = cur.node();
+        if node.is_error() || node.is_missing() {
+            n += 1;
+            if premiere == 0 {
+                premiere = node.start_position().row + 1;
+            }
+        }
+        if n < 500 && node.has_error() && cur.goto_first_child() {
+            continue;
+        }
+        loop {
+            if cur.goto_next_sibling() {
+                break;
+            }
+            if !cur.goto_parent() {
+                return Some((n, premiere));
+            }
+        }
+    }
+}
+
 /// Arbre d'un shader GLSL en chaîne (Lua) : même analyseur par thread que les fichiers `.glsl`.
 pub fn parse_glsl(text: &str) -> Option<Tree> {
     parse(Grammar::Glsl, text.as_bytes())

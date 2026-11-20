@@ -119,7 +119,7 @@ impl Profile {
 // ───────────────────────────── lecture ─────────────────────────────
 
 #[derive(Debug, Clone, PartialEq)]
-enum Val {
+pub(crate) enum Val {
     Str(String),
     Num(f32),
     List(Vec<String>),
@@ -173,7 +173,7 @@ fn parse_list(body: &str) -> Vec<String> {
     out.into_iter().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
 }
 
-fn parse_kv(text: &str) -> Vec<(String, String, Val)> {
+pub(crate) fn parse_kv(text: &str) -> Vec<(String, String, Val)> {
     // (section, clé, valeur)
     let mut out = Vec::new();
     let mut section = String::new();

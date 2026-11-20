@@ -270,6 +270,7 @@ instruction block you can paste into `AGENTS.md`, `CLAUDE.md` or your rules file
 | `changed` / `cortex_changed` | What did I change, who calls it, which tests? | git diff + grep |
 | `grep` / `cortex_grep` | Exact text, grouped by file and enclosing function | rg |
 | `peek` / `cortex_peek` | The right spot of ANY big text file (test log, cargo output, server log, JSON), indexed or not: `cortex peek <file> "<question>"`, `--erreurs` for failure blocks only, no question for a summary. Reads accented and unaccented text alike and the output of vitest, cargo, pytest, jest, `go test` and eslint; `ask` hands it the log files it is asked about | reading the whole log, tail, grep -C |
+| `edit` / `cortex_edit` | MANY edits in ONE call (Code Mode for any agent with a shell, subagents included): exact replacements (unique anchor, tolerant to indentation), line insertions, file creation, whole-symbol replacement by id (`S:path#symbol`, with the callers to recheck if the signature changed), project-wide whole-word rename. All-or-nothing (every error listed at once), CRLF/LF/BOM kept per file, syntax regressions and secret paths (`.env*`, `.secrets/`, `.git/`…) refused, journaled and undoable (`--annuler`), `--essai` previews. Escape-free text format (`@ file` / `< old` / `> new`) or JSON; see `docs/EDIT.md` | N `Edit` calls + a `Read` per file + correction turns |
 | `files` / `cortex_files` | A file by name fragment or glob | find, Glob |
 | `docs` / `cortex_docs` | Offline docs of a library you scraped (`cortex docs add <url>`) | web search |
 

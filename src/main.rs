@@ -14,6 +14,7 @@ mod config;
 mod confsym;
 mod cpp;
 mod dash;
+mod edit;
 mod engine;
 mod extract;
 mod fx;
@@ -296,6 +297,38 @@ enum Cmd {
         /// Lines of context on each side (default: 2 before, 3 after; failure blocks: up to 20).
         #[arg(short = 'C', long = "contexte")]
         contexte: Option<usize>,
+    },
+    /// EDIT MANY FILES IN ONE CALL (atomic, all or nothing). Reads a batch from FILE or stdin:
+    /// JSON (`{"editions":[{"fichier","ancien","nouveau","tous"}, {"fichier","apres"|"avant","insere"},
+    /// {"fichier","ajoute"}, {"fichier","cree"}, {"symbole":"S:…","remplace"}, {"renomme","en","dans"}]}`)
+    /// or the escape-free TEXT format (`@ file`, `< old lines`, `> new lines`; `@ "S:id"` = symbol;
+    /// `@ file new|append|after|before|all`; `@ rename Old New [dans dir]`). Keeps CRLF/LF/BOM per file,
+    /// refuses secrets/.git/outside-root paths and syntax regressions, journals the batch
+    /// (`--annuler <id>`). `--essai` previews.
+    Edit {
+        /// Batch file (default or `-`: standard input).
+        lot: Option<PathBuf>,
+        /// Indexed project whose root is used (default: project containing the paths / current folder).
+        #[arg(short, long)]
+        project: Option<String>,
+        /// Explicit root folder (no atlas: no symbol ids).
+        #[arg(long)]
+        racine: Option<PathBuf>,
+        /// Dry run: checks everything, writes nothing.
+        #[arg(long)]
+        essai: bool,
+        /// Detailed report (one line per edit + short diff).
+        #[arg(long)]
+        diff: bool,
+        /// Lifts the project's soft limits (`interdits`, sizes, syntax check) — needs a reason, journaled.
+        #[arg(long)]
+        forcer: Option<String>,
+        /// Undoes a batch (`<id>` or `dernier`).
+        #[arg(long)]
+        annuler: Option<String>,
+        /// Lists the last batches of the journal.
+        #[arg(long)]
+        liste: bool,
     },
     /// WHERE IS THIS UI? From what you SEE (button text, test id, aria-label, id, React
     /// component name) to the code that renders it: resolves i18n keys and their usages,
@@ -583,6 +616,45 @@ fn main() {
                     eprintln!("cortex peek: {}", e);
                     std::process::exit(1);
                 }
+            }
+        }
+        Cmd::Edit { lot, project, racine, essai, diff, forcer, annuler, liste } => {
+            let t0 = Instant::now();
+            let mut opts = edit::Options::par_defaut();
+            opts.essai = essai;
+            opts.diff = diff;
+            opts.forcer = forcer;
+            if liste {
+                print!("{}", edit::liste(&opts));
+                return;
+            }
+            let rapport = if let Some(id) = annuler {
+                edit::executer_annulation(&id, opts)
+            } else {
+                let octets = match lot.as_deref().filter(|p| p.as_os_str() != "-") {
+                    Some(p) => std::fs::read(p).map_err(|e| format!("« {} » illisible : {e}", p.display())),
+                    None => {
+                        use std::io::{IsTerminal, Read};
+                        if std::io::stdin().is_terminal() {
+                            eprintln!("cortex edit: pas de lot. Exemple : cortex edit <<'EOF'\n@ chemin/fichier\n< ancien texte\n> nouveau texte\nEOF\n(aussi : @ f tous|after|before|append|new, @ \"S:id\", @ rename A B ; --essai, --annuler <id>)");
+                            std::process::exit(2);
+                        }
+                        let mut b = Vec::new();
+                        std::io::stdin().read_to_end(&mut b).map(|_| b).map_err(|e| format!("entrée illisible : {e}"))
+                    }
+                };
+                match octets.and_then(|b| edit::decoder_entree(&b)) {
+                    Ok(t) => edit::executer_texte(&t, project.as_deref(), racine.as_deref(), opts),
+                    Err(e) => {
+                        eprintln!("cortex edit : {e}");
+                        std::process::exit(1);
+                    }
+                }
+            };
+            print!("{}", rapport.texte);
+            eprintln!("[cortex edit] {:.1}ms", t0.elapsed().as_secs_f64() * 1000.0);
+            if !rapport.ok {
+                std::process::exit(1);
             }
         }
         #[cfg(not(feature = "ui"))]

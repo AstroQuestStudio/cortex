@@ -6,6 +6,25 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-20
+
+### Added
+- **`cortex edit` / MCP `cortex_edit`: many edits on many files in ONE call** ("Code Mode" for any
+  agent that has a shell, subagents included; `docs/EDIT.md`, `src/edit.rs`). Exact replacements
+  (unique anchor unless `all`; falls back to whole-line matching tolerant to indentation and trailing
+  spaces, re-indenting the replacement), line insertions before/after an anchor line, append, file
+  creation, whole-symbol replacement by Cortex id (`S:path#symbol`: the callers to recheck are listed
+  when the signature changes), edits scoped to a symbol, and a project-wide whole-word rename
+  (`@ rename Old New`). Escape-free text format (`@ file`, `< old`, `> new`, read from a heredoc) or
+  JSON. **Atomic**: every edit is located and checked before the first write, any error means no
+  write and all errors are returned at once; a failed write rolls the written files back. CRLF/LF,
+  BOM and final newline preserved per file, byte for byte outside the edited ranges. Guards: `.env*`,
+  `.secrets/`, `.tauri/`, `.git/`, `.ssh/`, private keys, paths outside the root (links, 8.3 names,
+  `:` streams) are refused with no way around; the project's `interdits` list, size limits and
+  **syntax regressions** (tree-sitter, JSON) are refused unless `--forcer "<reason>"` (journaled).
+  Journal with the previous bytes (`~/.cortex/edit-journal/`), `--annuler <id|dernier>`,
+  `--liste`, `--essai` (dry run). The Cortex index is refreshed for the touched files.
+
 ## [0.6.0] — 2026-11-20
 
 ### Added
@@ -343,7 +362,8 @@ First public release of **Cortex by AstroQuest**.
   `<P>_SSH_PORT`, `<P>_LOGIN`, `<P>_SSH_KEY_PATH`, `<P>_LABEL`) and never copies other keys.
 - `CORTEX_HOME` overrides the data directory (`~/.cortex`).
 
-[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/AstroQuestStudio/cortex/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.7.0
 [0.6.0]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.6.0
 [0.5.3]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.3
 [0.5.2]: https://github.com/AstroQuestStudio/cortex/releases/tag/v0.5.2
