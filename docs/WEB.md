@@ -238,7 +238,31 @@ Changements nécessaires côté Spectra **avant** l'option B du §6 (par priorit
    concurrents, TTL de session inactive, plafond de RAM par session.
 7. `Network.getResponseBody` pour les JSON XHR/fetch (idée Scrapling : 1 000 entrées, 1 MiB/corps, 20 MiB au total ; troncature signalée).
 8. Port CDP lié à 127.0.0.1 avec jeton.
-Tant que 1-3 ne sont pas livrés, **l'option A reste la seule voie** (versement manuel `cortex web ingest`).
+**Mise à jour du 20/11/2026 — option B livrée côté Cortex.** Spectra a livré les huit changements
+ci-dessus (voir `Spectra/spectra-mcp/docs/RENDER.md` : `spectra-server capture <url>` et l'outil MCP
+`browser_render`, format `spectra.render/1`, contexte isolé, politique réseau revérifiée à chaque saut,
+mode `all` côté Chrome). Cortex en est le CLIENT, derrière la feature `web` (`src/web/render.rs`) :
+
+```
+cortex web render <url> --source <nom> [--timeout 30] [--json-responses]
+```
+
+1. l'URL passe le garde réseau de Cortex (`guard::check_url`) AVANT le rendu ;
+2. `spectra-server capture <url> --out <fichier> [--json-responses]` est lancé en sous-processus
+   (trouvé par `CORTEX_SPECTRA`, puis le PATH, puis `~/.cortex/bin/`) ; code 3 = refusé par Spectra ;
+   arrêt forcé au délai + 20 s ;
+3. l'URL FINALE (après redirections) repasse le garde de Cortex (défense en profondeur) ;
+4. le DOM final est versé par `crawl::ingest` (même extraction, même balisage « donnée non fiable »,
+   même index) ; avec `--json-responses`, les réponses JSON de la page (statut 2xx/3xx, non tronquées,
+   20 au plus, URL contrôlée) le sont aussi ;
+5. le trait `Renderer` permet de tester sans Chrome (faux rendu en test).
+
+Vérifié de bout en bout le 20/11/2026 : `cortex web render https://example.com/ --source exemple`
+(HTTP 200, 723 ms de rendu, 1 section, retrouvable par `cortex web find`) ; `http://localhost:8080/`
+refusé par le garde de Cortex ; Spectra absent : message d'installation. Cortex ne lance toujours JAMAIS
+Chrome lui-même et `needs_js` n'appelle pas le rendu tout seul : c'est une commande explicite.
+Limite : un appel = un Chrome démarré puis fermé (1 à 2 s) ; pour un lot, utiliser `browser_render`
+de Spectra (Chrome gardé) puis `cortex web ingest`.
 
 ## 9. Banc (obligatoire avant tout choix définitif)
 

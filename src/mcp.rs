@@ -96,7 +96,11 @@ thread_local! {
 /// Mémorise les arguments texte de l'appel d'outil en cours (hors `project`).
 fn set_hints(args: &Value) {
     let v: Vec<String> = match args.as_object() {
-        Some(o) => o.iter().filter(|(k, _)| k.as_str() != "project").filter_map(|(_, x)| x.as_str().map(String::from)).collect(),
+        Some(o) => o
+            .iter()
+            .filter(|(k, _)| !matches!(k.as_str(), "project" | "pile" | "tache" | "agent" | "mission" | "action"))
+            .filter_map(|(_, x)| x.as_str().map(String::from))
+            .collect(),
         None => Vec::new(),
     };
     HINTS.with(|h| *h.borrow_mut() = v);
@@ -258,7 +262,12 @@ fn tools_list_base() -> Value {
             {
                 "name": "cortex_card",
                 "description": format!("WHAT IS IT? Card of a symbol in one call, without reading its file: signature, role (doc-comment), what it calls, who calls it (with the call line), how many files import its file, related tests, homonyms. A file as input gives its outline.{}", REGLE),
-                "inputSchema": schema("cible", ID_DESC, json!({}))
+                "inputSchema": schema("cible", ID_DESC, json!({
+                    "mission": { "type": "string", "description": "Shared registry: mission id (or CORTEX_MISSION)" },
+                    "agent": { "type": "string", "description": "Your name in the registry" },
+                    "partage": { "type": "boolean", "description": "Already read by an agent (file unchanged): return its summary only" },
+                    "frais": { "type": "boolean", "description": "Force the full output" }
+                }))
             },
             {
                 "name": "cortex_outline",
@@ -282,7 +291,13 @@ fn tools_list_base() -> Value {
             {
                 "name": "cortex_impact",
                 "description": format!("WHAT BREAKS IF I CHANGE THIS? Transitive dependents of a symbol (callers resolved through imports, with the call line, and files that import the symbol without calling it) or of a file (importers), by depth, and the tests to re-run. Dynamic calls (import(), strings) are not seen.{}", REGLE),
-                "inputSchema": schema("cible", ID_DESC, json!({ "profondeur": { "type": "integer", "description": "Depth 1 to 6 (default 3)" } }))
+                "inputSchema": schema("cible", ID_DESC, json!({
+                    "profondeur": { "type": "integer", "description": "Depth 1 to 6 (default 3)" },
+                    "tests": { "type": "boolean", "description": "Instead: TESTS TO RUN for the change (ranked, with the run command). No cible = uncommitted files; cibles = several ids/files" },
+                    "parcours": { "type": "boolean", "description": "With tests: also the Spectra recipes touched" },
+                    "depuis": { "type": "string", "description": "With tests: files changed since this git ref" },
+                    "commit": { "type": "string", "description": "With tests: files changed by this commit" }
+                }))
             },
             {
                 "name": "cortex_path",
@@ -302,6 +317,40 @@ fn tools_list_base() -> Value {
                 "name": "cortex_changed",
                 "description": format!("WHAT DID I CHANGE? Uncommitted work (git status + git diff HEAD): files, touched functions, their callers outside the work in progress and the tests to re-run.{}", REGLE),
                 "inputSchema": { "type": "object", "properties": { "project": { "type": "string", "description": "Limit to one project (optional)" }, "budget": { "type": "integer", "description": "Output budget in tokens (optional)" } } }
+            },
+            {
+                "name": "cortex_trace",
+                "description": "WHERE DID THIS ERROR COME FROM? Paste a stack (console, Node, vitest, Rust, Spectra JSON): exact source symbols via source maps, code around, callers, tests. Ids to copy; 'next :' line.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "pile": { "type": "string", "description": "The stack: raw text or JSON" },
+                        "maps": { "type": "array", "items": { "type": "string" }, "description": "Folders or .map files of a build (optional)" },
+                        "offline": { "type": "boolean", "description": "No network (default false; only localhost is ever contacted)" },
+                        "contexte": { "type": "integer", "description": "Code lines around each frame (default 2)" },
+                        "project": { "type": "string", "description": "Limit to one project (optional)" },
+                        "budget": { "type": "integer", "description": "Output budget in tokens (default 1500)" }
+                    },
+                    "required": ["pile"]
+                }
+            },
+            {
+                "name": "cortex_pack",
+                "description": "WHAT DO I NEED FOR THIS TASK? Task in words: likely files (text + git co-change), key symbols, tests, docs, journeys, under a budget (3000). Use first; ids to copy.",
+                "inputSchema": schema("tache", "The task description (FR or EN)", json!({}))
+            },
+            {
+                "name": "cortex_registre",
+                "description": "WHAT DID THE OTHER AGENTS READ? Registry of the mission (mission arg or CORTEX_MISSION): who read which ids, ~tokens. cortex_card/cortex_read take mission, agent, partage:true (an id already read by an agent, file unchanged, returns 'already read by X: summary'), frais:true (full output). action: list (default) | clear.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "mission": { "type": "string" },
+                        "action": { "type": "string", "description": "list | clear" },
+                        "project": { "type": "string" },
+                        "max": { "type": "integer" }
+                    }
+                }
             },
             {
                 "name": "cortex_query",
@@ -437,6 +486,10 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
     let name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(json!({}));
     set_hints(&args);
+    // Registre de lectures partagé : mission/agent par argument, sinon par l'environnement du serveur.
+    let sarg = |k: &str| args.get(k).and_then(|v| v.as_str()).map(String::from);
+    let barg = |k: &str| args.get(k).and_then(|v| v.as_bool()).unwrap_or(false);
+    crate::outils::registre::definir(crate::outils::registre::Ctx::depuis(sarg("mission"), sarg("agent"), barg("partage"), barg("frais")));
 
     let text = match name {
         "cortex_find" | "cortex_query" => run_outil(&args, Appel::Find { question: arg_str(&args, "question") }),
@@ -461,7 +514,29 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "cortex_overview" => run_outil(&args, Appel::Overview { dossier: arg_str(&args, "dossier") }),
         "cortex_impact" => {
             let d = args.get("profondeur").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
-            run_outil(&args, Appel::Impact { cible: arg_str(&args, "cible"), profondeur: d })
+            let flag = |k: &str| args.get(k).and_then(|v| v.as_bool()).unwrap_or(false);
+            let opt = |k: &str| Some(arg_str(&args, k)).filter(|s| !s.is_empty());
+            if flag("tests") || flag("parcours") || opt("depuis").is_some() || opt("commit").is_some() {
+                let mut cibles: Vec<String> = args
+                    .get("cibles")
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+                    .unwrap_or_default();
+                if let Some(c) = opt("cible") {
+                    cibles.push(c);
+                }
+                let p = crate::outils::selection::Params {
+                    cibles,
+                    depuis: opt("depuis"),
+                    commit: opt("commit"),
+                    parcours: flag("parcours"),
+                    max: args.get("max").and_then(|v| v.as_u64()).unwrap_or(30) as usize,
+                    liste: false,
+                };
+                run_outil(&args, Appel::ImpactTests(p))
+            } else {
+                run_outil(&args, Appel::Impact { cible: arg_str(&args, "cible"), profondeur: d })
+            }
         }
         "cortex_path" => run_outil(&args, Appel::Path { de: arg_str(&args, "de"), vers: arg_str(&args, "vers") }),
         "cortex_changed" => run_outil(&args, Appel::Changed),
@@ -481,6 +556,36 @@ fn tools_call(params: Option<&Value>) -> Result<Value, (i64, String)> {
                 contexte: None,
             };
             crate::peek::peek_fichier(&arg_str(&args, "file"), &opt).unwrap_or_else(|e| format!("(cortex peek) {}\n", e))
+        }
+        "cortex_trace" => {
+            let opts = crate::outils::trace::Opts {
+                maps: args
+                    .get("maps")
+                    .and_then(|v| v.as_array())
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|v| v.as_str())
+                    .map(std::path::PathBuf::from)
+                    .collect(),
+                hotes: Vec::new(),
+                contexte: args.get("contexte").and_then(|v| v.as_u64()).map(|c| c as u32),
+                hors_ligne: args.get("offline").and_then(|v| v.as_bool()).unwrap_or(false),
+            };
+            run_outil(&args, Appel::Trace { pile: arg_str(&args, "pile"), opts })
+        }
+        "cortex_pack" => {
+            run_outil(&args, Appel::Pack(crate::outils::pack::Params { tache: arg_str(&args, "tache"), budget: 0, avant: None }))
+        }
+        "cortex_registre" => {
+            let m = sarg("mission").or_else(|| std::env::var("CORTEX_MISSION").ok()).filter(|m| !m.is_empty());
+            let p = sarg("project");
+            match m {
+                None => "(cortex) registry needs a mission id (mission arg or CORTEX_MISSION)\n".to_string(),
+                Some(m) if sarg("action").as_deref() == Some("clear") => crate::outils::registre::effacer(p.as_deref(), &m),
+                Some(m) => {
+                    crate::outils::registre::lister(p.as_deref(), &m, args.get("max").and_then(|v| v.as_u64()).unwrap_or(30) as usize)
+                }
+            }
         }
         "cortex_edit" => crate::edit::appel_mcp(&args),
         #[cfg(not(feature = "ui"))]

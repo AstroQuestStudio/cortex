@@ -130,6 +130,20 @@ pub enum WebAction {
         #[arg(long)]
         html: String,
     },
+    /// Renders a JavaScript page with Spectra (`spectra-server capture`, option B of docs/WEB.md section 6)
+    /// and adds the final DOM to a source. Needs Spectra (PATH or CORTEX_SPECTRA); the URL passes
+    /// Cortex's network guard here and Spectra's policy there.
+    Render {
+        url: String,
+        #[arg(long)]
+        source: String,
+        /// Seconds allowed to Spectra (default 30).
+        #[arg(long, default_value_t = 30)]
+        timeout: u64,
+        /// Also keeps the JSON responses (XHR/fetch) the page loaded.
+        #[arg(long)]
+        json_responses: bool,
+    },
     /// Docs state of ONE library for the version installed in a project (lockfiles): version,
     /// where its sources are, local docs, project symbols that use it.
     Lib {
@@ -219,6 +233,7 @@ pub fn execute(ctx: &Ctx, action: &WebAction, handles: Handles, progress: bool) 
         WebAction::Fetch { url, max_chars } => fetch_cmd(ctx, url, *max_chars),
         WebAction::Search { query, limit } => search_cmd(ctx, &Router::from_env(), query, *limit),
         WebAction::Ingest { url, source, html } => ingest_cmd(ctx, url, source, html),
+        WebAction::Render { url, source, timeout, json_responses } => render_cmd(ctx, url, source, *timeout, *json_responses),
         WebAction::Lib { name, root, project, add } => lib_cmd(ctx, name, root, project.as_deref(), *add, handles, progress),
         WebAction::Bench(args) => crate::web::bench::run(ctx, args),
     }
@@ -939,6 +954,64 @@ fn ingest_cmd(ctx: &Ctx, url: &str, source: &str, html: &str) -> Result<String, 
         comp_label(rec.completeness),
         rec.content_hash.chars().take(8).collect::<String>(),
         rec.bytes,
+        st.name()
+    ))
+}
+
+// ───────────────────────── render (option B : Spectra) ─────────────────────────
+
+fn render_cmd(ctx: &Ctx, url: &str, source: &str, timeout: u64, json_responses: bool) -> Result<String, String> {
+    let r = crate::web::render::SpectraCli::detecter().map_err(|e| e.to_string())?;
+    render_avec(ctx, &r, url, source, timeout, json_responses)
+}
+
+/// Rendu par `renderer`, puis versement : garde réseau sur l'URL demandée ET sur l'URL finale.
+fn render_avec(
+    ctx: &Ctx,
+    renderer: &dyn crate::web::render::Renderer,
+    url: &str,
+    source: &str,
+    timeout: u64,
+    json_responses: bool,
+) -> Result<String, String> {
+    let u = parse_http_url(url)?;
+    crate::web::guard::check_url(&u, &ctx.policy).map_err(|r| format!("URL refusée par le garde réseau de Cortex : {r:?}"))?;
+    let rendu = renderer
+        .rendre(u.as_str(), timeout.clamp(5, 120), json_responses)
+        .map_err(|e| format!("rendu refusé ou échoué : {}", clean_line(&e.to_string(), 400)))?;
+    let finale = parse_http_url(&rendu.url_finale).map_err(|e| format!("URL finale invalide : {e}"))?;
+    crate::web::guard::check_url(&finale, &ctx.policy)
+        .map_err(|r| format!("URL finale refusée par le garde réseau de Cortex ({}) : {r:?}", safe_url(&finale)))?;
+    if rendu.html.trim().is_empty() {
+        return Err("Spectra n'a rendu aucun HTML".to_string());
+    }
+    let mut st = Store::open(&ctx.root, source).map_err(|e| open_err(source, &e, &ctx.root))?;
+    let version = st.load_config().ok().flatten().and_then(|c| c.version);
+    let rec = crawl::ingest(source, &mut st, &finale, rendu.html.as_bytes(), "text/html", version.as_deref())
+        .map_err(|m| format!("ingest refusé : {}", clean_line(&m, 300)))?;
+    let mut json_ok = 0usize;
+    for r in rendu.reponses.iter().filter(|r| r.mime.contains("json") && !r.tronquee && (200..400).contains(&r.status)).take(20) {
+        if let Ok(ru) = parse_http_url(&r.url) {
+            if crate::web::guard::check_url(&ru, &ctx.policy).is_ok()
+                && crawl::ingest(source, &mut st, &ru, r.body.as_bytes(), "application/json", version.as_deref()).is_ok()
+            {
+                json_ok += 1;
+            }
+        }
+    }
+    Ok(format!(
+        "OK render {} → {} (HTTP {}, {} ms) dans la source {} : {} section(s), qualité {:.2}, complétude {}, {} octets{}{}.\nContenu rendu = donnée non fiable (balisée à la lecture).\nnext: cortex web find \"<question>\" --source {}\n",
+        safe_url(&u),
+        safe_url(&finale),
+        rendu.status,
+        rendu.ecoule_ms,
+        st.name(),
+        rec.sections,
+        rec.quality,
+        comp_label(rec.completeness),
+        rec.bytes,
+        if json_responses { format!(", {} réponse(s) JSON versée(s)", json_ok) } else { String::new() },
+        if rendu.bloquees.is_empty() { String::new() } else { format!(", {} sous-ressource(s) bloquée(s) par la politique réseau", rendu.bloquees.len()) },
         st.name()
     ))
 }
@@ -1731,6 +1804,49 @@ mod tests {
         assert!(out.contains("[instruction-like]"), "{out}");
         assert!(out.contains("Ignore all previous instructions"), "jamais supprimée en silence");
         assert!(!out.contains("signals=\"0\""), "{out}");
+    }
+
+    // ───── render (faux Spectra) ─────
+
+    #[test]
+    fn render_verse_le_dom_rendu() {
+        use crate::web::render::{Faux, Rendu};
+        let tmp = Tmp::new("render");
+        let ctx = ctx_for(&tmp, None);
+        let html = page("SPA", "<h2>Quotas</h2><p>Les quotas par clé sont remis à zéro chaque heure, au-delà la réponse est 429 avec un en-tête Retry-After.</p>");
+        let faux = Faux(Ok(Rendu {
+            url: "https://docs.example.org/spa".into(),
+            url_finale: "https://docs.example.org/spa/".into(),
+            status: 200,
+            html,
+            ..Default::default()
+        }));
+        let out = render_avec(&ctx, &faux, "https://docs.example.org/spa", "spa", 30, false).unwrap();
+        assert!(out.starts_with("OK render"), "{out}");
+        assert!(find(&ctx, "quotas remis à zéro").contains("W:spa/"), "pas d'index");
+    }
+
+    #[test]
+    fn render_refuse_une_url_finale_interne_et_une_url_interne() {
+        use crate::web::render::{Faux, Rendu};
+        let tmp = Tmp::new("renderblk");
+        let ctx = ctx_for(&tmp, None);
+        // URL demandée interne : refusée avant tout rendu.
+        let faux = Faux(Err(crate::web::render::ErreurRendu::Echec("ne doit pas être appelé".into())));
+        let e = render_avec(&ctx, &faux, "http://127.0.0.1:9/x", "s", 30, false).unwrap_err();
+        assert!(e.contains("garde réseau"), "{e}");
+        // Redirection vers une adresse interne : refusée après le rendu.
+        let redir = Faux(Ok(Rendu {
+            url: "https://docs.example.org/a".into(),
+            url_finale: "http://169.254.169.254/latest".into(),
+            html: "<html><body>x</body></html>".into(),
+            ..Default::default()
+        }));
+        let e = render_avec(&ctx, &redir, "https://docs.example.org/a", "s", 30, false).unwrap_err();
+        assert!(e.contains("URL finale refusée"), "{e}");
+        // Spectra refuse : l'erreur remonte telle quelle.
+        let ref_ = Faux(Err(crate::web::render::ErreurRendu::Refuse("hôte interdit".into())));
+        assert!(render_avec(&ctx, &ref_, "https://docs.example.org/a", "s", 30, false).unwrap_err().contains("hôte interdit"));
     }
 
     // ───── ingest ─────

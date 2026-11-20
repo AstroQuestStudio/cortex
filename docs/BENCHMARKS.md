@@ -504,3 +504,87 @@ Honest limits: tuned on dev only but by a single question author (several questi
 section title, so lexical leakage is possible); the abstention threshold rests on 6 negative
 questions; pages that need JavaScript are not read; base A was not replayed after the tuning lot;
 trying to merge very short sections gained nothing and was dropped (A/B on the same pages).
+
+
+## 5. The Claude × Cortex × Spectra loop: locate and fix (20/11/2026)
+
+Measured on AstroQuest (19,582 files, a private repository; its data are not published: `bench/pack/`
+and `bench/trace/` stay local). Method, limits and numbers below; commands in `cortex bench-pack`,
+`cortex bench-tests`, `bench/trace/run.sh`. Existing benchmarks unchanged: the 60 public questions
+(flask, hono, ripgrep, EN and FR) give the same top-1 / top-5 / MRR before and after, `bench-agent
+--tache peek` the same ×207, `cargo test` 303 passed, and 566 `web::` tests with the `web` feature.
+
+### 5.1 `trace` (docs/TRACE.md)
+
+Real stacks, produced for the benchmark without touching the AstroQuest repository: two from Chrome
+on the Vite dev server (a `TypeError` thrown by `withAlpha` in `src/lib/utils.ts`, and one by
+`toCompactDate` called from `exportDataFromInvoice` in `src/lib/billing/invoice-export.ts`; the
+served line is 255, the real line 425) and one from Node on an esbuild bundle with its `.map`. Result
+**3 / 3 resolved to the exact symbol, line and column** (`bench/trace/run.sh`), in 65 ms (atlas
+open, fetching an inline map from the dev server included). Without a map (server stopped) the
+function name still finds the symbol, flagged « line approximate ». Spectra's `spectra.console/1`
+JSON and `proof.json` `console_errors` are read as they are. Limit: three real stacks and unit tests
+for every format (Chrome, Firefox, Node, vitest, Rust, TypeScript, CDP JSON), not a statistical
+benchmark.
+
+### 5.2 `pack` (docs/PACK.md)
+
+Ground truth: the source files a real commit touched (history of the AstroQuest repository; the git
+history that `pack` uses stops BEFORE the commit, no leak). Recall = share of those files named in
+the output, at a fixed token budget, against `find` and `ask` with the same budget (the three
+printed and measured with the same characters / 4). Two sets:
+
+- **10 cleaned tasks** (`taches.json`, commit messages rewritten as requests): saturated, pack and
+  find both reach 100 % (28 of 28) at 3000, 1000 and 600 tokens, `ask` 82 %. Useless to discriminate;
+  kept as a floor.
+- **60 commits whose own message is the task** (sample spread over 929 commits since 20/09/2026,
+  802 files, from 1 to 96 files per commit): mean recall per task.
+
+| budget | pack (tokens used) | ask (tokens) | find (tokens) |
+|---|---|---|---|
+| 3000 | **63.3 %** (1761) | 53.4 % (1539) | 54.3 % (1531) |
+| 1000 | **57.0 %** (972) | 48.5 % (909) | 47.6 % (589) |
+| 600 | **53.6 %** (577) | 43.7 % (562) | 41.2 % (401) |
+
+Reading: at EQUAL granted budget pack gains 9 to 12 points. At equal tokens used it is closer
+(pack at 1000: 57.0 % with 972 tokens, find at 3000: 54.3 % with 1531 tokens, so a third fewer tokens for
+three more points). The share due to the git co-change signal, measured on the ranking alone (80
+commits, recall at 10 / 20 / 40 files): text only 30.7 / 38.2 / 44.5 %, with co-change and neighbours
+35.7 / 44.1 / 49.9 %, with the weights shipped 34.8 / 45.1 / 51.6 %. Limits: weights tuned on this
+repository (a few settings, not fitted per commit); huge commits (96 files) cap everyone's recall; the
+benchmark rewards naming files, not reading them.
+
+### 5.3 `impact --tests` (docs/TESTS.md)
+
+Ground truth: the test files a commit changed or added alongside source files (120 commits spread
+over 929; 583 tests; the atlas is today's, not the commit's). The selection receives only the commit's
+source files and must contain the tests the commit touched.
+
+| list | recall of the tests changed by the commit |
+|---|---|
+| naive baseline: the test with the file's name | 57.8 % |
+| top 5 / top 10 | 33.1 % / 46.1 % |
+| top 30 (default cap) | 65.9 % (87 commits of 120 with all their tests) |
+| whole list (79 tests on average) | **91.6 %** (99 commits of 120 with all their tests) |
+
+Adding the textual-mention signal (tests that read a source file by its path, which import nothing)
+moved the whole list from 88.5 to 91.6 % and the top 30 from 63.6 to 65.9 %. What is missed: tests that
+reach the code through a dynamic import or a mock only. Honest reading: the whole list is a safe
+superset (80 tests out of ~1,500), the top 10 is not enough to certify a change: use `--max` and
+`--liste`, then the full suite once at the end.
+`--parcours` has no benchmark of its own: on the commit `b612b5bc5` it returned the one Spectra recipe
+whose screen depends on the files (`draw-outils`, 4 import hops).
+
+### 5.4 Shared reads registry (docs/REGISTRE.md)
+
+Three agents on one mission read (`card` then `read`) the same 12 symbols of AstroQuest:
+**25,458 tokens without `--partage`, 14,821 with** (−42 %). The first agent always pays; the saving
+grows with the number of agents and with the size of what is read (a `read` of a 200-line function comes
+back as 5 lines). Small cards save little.
+
+### 5.5 Cortex Web option B (docs/WEB.md §8)
+
+Not a statistical benchmark: end to end against the real `spectra-server capture`, `https://example.com/`
+rendered and ingested in 3.6 s wall (723 ms of render), found again by `web find`; internal URL and
+missing Spectra refused with a clear message; the redirect-to-internal case is tested with a fake
+renderer.

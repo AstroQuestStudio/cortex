@@ -6,6 +6,33 @@ All notable changes to Cortex are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-20
+
+### Added
+- **`cortex trace` / MCP `cortex_trace`: from an error stack to the exact source symbols**
+  (`docs/TRACE.md`, `src/sourcemap.rs`, `src/outils/trace.rs`). Reads a browser console text
+  (Chrome, Firefox), Node, vitest, a Rust panic, a TypeScript diagnostic, or Spectra's JSON
+  (`spectra.console/1`, `proof.json`, CDP `callFrames`); resolves source maps (inline maps served by the
+  Vite dev server, `.map` files, `--maps dist/` offline; localhost only, no redirect, 5 s, 25 MB);
+  attaches each frame to the atlas: stable id, lines, code around, callers, tests. Libraries are
+  summarised, files outside the project never printed, `.env*` never read.
+- **`cortex pack "<task>"` / MCP `cortex_pack`: the minimal context of a task under a token budget**
+  (`docs/PACK.md`): likely files (task text + files that changed together in git history), key symbols
+  with callers, tests, docs, recent changes, Spectra journeys. On 60 real commits, mean file recall
+  63.3 % (find 54.3 %, ask 53.4 %) at a 3000-token budget.
+- **`cortex impact --tests [--parcours] [--depuis <ref>] [--commit <sha>] [--liste]`**
+  (`docs/TESTS.md`): ranked test files to run for a change (uncommitted files by default), the command
+  (`npm run test:resume -- …`, `cargo test …`), and the Spectra recipes whose screens depend on it.
+  On 120 real commits the list holds 91.6 % of the tests the commit changed (name-only baseline 57.8 %).
+- **Shared reads registry**: `--mission/--agent/--partage/--frais` (or `CORTEX_MISSION`,
+  `CORTEX_AGENT`), `cortex registre`, MCP `cortex_registre` (`docs/REGISTRE.md`). `card` / `read` answer
+  "already read by agent X: summary" for what a peer read (file unchanged). No effect without a mission.
+- **`cortex web render <url> --source <s>`** (feature `web`, `docs/WEB.md` §8): option B, JavaScript pages
+  rendered by Spectra (`spectra-server capture`) and ingested; network guard on the requested and the
+  final URL.
+- `cortex bench-pack` and `cortex bench-tests`: benchmarks of the above on a repository's git history.
+- Skill `aq-boucle` (`skills/aq-boucle`): the see, locate, fix, prove loop with Spectra.
+
 ## [0.7.0] — 2026-11-20
 
 ### Added

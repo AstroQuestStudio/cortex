@@ -105,7 +105,7 @@ fn stat_cle(p: &Path) -> String {
     }
 }
 
-fn git(root: &Path, args: &[&str]) -> Option<Vec<u8>> {
+pub(super) fn git(root: &Path, args: &[&str]) -> Option<Vec<u8>> {
     let mut c = std::process::Command::new("git");
     c.arg("-C").arg(root).arg("--no-optional-locks").args(args);
     #[cfg(windows)]

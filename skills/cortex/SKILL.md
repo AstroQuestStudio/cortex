@@ -24,6 +24,10 @@ reading whole files. Read a full file only when you are about to edit it.
 | what did I change, what calls it, which tests | `cortex_changed` | `cortex changed` |
 | exact text (error message, URL, i18n key, TODO) with the enclosing function | `cortex_grep`, `cortex_ui` (de ce qu'on voit à l'écran au code : texte, clé i18n, data-testid, composant) | `cortex grep "<text>"` |
 | the right spot of a BIG text file (test/cargo/server log, JSON; indexed or not) without reading it all | `cortex_peek` (`errors: true` = failure blocks only) | `cortex peek <file> "<q>"` · `--erreurs` · no question = summary (accents either way; vitest, cargo, pytest, jest, go test, eslint) |
+| the context of a TASK (likely files incl. what changed together in git, symbols, tests, docs, journeys) under a budget | `cortex_pack` | `cortex pack "<task>" -b 3000` |
+| where an ERROR comes from: a stack (console, Node, vitest, Rust, Spectra JSON) to exact source symbols through source maps | `cortex_trace` (`pile`) | `cortex trace <file\|-> [--maps dist]` |
+| which tests to run for the changed files (+ Spectra recipes touched) | `cortex_impact` (`tests: true`, `parcours`) | `cortex impact --tests [--parcours] [--liste]` |
+| several agents, one mission: skip what a peer already read | `cortex_card` / `cortex_read` (`mission`, `agent`, `partage`), `cortex_registre` | `--mission M --agent A --partage` · `cortex registre` |
 | a file by name fragment or glob | `cortex_files` | `cortex files "<fragment>"` |
 | offline docs of a library you scraped | `cortex_docs` | `cortex docs query "<q>" --source <Lib>` |
 

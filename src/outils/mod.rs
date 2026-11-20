@@ -23,6 +23,10 @@ pub mod ask;
 pub mod graphe;
 pub mod lecture;
 pub mod overlay;
+pub mod pack;
+pub mod registre;
+pub mod selection;
+pub mod trace;
 
 use crate::atlas::Handle;
 use crate::ids::{self, Target};
@@ -73,6 +77,15 @@ pub enum Appel {
         question: String,
         budget: Option<usize>,
     },
+    /// `pack "<tâche>"` : le contexte minimal utile à une tâche, sous un budget.
+    Pack(pack::Params),
+    /// `impact --tests` : les tests à lancer (et les recettes Spectra) pour un changement.
+    ImpactTests(selection::Params),
+    /// `trace <pile>` : d'une pile d'erreur (texte ou JSON) aux symboles source exacts (cartes de sources).
+    Trace {
+        pile: String,
+        opts: trace::Opts,
+    },
     /// `peek <fichier> [question]` : le bon passage d'un gros fichier texte (log de tests, sortie
     /// de build…) sans le lire en entier. Ne touche à aucun atlas (marche sans projet indexé).
     Peek {
@@ -92,6 +105,9 @@ impl Appel {
             Appel::Ask { .. } => ask::BUDGET_DEFAUT,
             Appel::Read { .. } | Appel::ReadAutour { .. } => 4000,
             Appel::Path { .. } => 800,
+            Appel::Trace { .. } => 1500,
+            Appel::Pack(_) => pack::BUDGET_DEFAUT,
+            Appel::ImpactTests(_) => 1500,
             _ => 1500,
         }
     }
@@ -162,11 +178,11 @@ pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> Str
     }
     match appel {
         Appel::Find { question } => lecture::find(handles, question, budget),
-        Appel::Card { cible } => lecture::card(handles, cible, budget, false),
+        Appel::Card { cible } => registre::avec_registre(handles, appel, || lecture::card(handles, cible, budget, false)),
         Appel::Context { cible } => lecture::card(handles, cible, budget, true),
         Appel::Ask { question, .. } => ask::ask(handles, question, budget),
         Appel::Outline { cible } => lecture::outline(handles, cible, budget),
-        Appel::Read { cible, contexte } => lecture::read(handles, cible, *contexte, budget),
+        Appel::Read { cible, contexte } => registre::avec_registre(handles, appel, || lecture::read(handles, cible, *contexte, budget)),
         Appel::ReadAutour { cible, contexte, question, max_lignes } => {
             lecture::read_autour(handles, cible, *contexte, budget, question, *max_lignes)
         }
@@ -174,6 +190,9 @@ pub fn executer(handles: &[Handle], appel: &Appel, budget: Option<usize>) -> Str
         Appel::Impact { cible, profondeur } => graphe::impact(handles, cible, (*profondeur).clamp(1, 6), budget),
         Appel::Path { de, vers } => graphe::path(handles, de, vers, budget),
         Appel::Changed => overlay::changed(handles, budget),
+        Appel::Pack(p) => pack::pack(handles, &pack::Params { budget, ..p.clone() }),
+        Appel::ImpactTests(p) => selection::tests_a_lancer(handles, p, budget),
+        Appel::Trace { pile, opts } => trace::trace(handles, pile, opts, budget),
         Appel::Peek { .. } => unreachable!("peek est traité avant l'ouverture des atlas"),
     }
 }
@@ -381,6 +400,14 @@ pub fn court(s: &str, n: usize) -> String {
     } else {
         let c: String = s.chars().take(n.saturating_sub(1)).collect();
         format!("{}…", c.trim_end())
+    }
+}
+
+/// Fichier d'une cible (symbole : son fichier ; plage : le fichier de la plage).
+pub fn noeud_fichier(h: &Handle, c: Cible) -> u32 {
+    match c {
+        Cible::Noeud(g) => fichier_de(h, g),
+        Cible::Lignes { fichier, .. } => fichier,
     }
 }
 

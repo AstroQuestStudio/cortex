@@ -15,6 +15,7 @@ pub mod extract;
 pub mod guard;
 pub mod index;
 pub mod link;
+pub mod render;
 pub mod resolve;
 pub mod robots;
 pub mod search;

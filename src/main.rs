@@ -9,6 +9,7 @@ mod atlas;
 mod banc_agent;
 mod batch;
 mod bench;
+mod bench_combo;
 mod comparatif;
 mod config;
 mod confsym;
@@ -38,6 +39,7 @@ mod rust_refs;
 mod scrape;
 mod search;
 mod semantic;
+mod sourcemap;
 mod stem;
 mod symbol;
 mod textsearch;
@@ -183,10 +185,30 @@ enum Cmd {
     /// WHAT BREAKS IF I CHANGE THIS? Transitive callers (and importers) by depth,
     /// with call sites, and tests to re-run.
     Impact {
-        cible: String,
+        /// Symbol id / file / name. With `--tests`: any number (empty = uncommitted files, from git).
+        cible: Vec<String>,
         /// Depth (1 to 6).
         #[arg(short, long, default_value_t = 3)]
         depth: usize,
+        /// TESTS TO RUN for the change (ranked test files + the command to run them). With no target:
+        /// the uncommitted files; else the given ids/files.
+        #[arg(long)]
+        tests: bool,
+        /// With --tests: also the Spectra recipes (`.spectra/recipes/*.json`) whose screens depend on the change.
+        #[arg(long)]
+        parcours: bool,
+        /// With --tests: files changed since this git ref (branch, `HEAD~3`...), work in progress included.
+        #[arg(long)]
+        depuis: Option<String>,
+        /// With --tests: files changed by this commit.
+        #[arg(long)]
+        commit: Option<String>,
+        /// With --tests: max tests listed (default 30).
+        #[arg(long, default_value_t = 30)]
+        max: usize,
+        /// With --tests: bare output, one test path per line (`npm run test:resume -- $(cortex impact --tests --liste)`).
+        #[arg(long)]
+        liste: bool,
         #[command(flatten)]
         c: Commun,
     },
@@ -203,6 +225,48 @@ enum Cmd {
     Changed {
         #[command(flatten)]
         c: Commun,
+    },
+    /// WHAT DID THE OTHER AGENTS READ? Registry of a mission (set `--mission`/`CORTEX_MISSION` on card/read): who read which ids.
+    Registre {
+        /// Mission id (default: `CORTEX_MISSION`).
+        mission: Option<String>,
+        #[arg(short, long)]
+        project: Option<String>,
+        /// Lines shown (most recent).
+        #[arg(long, default_value_t = 30)]
+        max: usize,
+        /// Forget the mission.
+        #[arg(long)]
+        clear: bool,
+    },
+    /// BENCH of `pack` on git history: does the budgeted context contain the files the commit really touched?
+    BenchPack {
+        /// JSON: [{commit, tache?, fichiers|sources}] (bench/pack/taches.json).
+        file: PathBuf,
+        #[arg(short, long)]
+        project: Option<String>,
+        /// Budget in tokens per task.
+        #[arg(short, long, default_value_t = 3000)]
+        budget: usize,
+        /// Take N entries spread over the file (0 = all).
+        #[arg(long, default_value_t = 0)]
+        echantillon: usize,
+        /// Ranking only (no rendering, no baselines): mean recall at 10/20/40 files, to tune weights.
+        #[arg(long)]
+        rapide: bool,
+        #[arg(short, long)]
+        verbose: bool,
+    },
+    /// BENCH of `impact --tests` on git history: do the selected tests contain those the commit changed?
+    BenchTests {
+        /// JSON: [{commit, sources, tests}] (bench/pack/tests.json).
+        file: PathBuf,
+        #[arg(short, long)]
+        project: Option<String>,
+        #[arg(long, default_value_t = 0)]
+        echantillon: usize,
+        #[arg(short, long)]
+        verbose: bool,
     },
     /// AGENT bench (architecture v2 §7): replays comprehension tasks with and
     /// without Cortex (rg + file reads); calls, tokens read, facts covered.
@@ -297,6 +361,43 @@ enum Cmd {
         /// Lines of context on each side (default: 2 before, 3 after; failure blocks: up to 20).
         #[arg(short = 'C', long = "contexte")]
         contexte: Option<usize>,
+    },
+    /// WHAT DO I NEED FOR THIS TASK? Minimal context for a task description, under a token budget
+    /// (`-b`, default 3000): the likely files (task text + files that changed together before),
+    /// key symbols with their callers, tests, docs, recent changes, Spectra journeys. Ids to reuse.
+    Pack {
+        /// The task, in words (FR or EN).
+        tache: Vec<String>,
+        /// History cut: only commits before this one count (benchmarks).
+        #[arg(long)]
+        avant: Option<String>,
+        #[command(flatten)]
+        c: Commun,
+    },
+    /// WHERE DID THIS ERROR COME FROM? From a stack trace (browser console text, Node/vitest/Rust
+    /// panic, or Spectra JSON: docs/TRACE.md) to the exact source symbols: resolves source maps
+    /// (Vite dev server inline maps, `.map` files, `--maps <dist>`), shows the code around and the
+    /// callers. Reads FILE, `-` or stdin, or `--texte`.
+    Trace {
+        /// File holding the stack (text or JSON); `-` or absent: standard input.
+        fichier: Option<PathBuf>,
+        /// The stack given directly.
+        #[arg(long)]
+        texte: Option<String>,
+        /// Folders (or .map files) holding the maps of a build (repeatable).
+        #[arg(long)]
+        maps: Vec<PathBuf>,
+        /// Extra HTTP host allowed to serve maps (localhost is always allowed).
+        #[arg(long)]
+        hote: Vec<String>,
+        /// Lines of code around each frame (default 2).
+        #[arg(long)]
+        contexte: Option<u32>,
+        /// No network: maps on disk only.
+        #[arg(long)]
+        hors_ligne: bool,
+        #[command(flatten)]
+        c: Commun,
     },
     /// EDIT MANY FILES IN ONE CALL (atomic, all or nothing). Reads a batch from FILE or stdin:
     /// JSON (`{"editions":[{"fichier","ancien","nouveau","tous"}, {"fichier","apres"|"avant","insere"},
@@ -469,6 +570,18 @@ struct Commun {
     /// Skips the automatic freshness check (directory read) before answering.
     #[arg(long)]
     no_refresh: bool,
+    /// Shared reads registry: mission id (also `CORTEX_MISSION`). `card`/`read` are then noted for the mission's agents.
+    #[arg(long)]
+    mission: Option<String>,
+    /// Name of this agent in the registry (also `CORTEX_AGENT`).
+    #[arg(long)]
+    agent: Option<String>,
+    /// With a mission: an id already read by an agent (file unchanged) comes back as "already read by X: summary".
+    #[arg(long)]
+    partage: bool,
+    /// With a mission: force the full output even if already read.
+    #[arg(long)]
+    frais: bool,
 }
 
 #[derive(Subcommand)]
@@ -588,7 +701,23 @@ fn main() {
         }
         Cmd::Read { cible, contexte, c, .. } => cmd_outil("read", outils::Appel::Read { cible, contexte }, c),
         Cmd::Overview { dossier, c } => cmd_outil("overview", outils::Appel::Overview { dossier }, c),
-        Cmd::Impact { cible, depth, c } => cmd_outil("impact", outils::Appel::Impact { cible, profondeur: depth }, c),
+        Cmd::Impact { cible, depth, tests, parcours, depuis, commit, max, liste, c } => {
+            if tests || parcours || depuis.is_some() || commit.is_some() || liste || cible.len() > 1 {
+                let p = outils::selection::Params { cibles: cible, depuis, commit, parcours, max, liste };
+                if liste {
+                    // Sortie brute : aucune ligne de diagnostic sur la sortie standard.
+                    let handles = require_handles(&c.project, c.no_refresh);
+                    print!("{}", outils::executer(&handles, &outils::Appel::ImpactTests(p), c.budget));
+                } else {
+                    cmd_outil("impact --tests", outils::Appel::ImpactTests(p), c)
+                }
+            } else if let Some(cible) = cible.into_iter().next() {
+                cmd_outil("impact", outils::Appel::Impact { cible, profondeur: depth }, c)
+            } else {
+                eprintln!("cortex impact: give a target (S:id, file, name) or use --tests for the uncommitted files");
+                std::process::exit(2);
+            }
+        }
         Cmd::Path { de, vers, c } => cmd_outil("path", outils::Appel::Path { de, vers }, c),
         Cmd::Changed { c } => cmd_outil("changed", outils::Appel::Changed, c),
         Cmd::BenchAgent { file, project, verbose, tache, budget_ask } => {
@@ -597,6 +726,21 @@ fn main() {
             let file = file.unwrap_or_else(|| bench::bench_file(if peek { "agent-peek/taches.json" } else { "agent_tasks.json" }));
             banc_agent::run(&file, project, verbose, tache, budget_ask)
         }
+        Cmd::Registre { mission, project, max, clear } => {
+            let Some(m) = mission.or_else(|| std::env::var("CORTEX_MISSION").ok()).filter(|m| !m.is_empty()) else {
+                eprintln!("cortex registre: give a mission id (argument or CORTEX_MISSION)");
+                std::process::exit(2);
+            };
+            if clear {
+                print!("{}", outils::registre::effacer(project.as_deref(), &m));
+            } else {
+                print!("{}", outils::registre::lister(project.as_deref(), &m, max));
+            }
+        }
+        Cmd::BenchPack { file, project, budget, echantillon, rapide, verbose } => {
+            bench_combo::bench_pack(&file, project, budget, verbose, echantillon, rapide)
+        }
+        Cmd::BenchTests { file, project, echantillon, verbose } => bench_combo::bench_tests(&file, project, echantillon, verbose),
         Cmd::Bench { file, project, verbose, moteur } => cmd_bench(&file, project, verbose, &moteur),
         Cmd::BenchCompare { file, project, sans_construction, sortie } => {
             cmd_bench_compare(&file, project, sans_construction, sortie.unwrap_or_else(bench::results_dir))
@@ -617,6 +761,34 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+        Cmd::Pack { tache, avant, c } => {
+            let p = outils::pack::Params { tache: tache.join(" "), budget: 0, avant };
+            cmd_outil("pack", outils::Appel::Pack(p), c)
+        }
+        Cmd::Trace { fichier, texte, maps, hote, contexte, hors_ligne, c } => {
+            let pile = match (texte, fichier.as_deref().filter(|p| p.as_os_str() != "-")) {
+                (Some(t), _) => t,
+                (None, Some(p)) => match std::fs::read(p) {
+                    Ok(b) => String::from_utf8_lossy(&b).to_string(),
+                    Err(e) => {
+                        eprintln!("cortex trace: « {} » illisible : {e}", p.display());
+                        std::process::exit(1);
+                    }
+                },
+                (None, None) => {
+                    use std::io::{IsTerminal, Read};
+                    if std::io::stdin().is_terminal() {
+                        eprintln!("cortex trace: pas de pile. Exemples : cortex trace pile.txt | cortex trace --texte \"at f (http://localhost:8080/src/a.tsx:10:5)\" | cat pile.json | cortex trace");
+                        std::process::exit(2);
+                    }
+                    let mut b = Vec::new();
+                    let _ = std::io::stdin().read_to_end(&mut b);
+                    String::from_utf8_lossy(&b).to_string()
+                }
+            };
+            let opts = outils::trace::Opts { maps, hotes: hote, contexte, hors_ligne };
+            cmd_outil("trace", outils::Appel::Trace { pile, opts }, c)
         }
         Cmd::Edit { lot, project, racine, essai, diff, forcer, annuler, liste } => {
             let t0 = Instant::now();
@@ -804,6 +976,7 @@ fn file_sets(handles: &[atlas::Handle]) -> Vec<textsearch::FileSet<'_>> {
 fn cmd_outil(nom: &str, appel: outils::Appel, c: Commun) {
     let t0 = Instant::now();
     let handles = require_handles(&c.project, c.no_refresh);
+    outils::registre::definir(outils::registre::Ctx::depuis(c.mission.clone(), c.agent.clone(), c.partage, c.frais));
     print!("{}", outils::executer(&handles, &appel, c.budget));
     eprintln!("[cortex {}] {:.1}ms (atlas)", nom, t0.elapsed().as_secs_f64() * 1000.0);
 }
